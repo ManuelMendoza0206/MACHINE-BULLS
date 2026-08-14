@@ -2,17 +2,18 @@
 
 ## Listas del Espacio de Trabajo (Space)
 
-El proyecto se organizará en siete listas estándar para garantizar el flujo y la trazabilidad del trabajo según el ciclo de vida de desarrollo de IA:
+El proyecto se organizará en ocho listas estándar para garantizar el flujo y la trazabilidad del trabajo según el ciclo de vida de desarrollo de IA:
 
-| Lista | Propósito y Tipo de Trabajo | Entregables Típicos |
+| Lista | Uso típico / Propósito | Entregables y Evidencia asociada |
 |---|---|---|
-| **Discovery** | Definición del problema, investigación, Product Goal, Team Charter y priorización de casos. | `team_charter.md`, `priorizacion_casos.md`, actas de reunión. |
-| **Data** | Identificación de fuentes, limpieza, eda, contratos de datos, preparación y versionado. | Datasets, scripts de ETL, data datasheets, validaciones de esquema. |
-| **Architecture** | Diagramas de arquitectura, decisiones de diseño (ADRs), definición de APIs e infraestructura. | Diagramas C4/UML, documentos ADR, especificaciones OpenAPI. |
-| **Build** | Desarrollo de modelos de IA, entrenamiento, creación de servicios backend, frontend e integración. | Código fuente, pipelines de entrenamiento, endpoints REST/gRPC. |
-| **QA** | Pruebas unitarias, evaluación de métricas del modelo, validación de integración y seguridad. | Matriz de pruebas, reportes de evaluación ML, pruebas de carga. |
-| **Deploy** | Contenedorización, configuración de pipelines CI/CD y despliegue en ambiente productivo/cloud. | Dockerfiles, YAMLs de CI/CD, endpoints desplegados en la nube. |
-| **Risk** | Registro, seguimiento y mitigación de bloqueos, riesgos técnicos, éticos o de equipo. | Matriz de riesgos, tarjetas de bloqueo activo. |
+| **Discovery** | Definición de problema, usuarios, Product Goal, priorización | `team_charter.md`, `priorizacion_casos.md` |
+| **Data** | Fuentes, permisos, limpieza, contratos, versionado | Datasets, scripts de ETL, data datasheets |
+| **Architecture** | Diagramas, ADR, decisiones técnicas, riesgos | Diagramas de arquitectura, documentos ADR |
+| **Build** | Desarrollo de modelos, backend, frontend e integración | Código fuente, endpoints API, modelos |
+| **QA** | Pruebas unitarias, métricas de IA, integración y seguridad | Matriz de pruebas, reportes de evaluación |
+| **Deploy** | Contenedorización, CI/CD, infraestructura cloud | Dockerfiles, scripts de despliegue |
+| **Risk** | Bloqueos, amenazas, mitigaciones y seguimiento | Registro de bloqueos, matriz de mitigación |
+| **Reportes / Evidencia** | Archivo Markdown versionado | Enlace a la evidencia en GitHub |
 
 ---
 
@@ -36,31 +37,3 @@ Cada tarea creada en ClickUp debe completar de forma obligatoria los siguientes 
 - **In Review / PR:** Tarea completada pendiente de revisión de código/documentación en GitHub.
 - **Done:** Tarea verificada que cumple el Definition of Done (DoD) con evidencia enlazada.
 - **Blocked:** Tarea pausada por un impedimento reportado en la lista *Risk*.
-
----
-
-## Ejemplos de Tareas Iniciales (Sprint 0)
-
-### Tarea 1: Elaboración del Team Charter v1
-- **Lista:** Discovery
-- **Sprint:** Sprint 0
-- **Dueño:** Carla (Producto)
-- **Criterio de Aceptación:** Archivo `team_charter.md` redactado con las 6 secciones obligatorias (integrantes, canales, PRs, bloqueos, reglas de IA y DoD), revisado y aprobado por todos los integrantes en el repo.
-- **Enlace a Evidencia:** `https://github.com/equipo-tsi/proyecto-ia/blob/main/docs/team_charter.md`
-- **Riesgo Asociado:** Medio (disponibilidad de integrantes no validada).
-
-### Tarea 2: Matriz de Priorización de Casos
-- **Lista:** Discovery
-- **Sprint:** Sprint 0
-- **Dueño:** Bruno (Ingeniería)
-- **Criterio de Aceptación:** Comparación cuantitativa de 3 casos mediante escala 1-5 en 5 dimensiones, justificación de selección del caso ganador y redacción del Product Goal.
-- **Enlace a Evidencia:** `https://github.com/equipo-tsi/proyecto-ia/blob/main/docs/priorizacion_casos.md`
-- **Riesgo Asociado:** Bajo.
-
-### Tarea 3: Configuración de la Estructura del Tablero ClickUp
-- **Lista:** Discovery
-- **Sprint:** Sprint 0
-- **Dueño:** Ana (Datos)
-- **Criterio de Aceptación:** Tablero creado con las 7 listas operativas, campos obligatorios configurados y vinculación con la organización de GitHub.
-- **Enlace a Evidencia:** `https://github.com/equipo-tsi/proyecto-ia/blob/main/docs/clickup_estructura.md`
-- **Riesgo Asociado:** Bajo.

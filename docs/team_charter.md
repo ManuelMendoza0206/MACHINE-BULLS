@@ -2,12 +2,12 @@
 
 ## Integrantes y disponibilidad
 
-| Integrante | Responsabilidad Inicial | Horarios Disponibles | Restricción Real | Riesgo Personal Declarado |
+| Integrante | Responsabilidad | Disponibilidad | Restricción | Riesgo personal declarado |
 |---|---|---|---|---|
-| Integrante 1 | Producto / Backlog (Product Owner) | Lun-Mié 19:00 - 21:00, Sáb 09:00 - 12:00 | Conexión a internet inestable en noches | Baja disponibilidad en semanas de exámenes parciales |
-| Integrante 2 | Datos / Calidad (Data Engineer) | Mar-Jue 20:00 - 22:00, Dom 14:00 - 17:00 | Trabajo de medio tiempo hasta las 18:30 | Dificultad de acceso a datasets privados sin autorización |
-| Integrante 3 | Modelo / IA (ML Engineer) | Lun-Jue 18:00 - 20:00, Sáb 14:00 - 18:00 | Sin tarjeta gráfica dedicada local | Tiempos de entrenamiento prolongados en infraestructura cloud |
-| Integrante 4 | Ingeniería / CI/CD (DevOps & QA) | Mié-Vie 19:00 - 21:00, Dom 10:00 - 13:00 | Compromisos laborales los fines de semana por la tarde | Disponibilidad limitada durante despliegues de fin de mes |
+| Manuel Jiménez | Product Owner | Lun-Dom 19:00 - 23:00 | *Por definir* | *Por definir* |
+| Leonardo Ibarra | Scrum Master | Lun-Dom 19:00 - 23:00 | *Por definir* | *Por definir* |
+| Huascar Durán | Development Team | Lun-Dom 19:00 - 23:00 | *Por definir* | *Por definir* |
+| Jaicel Velasco | Development Team | Lun-Dom 19:00 - 23:00 | *Por definir* | *Por definir* |
 
 ---
 
@@ -15,9 +15,9 @@
 
 - **ClickUp:** Gestión de tareas, asignación de responsables, estado del backlog y enlaces obligatorios a evidencia.
 - **GitHub Issues & PRs:** Reporte de defectos técnicos, bloqueos reproducibles, discusión de código y revisión de pares.
-- **WhatsApp / Teams:** Comunicación rápida y coordinación operativa diaria. **Regla:** No se toman ni aprueban decisiones finales por este medio.
+- **WhatsApp:** Comunicación rápida y coordinación operativa diaria. **Regla:** No se toman ni aprueban decisiones finales por este medio.
 - **Tiempo de respuesta normal:** Máximo 24 horas en días laborables.
-- **Bloqueo crítico:** Se etiqueta la tarea como `Bloqueado` en ClickUp y se notifica inmediatamente con la etiqueta `@canal` en Teams/WhatsApp.
+- **Bloqueo crítico:** Se etiqueta la tarea como `Bloqueado` en ClickUp y se notifica inmediatamente con la etiqueta `@canal` en WhatsApp.
 
 > **Regla de evidencia:** Toda decisión que afecte el alcance, los datos, la arquitectura o la evaluación debe quedar registrada en ClickUp o GitHub. Si no está registrada, no es parte del avance del equipo.
 
