@@ -4,8 +4,8 @@
 
 | Integrante | Responsabilidad | Disponibilidad | Restricción | Riesgo personal declarado |
 |---|---|---|---|---|
-| Manuel Jiménez | Product Owner | Lun-Dom 19:00 - 23:00 | *Por definir* | *Por definir* |
-| Leonardo Ibarra | Scrum Master | Lun-Dom 19:00 - 23:00 | *Por definir* | *Por definir* |
+| Manuel Jiménez | Scrum Master | Lun-Dom 19:00 - 23:00 | *Por definir* | *Por definir* |
+| Leonardo Ibarra | Product Owner | Lun-Dom 19:00 - 23:00 | *Por definir* | *Por definir* |
 | Huascar Durán | Development Team | Lun-Dom 19:00 - 23:00 | *Por definir* | *Por definir* |
 | Jaicel Velasco | Development Team | Lun-Dom 19:00 - 23:00 | *Por definir* | *Por definir* |
 
