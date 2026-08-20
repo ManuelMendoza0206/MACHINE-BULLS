@@ -8,7 +8,7 @@ Para la selección del proyecto del semestre en Taller de Sistemas Inteligentes,
 
 | Caso | Valor | Datos | Factibilidad | Riesgo | Despliegue | Puntaje Total | Decisión |
 |---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
-| A. StyleSync IA: Probador Virtual + Asesor de Estilo | 4 | 4 | 4 | 3 | 5 | **20** | Elegir |
+| A. StyleSync: Probador Virtual + Asesor de Estilo | 4 | 4 | 4 | 3 | 5 | **20** | Elegir |
 | B. Arte-Match: Buscador Semántico de Museos | 3 | 5 | 3 | 4 | 4 | **19** | Descartar |
 | C. Tutor Inteligente de Ejecución Musical (Guitarra, Piano y otros) | 5 | 3 | 2 | 2 | 4 | **16** | Descartar |
 
