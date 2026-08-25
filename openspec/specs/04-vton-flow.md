@@ -34,6 +34,8 @@ export function useCreateVtonJob(): UseCreateVtonJobResult;
 ```
 Antes de invocar `createVtonJob` (spec 01 §2.4), consulta `checkCachedVtonResult(outfitId, userImageHash)` (§2.4) — si hay HIT, no ejecuta la mutación, expone `data` sintético apuntando al job cacheado.
 
+**Protección contra doble-submit (hallazgo de auditoría, agosto 2026):** el CTA "Generar prueba virtual" (`UserPhotoCapture`, §2.5) SHALL deshabilitarse mientras `status === 'pending'`, evitando disparar dos `POST /vton/try-on` concurrentes por doble click. `POST /vton/try-on` es la mutación de mayor costo del sistema (inferencia GPU, `base-plan.md` §8) — recibe, como mínimo, la misma protección que ya es obligatoria para `AuthForm` (spec 06 §5).
+
 ### 2.2 Hook de polling (`src/features/vton/hooks/useVtonJobStatus.ts`) — núcleo de esta spec
 
 ```ts
@@ -101,6 +103,7 @@ Almacenamiento: `Map` en memoria respaldado por TanStack Query cache (clave `['v
 // src/features/vton/components/UserPhotoCapture.tsx
 interface UserPhotoCaptureProps {
   onPhotoReady: (file: File) => void;
+  isSubmitting: boolean; // true cuando useCreateVtonJob().status === 'pending' — deshabilita el CTA "Generar prueba virtual" (§2.1)
 }
 // Incluye: selector cámara/galería, overlay guía de encuadre (silueta), integra detectBlur
 
@@ -114,13 +117,18 @@ interface VtonProgressViewProps {
 // aria-live="polite" — cada cambio de fase debe anunciarse a lectores de pantalla sin
 // requerir que el usuario esté enfocado en ese elemento (es contenido que cambia sin
 // interacción directa del usuario, caso de uso canónico de aria-live)
+// prefers-reduced-motion: la ilustración/animación decorativa de fase se omite cuando
+// el sistema lo solicita — se conserva únicamente `Progress` (spec 00 §2.4) con
+// aria-valuetext y el texto de fase, sin la animación (hallazgo de auditoría, agosto 2026)
 
 // src/features/vton/components/VtonResultView.tsx
 interface VtonResultViewProps {
   originalPhotoUrl: string;
   resultUrl: string;
 }
-// Slider comparación before/after
+// Slider comparación before/after. Accesibilidad: cada imagen expone un `alt` no vacío
+// y distinguible entre sí (ej. "Foto original del usuario" / "Resultado con el outfit
+// {estética} aplicado") — es la pantalla de mayor peso visual del producto, nunca alt=""
 
 // src/features/vton/components/VtonFailedView.tsx
 interface VtonFailedViewProps {
@@ -250,6 +258,9 @@ GET (listado de VTONJob del usuario, ver gap §6)
 - Flujo timeout: MSW responde `processing` indefinidamente, `timeoutMs` reducido en el test (ej. 3s) → `VtonTimeoutView` aparece, click en "Verificar de nuevo" dispara exactamente un `GET` adicional.
 - Reuso de cache: crear job para `(outfitId=A, foto=F)`, completarlo; segunda invocación con el mismo par → `useCreateVtonJob` NO llama a `createVtonJob` (aserción sobre contador de llamadas MSW = 0 para ese endpoint en la segunda pasada), navega directo con los datos cacheados.
 - `UserPhotoCapture`: integra `detectBlur` igual que `GarmentAnalysisResult` (spec 02) — mismo comportamiento no bloqueante verificado aquí en el contexto de VTON.
+- Doble-submit: doble click en "Generar prueba virtual" antes de que la primera respuesta resuelva → exactamente una llamada a `createVtonJob` (aserción de contador MSW = 1), CTA deshabilitado mientras `status === 'pending'`.
+- `VtonResultView`: `originalPhotoUrl` y `resultUrl` renderizan con `alt` no vacío y distinguible entre sí.
+- `VtonProgressView` con `prefers-reduced-motion: reduce` simulado: la ilustración/animación decorativa no se renderiza, `Progress` y el texto de fase permanecen.
 
 **E2E (Playwright):**
 - Flujo completo feliz: desde `/outfits/[id]` → "Probar este outfit" → captura de foto (fixture) → progreso → resultado, con MSW o backend de staging mockeado a nivel de red de Playwright.
@@ -267,6 +278,9 @@ GET (listado de VTONJob del usuario, ver gap §6)
 - [ ] `VtonTimeoutView` ofrece verificación manual sin reiniciar el loop automático de polling.
 - [ ] `UserPhotoCapture` reutiliza `detectBlur` de spec 02 (sin duplicar la heurística de blur en dos lugares del código).
 - [ ] Botón "seguir usando la app" navega sin interrumpir el polling en curso (verificado en integración: el resultado sigue resolviéndose y se refleja al volver a `/try-on/jobs/[jobId]` o notificarse).
+- [ ] El CTA "Generar prueba virtual" se deshabilita durante `status === 'pending'` de `useCreateVtonJob`, evitando doble-submit — verificado por test con aserción de contador de llamadas MSW.
+- [ ] `VtonResultView` expone `alt` no vacío y distinguible en ambas imágenes (original/resultado), verificado por test.
+- [ ] `VtonProgressView` respeta `prefers-reduced-motion`, verificado por test.
 - [ ] Cobertura de tests ≥ 85% en `src/features/vton/` (es el módulo de mayor riesgo de UX del producto).
 - [ ] `npm run typecheck && npm run lint && npm run test && npm run test:e2e` pasan en verde.
 
@@ -277,6 +291,8 @@ GET (listado de VTONJob del usuario, ver gap §6)
 `base-plan.MD` §11 no define un endpoint de **listado** de `VTONJob` por usuario, necesario para `/try-on/history` (mismo tipo de gap que en spec 02 §6 y spec 03 §6). Se desarrolla contra mocks MSW documentados como tales; la conexión real queda bloqueada hasta confirmación de `GET /api/v1/vton/jobs?user_id=` (o equivalente) con el backend.
 
 Adicionalmente: el documento base no define un endpoint de **cancelación** de `VTONJob`. Por diseño, esta spec asume que un job iniciado no puede cancelarse desde el frontend — el timeout de UI (§2.2) es puramente una decisión de presentación local, nunca una operación de backend.
+
+**Ver `specs/08-api-contract-gaps.md` (G3)** para el estado consolidado del gap de listado. El gap de licenciamiento del proveedor de inferencia VTON (IDM-VTON/OOTDiffusion vía Replicate — modelos con licencia no comercial, hallazgo de auditoría agosto 2026) está documentado como riesgo de producto en `.speckit/.../constitution.md` §7 y `docs/context/base-plan.md` §8 — no es un gap de contrato de API, pero condiciona si `/try-on` es una feature permanente o un prototipo con alcance no comercial; se referencia aquí porque toda esta spec depende de la resolución de ese riesgo antes de Fase 3.
 
 ---
 

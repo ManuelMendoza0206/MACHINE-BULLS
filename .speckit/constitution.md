@@ -46,3 +46,7 @@ Una tarea se considera Terminada solo si:
 - Costo de inferencia GPU y latencia del modelo generativo (VTON).
 - Calidad realista del try-on (distorsiones de cuerpo/tela) — requiere monitoreo continuo, no solo validación inicial.
 - Dependencia del catálogo de un comercio específico limita la generalización del recomendador de estilos.
+- **Licenciamiento del modelo VTON (riesgo Legal/Alto, hallazgo de auditoría agosto 2026):** los modelos de referencia para el pipeline generativo (IDM-VTON, OOTDiffusion) se publican bajo licencia **no comercial**. Consumirlos vía una API gestionada (Replicate/RunPod, `base-plan.md` §6.1) delega la infraestructura pero no despeja el uso comercial de la salida generada — la licencia de los pesos subyacentes no cambia. Debe resolverse antes de la Fase 3 del cronograma (integración VTON, `base-plan.md` §7.1) por una de tres rutas, decisión pendiente del equipo completo (no solo frontend):
+  1. Confirmar un proveedor con licencia comercial explícita para el modelo servido (distinta del checkpoint de investigación crudo).
+  2. Mantener el alcance del proyecto estrictamente académico/no comercial y documentarlo como restricción de producto — consistente con el carácter de proyecto de semestre (§2).
+  3. Entrenar/ajustar un modelo propio sobre una arquitectura con licencia permisiva.

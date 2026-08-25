@@ -214,6 +214,7 @@ SEMANA  13 - 16 :  [ Phase 4: Frontend UI, Pruebas End-to-End y Ajuste Final ]
 | Fotos de baja calidad subidas por el usuario. | Medio | Alta | Validación previa con varianza de Laplaciano (detección de borrosidad) y MediaPipe antes de la inferencia. |
 | Costo de llamadas a APIs GPU en la nube. | Alto | Media | Sistema de caché de resultados VTON para outfits y prendas repetidas en PostgreSQL. |
 | Baja precisión en estéticas ambiguas. | Medio | Media | Respuesta Top-N estéticas con score de confianza en lugar de un único valor determinista. |
+| **Licenciamiento no comercial de los modelos VTON de referencia (IDM-VTON, OOTDiffusion).** *(Hallazgo de auditoría, agosto 2026)* | Alto | Alta (si el proyecto excede el alcance académico) | Confirmar antes de Fase 3 un proveedor con licencia comercial explícita para el modelo servido, **o** mantener el alcance estrictamente académico/no comercial documentado como restricción de producto, **o** entrenar/ajustar un modelo propio sobre arquitectura con licencia permisiva. Servir el modelo vía una API gestionada (Replicate/RunPod) delega la infraestructura pero no cambia la licencia de los pesos subyacentes — ver `.speckit/constitution.md` §7. |
 
 ---
 
