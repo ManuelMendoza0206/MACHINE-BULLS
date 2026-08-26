@@ -1,8 +1,36 @@
+## Purpose
+Permite al usuario digitalizar su guardarropa con fricción mínima (subida propia y/o catálogo cápsula) y revisar/corregir el análisis automático de cada prenda antes de que alimente el motor de recomendación.
+
+## Requirements
+
+### Requirement: Subida por lote con techo de concurrencia
+El sistema SHALL limitar la subida simultánea de prendas a un techo configurable, encolando el excedente sin detener el proceso ante fallos individuales.
+
+#### Scenario: Exceso de archivos en un lote
+- **WHEN** el usuario suelta más archivos que el techo de concurrencia configurado
+- **THEN** el excedente pasa a estado `queued` y se procesa en orden FIFO, sin bloquearse por el fallo de un archivo activo
+
+### Requirement: Resultado de análisis editable antes de confirmar
+El sistema SHALL permitir corregir la categoría y estética detectadas antes de guardar una prenda.
+
+#### Scenario: Corrección manual de categoría
+- **WHEN** el usuario edita la categoría detectada en el resultado de análisis
+- **THEN** el valor editado, no el original detectado, es el que se persiste al confirmar
+
+### Requirement: Catálogo cápsula con cobertura mínima verificable
+El sistema SHALL exigir que el catálogo "Básicos StyleMe" cubra al menos una prenda por posición de outfit y por estética objetivo.
+
+#### Scenario: Validación de cobertura del catálogo
+- **WHEN** se publica o actualiza el catálogo cápsula
+- **THEN** existe al menos una prenda por cada posición (`top/bottom/footwear/outerwear`) y por cada estética objetivo definida
+
+---
+
 # Spec 02 — Wardrobe Flow (Onboarding, Upload, Armario, Catálogo Cápsula)
 
 **Estado:** Draft para implementación · **Depende de:** spec 00 (design system), spec 01 (api client/schemas) · **Consumido por:** ninguna
 
-Deriva de `docs/frontend-plan.md` §3.1 (Flujo A), §3.2 (Flujo B), §4.2-4.6 (inventario de pantallas). Cubre rutas `/onboarding`, `/wardrobe`, `/wardrobe/upload`, `/wardrobe/[garmentId]`, `/wardrobe/capsule`.
+Deriva de `docs/context/frontend-plan.md` §3.1 (Flujo A), §3.2 (Flujo B), §4.2-4.6 (inventario de pantallas). Cubre rutas `/onboarding`, `/wardrobe`, `/wardrobe/upload`, `/wardrobe/[garmentId]`, `/wardrobe/capsule`.
 
 ---
 
@@ -110,10 +138,10 @@ interface CapsuleCatalogGridProps {
 
 #### 2.4.1 Criterio de calidad de curación del catálogo cápsula
 
-El catálogo "Básicos StyleMe" (`base-plan.md` §5.2) es el diferenciador de producto frente a la fricción de alta que hunde a la competencia directa (Whering, Acloset, Stylebook — ver auditoría de agosto 2026: la queja #1 en reseñas de esas apps es exigir un armario mínimo antes de dar valor). Por eso no basta con el rótulo genérico "curado" — debe cumplir un checklist verificable antes de publicarse o actualizarse:
+El catálogo "Básicos StyleMe" (`plan-base.md` §5.2) es el diferenciador de producto frente a la fricción de alta que hunde a la competencia directa (Whering, Acloset, Stylebook — ver auditoría de agosto 2026: la queja #1 en reseñas de esas apps es exigir un armario mínimo antes de dar valor). Por eso no basta con el rótulo genérico "curado" — debe cumplir un checklist verificable antes de publicarse o actualizarse:
 
-- **Cobertura mínima por posición:** al menos una prenda por cada posición de outfit (`top`, `bottom`, `footwear`, `outerwear`, `base-plan.md` §10.1), de forma que ningún filtro de `/outfits` quede sin combinaciones posibles usando solo prendas cápsula.
-- **Cobertura mínima por estética:** al menos una prenda etiquetada por cada estética objetivo listada en `base-plan.md` (Old Money, Streetwear, Soft Boy, Starboy, Gorpcore).
+- **Cobertura mínima por posición:** al menos una prenda por cada posición de outfit (`top`, `bottom`, `footwear`, `outerwear`, `plan-base.md` §10.1), de forma que ningún filtro de `/outfits` quede sin combinaciones posibles usando solo prendas cápsula.
+- **Cobertura mínima por estética:** al menos una prenda etiquetada por cada estética objetivo listada en `plan-base.md` (Old Money, Streetwear, Soft Boy, Starboy, Gorpcore).
 - **Estándar visual consistente:** cada fotografía del catálogo cumple el mismo estándar de fondo removido y encuadre que `processed_image_url` de `POST /garments/upload` (spec 01 §2.5) — el catálogo no debe percibirse visualmente distinto de una prenda subida por el usuario.
 
 ### 2.5 Componente de onboarding
@@ -263,7 +291,7 @@ GET (listado de garments, ver gap §6)
 
 ## 6. Gap Explícito (bloqueante parcial)
 
-Como se documentó en `frontend-plan.md` §6, no existe en `base-plan.MD` §11 un endpoint de **listado** de prendas del usuario ni de **asociación** de prendas del catálogo cápsula a un usuario. Esta spec define `GarmentSummary` como un tipo placeholder mínimo (`{ id, processed_image_url, category, dominant_aesthetic }`) para permitir desarrollar `/wardrobe` contra mocks MSW (Fase 1 de `frontend-plan.md` §10), pero **la conexión real queda bloqueada** hasta que el backend confirme:
+Como se documentó en `frontend-plan.md` §6, no existe en `plan-base.md` §11 un endpoint de **listado** de prendas del usuario ni de **asociación** de prendas del catálogo cápsula a un usuario. Esta spec define `GarmentSummary` como un tipo placeholder mínimo (`{ id, processed_image_url, category, dominant_aesthetic }`) para permitir desarrollar `/wardrobe` contra mocks MSW (Fase 1 de `frontend-plan.md` §10), pero **la conexión real queda bloqueada** hasta que el backend confirme:
 1. `GET /api/v1/garments?user_id=` (o equivalente) para el grid de `/wardrobe`.
 2. El mecanismo para "agregar" prendas del catálogo cápsula al armario del usuario (¿es un `POST` separado, o el `user_id` se asigna directamente al seleccionar?).
 

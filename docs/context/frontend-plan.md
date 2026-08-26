@@ -1,8 +1,8 @@
 # StyleMe — Planteamiento Integral del Frontend
 
-Documento exclusivo de planificación de producto, UX y diseño conceptual para el frontend de **StyleMe**, derivado en su totalidad de `docs/base-plan.MD`. Este documento precede a las specs técnicas SDD en `/specs/` — define **qué** se construye y **por qué**, antes de que las specs definan **cómo** (contratos, tipos, tests).
+Documento exclusivo de planificación de producto, UX y diseño conceptual para el frontend de **StyleMe**, derivado en su totalidad de `docs/context/plan-base.md`. Este documento precede a las specs técnicas SDD en `/specs/` — define **qué** se construye y **por qué**, antes de que las specs definan **cómo** (contratos, tipos, tests).
 
-> Referencias cruzadas al documento base: cada sección cita el apartado de `base-plan.MD` del que se deriva, para trazabilidad total. Nada aquí introduce alcance no presente en el documento base salvo decisiones de UX/UI explícitamente marcadas como **[Decisión de diseño]**.
+> Referencias cruzadas al documento base: cada sección cita el apartado de `plan-base.md` del que se deriva, para trazabilidad total. Nada aquí introduce alcance no presente en el documento base salvo decisiones de UX/UI explícitamente marcadas como **[Decisión de diseño]**.
 
 ---
 
@@ -132,6 +132,8 @@ Mapeo directo desde §10.1:
 ```
 
 Ambas ramas (subida propia / catálogo cápsula) son **no excluyentes**: el usuario puede combinar ambas en el mismo onboarding, y siempre puede volver a `/wardrobe/upload` o `/wardrobe/capsule` después. Esto responde directamente a §3.2 ("armario cápsula para reducir la fricción inicial").
+
+**Estándar de calidad del catálogo cápsula** *(añadido — hallazgo de auditoría QA, `openspec/specs/frontend/wardrobe-flow/spec.md` §2.4.1)*: no basta con el rótulo "curado" — el catálogo debe cumplir cobertura mínima por posición de outfit (`top/bottom/footwear/outerwear`) y por cada estética objetivo, más un estándar visual idéntico al de `GarmentCard`. Es el diferenciador de producto frente a la fricción de alta que hunde a la competencia directa (Whering, Acloset, Stylebook), por lo que se trata como criterio de aceptación verificable, no como aspiración.
 
 ### 3.2 Flujo B — Subida y análisis de una prenda
 
@@ -300,7 +302,7 @@ Para cada pantalla: propósito, estados (loading/empty/error/success), component
 
 ## 5. Sistema de Diseño
 
-**[Decisión de diseño]** — no especificado en `base-plan.MD` (solo indica "Tailwind CSS"), se define aquí para asegurar consistencia con la personalidad de §1.
+**[Decisión de diseño]** — no especificado en `plan-base.md` (solo indica "Tailwind CSS"), se define aquí para asegurar consistencia con la personalidad de §1.
 
 ### 5.1 Paleta de color
 
@@ -363,7 +365,9 @@ Mapeo semántico por categoría de prenda (`Shirt`, `Footprints` para calzado, e
 
 **Gap identificado [requiere validación con equipo backend]:** el documento base no define un endpoint de **listado** de `Garments`/`Outfits`/historial de `VTONJob` por usuario (§11 solo cubre creación/consulta puntual). `/wardrobe`, `/outfits` (vista inicial sin filtros) y `/try-on/history` requieren un endpoint tipo `GET /api/v1/garments?user_id=`, `GET /api/v1/outfits?user_id=` y `GET /api/v1/vton/jobs?user_id=` respectivamente. Se documenta aquí como pendiente explícito — no se asume su forma para no violar la regla de "no inventar campos no listados" de `CLAUDE.md` §8.
 
-**Ver `openspec/specs/08-api-contract-gaps.md`** para el contrato consolidado de estos gaps (más el de asociación de catálogo cápsula y sincronización de identidad Supabase↔`User`), con dueño, fase de corte por gap y proceso de cierre — esta nota se mantiene como referencia local, esa spec es la fuente única de verdad sobre su estado.
+**Ver `openspec/specs/frontend/api-contract-gaps/spec.md`** para el contrato consolidado de estos gaps (más el de asociación de catálogo cápsula y sincronización de identidad Supabase↔`User`), con dueño, fase de corte por gap y proceso de cierre — esta nota se mantiene como referencia local, esa spec es la fuente única de verdad sobre su estado.
+
+**Actualización (2026-08-26):** `docs/context/backend-plan.md` §6-7 ya propone el contrato concreto que cierra los 5 gaps (G1-G5), incluyendo el trigger de base de datos para la sincronización de identidad y el endpoint de adopción de catálogo cápsula. Sigue pendiente de implementación real, pero deja de ser un contrato "por definir" — es el documento hermano de este (`frontend-plan.md`) del lado backend, y ambos deben mantenerse cruzados en cualquier cambio futuro de contrato.
 
 ---
 
@@ -397,6 +401,8 @@ Mapeo semántico por categoría de prenda (`Shirt`, `Footprints` para calzado, e
 - `/wardrobe` y `/outfits` con scroll virtualizado o paginación si el armario supera ~50 items (evita jank en grids de imagen pesada).
 - LCP objetivo < 2.5s en `/` y `/wardrobe` en conexión 4G simulada.
 - Polling de VTON (`refetchInterval`) se pausa automáticamente si la pestaña pierde foco (`visibilitychange`) y se reanuda al volver, para no gastar batería/datos innecesariamente en mobile.
+- **Subida por lote con techo de concurrencia** *(añadido — hallazgo de auditoría QA, `openspec/specs/frontend/wardrobe-flow/spec.md` §2.3.1)*: 4-6 subidas simultáneas, el resto en cola visible (estado `queued`) — evita disparar decenas de `multipart/form-data` a la vez cuando el onboarding sube un armario completo.
+- **Doble-submit bloqueado en toda mutación costosa o de identidad** *(añadido — hallazgo de auditoría QA)*: el CTA se deshabilita mientras la mutación está `pending`. Aplica a `AuthForm` (`openspec/specs/frontend/landing-and-auth-flow/spec.md` §5) y a "Generar prueba virtual" (`openspec/specs/frontend/vton-flow/spec.md` §2.1) — es un principio transversal, no una regla local de un solo flujo.
 
 ---
 

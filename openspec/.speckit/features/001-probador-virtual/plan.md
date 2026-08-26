@@ -1,5 +1,13 @@
 # Plan Técnico — Feature 001: Probador Virtual
 
+> **⚠️ SUPERSEDED — plataforma y stack ya no vigentes.** Este documento eligió **app móvil React Native + AWS (SageMaker/RDS/S3/SQS)**. La dirección actual del proyecto, formalizada en `docs/context/plan-base.md` (§6.1) y desarrollada en detalle en `openspec/specs/` (00-08), es **aplicación web Next.js + Supabase** (Auth, Postgres+pgvector) con inferencia VTON vía API gestionada (Replicate/RunPod) en vez de SageMaker propio.
+>
+> **Por qué queda esta nota en vez de borrar el archivo:** `constitution.md` §5 exige que toda decisión de arquitectura quede trazable — este documento es la evidencia de la decisión anterior y el motivo de compararla, no basura a eliminar. El pivote de móvil a web ocurrió entre el commit `9fecf33` (este plan) y `6c89b64` (creación de `plan-base.md` y `openspec/`) sin una entrada explícita de decisión en ese momento; esta nota registra el pivote retroactivamente, según lo acordado con el Product Owner (2026-08-24).
+>
+> **Sigue vigente de este documento** (no depende de la plataforma): las user stories y FRs de `specify.md`, los edge cases de privacidad de foto de usuario, y la justificación de "modelo pre-entrenado + fine-tuning" — todo lo específico de infraestructura (React Native, SageMaker, RDS, SQS) está reemplazado por `plan-base.md` §6.1 y `openspec/specs/frontend/api-client-and-schemas/spec.md`.
+>
+> Si el equipo no ratifica este pivote en la próxima ceremonia (registrarlo en ClickUp/GitHub por `constitution.md` §5), este documento vuelve a ser la fuente de verdad y `openspec/specs/` debe reescribirse.
+
 ## Stack Elegido
 
 | Capa | Tecnología | Notas |

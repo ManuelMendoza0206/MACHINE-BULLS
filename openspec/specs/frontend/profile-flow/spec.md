@@ -1,8 +1,29 @@
+## Purpose
+Muestra los datos del usuario autenticado, permite fijar una estética por defecto que prefiltra las recomendaciones de outfits, y provee cierre de sesión seguro.
+
+## Requirements
+
+### Requirement: Perfil de solo lectura donde no existe endpoint de persistencia
+El sistema SHALL no ofrecer edición de nombre o email mientras el backend no exponga un endpoint de actualización de usuario.
+
+#### Scenario: Visita al perfil sin endpoint de edición disponible
+- **WHEN** el usuario visita `/profile`
+- **THEN** no se muestra ningún control de edición para `name` o `email`
+
+### Requirement: Cierre de sesión requiere confirmación explícita
+El sistema SHALL exigir una confirmación antes de ejecutar el cierre de sesión.
+
+#### Scenario: Click en cerrar sesión
+- **WHEN** el usuario hace click en "Cerrar sesión"
+- **THEN** se muestra un diálogo de confirmación y solo el botón de confirmar invoca el cierre de sesión real
+
+---
+
 # Spec 07 — Profile Flow
 
 **Estado:** Draft para implementación · **Depende de:** spec 00, spec 01, spec 05, spec 06 (`useAuth()`, Supabase Auth) · **Consumido por:** spec 03 (lee `defaultAesthetic` como filtro inicial)
 
-Deriva de `docs/frontend-plan.md` §4.9. Cubre la ruta `/profile`.
+Deriva de `docs/context/frontend-plan.md` §4.9. Cubre la ruta `/profile`.
 
 ---
 
@@ -46,7 +67,7 @@ interface ProfileHeaderProps {
   email: string;
   createdAt: string; // ISO date, formateado como "Miembro desde {mes año}"
 }
-// Solo lectura — no hay endpoint de actualización de User en base-plan.MD §11 (ver gap §6)
+// Solo lectura — no hay endpoint de actualización de User en plan-base.md §11 (ver gap §6)
 
 // src/features/profile/components/DefaultAestheticSelector.tsx
 interface DefaultAestheticSelectorProps {
@@ -153,8 +174,8 @@ Click "Cerrar sesión" ──► Dialog de confirmación
 
 ## 6. Gaps Explícitos
 
-1. **Sin endpoint de actualización de `User`:** `base-plan.MD` §11 no define ningún `PATCH`/`PUT` sobre `User`. Por eso `ProfileHeader` es deliberadamente de solo lectura — implementar campos editables de nombre/email sin backend que los persista violaría la regla de "cero código funcional sin contrato real" de `CLAUDE.md`.
-2. **`defaultAesthetic` no existe en el schema de `User`** (`base-plan.MD` §10.1 solo lista `id, email, name, created_at`). Se implementa como preferencia **local al navegador** (`localStorage`), explícitamente no sincronizada entre dispositivos. **Acción de seguimiento:** si el backend agrega este campo a `User`, esta spec debe actualizarse para leer/escribir vía API en vez de `localStorage`, y esa migración debe preservar (no descartar) el valor ya guardado localmente en el primer sync.
+1. **Sin endpoint de actualización de `User`:** `plan-base.md` §11 no define ningún `PATCH`/`PUT` sobre `User`. Por eso `ProfileHeader` es deliberadamente de solo lectura — implementar campos editables de nombre/email sin backend que los persista violaría la regla de "cero código funcional sin contrato real" de `CLAUDE.md`.
+2. **`defaultAesthetic` no existe en el schema de `User`** (`plan-base.md` §10.1 solo lista `id, email, name, created_at`). Se implementa como preferencia **local al navegador** (`localStorage`), explícitamente no sincronizada entre dispositivos. **Acción de seguimiento:** si el backend agrega este campo a `User`, esta spec debe actualizarse para leer/escribir vía API en vez de `localStorage`, y esa migración debe preservar (no descartar) el valor ya guardado localmente en el primer sync.
 3. Esta spec consume `useAuth()` tal como lo implementa spec 06 (Supabase Auth) — sin lógica de proveedor propia aquí, solo el contrato.
 
 Estos dos gaps son distintos de los cinco consolidados en `specs/08-api-contract-gaps.md` (que cubren listados y sincronización de identidad, no actualización de perfil) — se mantienen documentados localmente porque son específicos de esta spec, sin efecto cascada sobre otras pantallas.

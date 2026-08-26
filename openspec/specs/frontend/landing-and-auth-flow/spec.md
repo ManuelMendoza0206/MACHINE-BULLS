@@ -1,8 +1,29 @@
+## Purpose
+Comunica la propuesta de valor de StyleMe en la landing pública y provee autenticación (email + contraseña, con espacio para OAuth futuro) delegada a Supabase Auth.
+
+## Requirements
+
+### Requirement: Rutas protegidas exigen sesión válida
+El sistema SHALL redirigir a `/login` cualquier intento de acceso a una ruta protegida sin sesión activa.
+
+#### Scenario: Acceso sin sesión a ruta protegida
+- **WHEN** un usuario sin sesión intenta acceder a `/wardrobe`, `/outfits`, `/try-on` o `/profile`
+- **THEN** el middleware redirige a `/login` incluyendo la ruta original como `redirectTo`
+
+### Requirement: Mensajes de error de login no revelan cuál credencial falló
+El sistema SHALL mostrar un mensaje genérico ante credenciales inválidas, sin distinguir email inexistente de contraseña incorrecta.
+
+#### Scenario: Login con credenciales inválidas
+- **WHEN** el usuario intenta iniciar sesión con un email o contraseña incorrectos
+- **THEN** el mensaje mostrado es genérico y no distingue cuál de los dos campos fue el causante
+
+---
+
 # Spec 06 — Landing Page & Auth Flow
 
 **Estado:** Draft para implementación · **Depende de:** spec 00 (design system) · **Consumido por:** spec 05 (middleware protege las rutas que envuelve el shell), spec 07 (contrato `useAuth()`)
 
-Deriva de `docs/frontend-plan.md` §4.1 (Landing), §3.1 (entrada al onboarding), `base-plan.MD` §10.1 (entidad `User`). Cubre `/` (pública), `/login`, `/signup`.
+Deriva de `docs/context/frontend-plan.md` §4.1 (Landing), §3.1 (entrada al onboarding), `plan-base.md` §10.1 (entidad `User`). Cubre `/` (pública), `/login`, `/signup`.
 
 ---
 
@@ -13,8 +34,8 @@ Deriva de `docs/frontend-plan.md` §4.1 (Landing), §3.1 (entrada al onboarding)
 ### 1.1 Decisión de proveedor de autenticación [Decisión de diseño, confirmada]
 
 Se usa **Supabase Auth** en vez de una implementación de credenciales propia. Justificación:
-1. `base-plan.MD` §10.1 define `User` sin `password_hash` — indica que el backend no está diseñado para verificar credenciales él mismo.
-2. `base-plan.MD` §6.1 ya compromete el stack a **PostgreSQL + pgvector** — exactamente la combinación que Supabase provee de forma gestionada (Postgres + pgvector + Auth + Storage), lo que minimiza infraestructura adicional a coordinar con el equipo backend.
+1. `plan-base.md` §10.1 define `User` sin `password_hash` — indica que el backend no está diseñado para verificar credenciales él mismo.
+2. `plan-base.md` §6.1 ya compromete el stack a **PostgreSQL + pgvector** — exactamente la combinación que Supabase provee de forma gestionada (Postgres + pgvector + Auth + Storage), lo que minimiza infraestructura adicional a coordinar con el equipo backend.
 3. Provee out-of-the-box: verificación de email, recuperación de contraseña, y una ruta directa a OAuth (Google, etc.) sin trabajo adicional de frontend cuando se decida habilitarlo.
 
 **SLA de rendimiento:**
@@ -136,7 +157,7 @@ signUpWithEmail(form) ──► supabase.auth.signUp({ email, password, options:
                 │
                 v
         [GAP — ver §6] reconciliación con la tabla `User` propia del backend
-        (base-plan.MD §10.1) — requiere que exista una fila correspondiente
+        (plan-base.md §10.1) — requiere que exista una fila correspondiente
         con el mismo id antes de que /garments/upload u /outfits/recommend
         puedan asociar datos a este usuario
                 │
@@ -224,9 +245,9 @@ CTA "Empezar" — Client Component delgado que lee useAuth().status tras hidrata
 
 ## 6. Gap Explícito (crítico, bloqueante para integración real)
 
-`base-plan.MD` §10.1 define una tabla `User` propia del backend (`id, email, name, created_at`), separada de `auth.users` de Supabase. **Ningún endpoint en §11 sincroniza ambas.** Debe resolverse con el equipo backend antes de que el signup real funcione end-to-end — dos alternativas:
+`plan-base.md` §10.1 define una tabla `User` propia del backend (`id, email, name, created_at`), separada de `auth.users` de Supabase. **Ningún endpoint en §11 sincroniza ambas.** Debe resolverse con el equipo backend antes de que el signup real funcione end-to-end — dos alternativas:
 
 1. **Trigger a nivel de base de datos (ruta preferida, recomendación de auditoría agosto 2026):** dado que ambos (backend y Supabase Auth) comparten el mismo Postgres, un trigger en `auth.users` (`AFTER INSERT`) inserta automáticamente la fila correspondiente en la tabla `User` del backend con el mismo `id`. Preferible sobre la alternativa de endpoint porque elimina una clase entera de fallos que un mecanismo HTTP no elimina (reintentos de red, orden de operaciones, fallos parciales de una llamada adicional) — cero llamadas adicionales desde el frontend, consistencia garantizada a nivel de DB.
-2. **Endpoint de sincronización explícito** (`POST /api/v1/users/sync`, no listado en `base-plan.MD` §11): el frontend lo invoca una vez tras `onSuccess` del signup, antes de redirigir a `/onboarding`. Alternativa válida si el equipo backend la prefiere, pero no es la ruta recomendada por esta spec.
+2. **Endpoint de sincronización explícito** (`POST /api/v1/users/sync`, no listado en `plan-base.md` §11): el frontend lo invoca una vez tras `onSuccess` del signup, antes de redirigir a `/onboarding`. Alternativa válida si el equipo backend la prefiere, pero no es la ruta recomendada por esta spec.
 
 Mientras no se confirme cuál, `signUpWithEmail` (§2.4) debe implementarse de forma que ambas alternativas sean *swappable* sin tocar `AuthForm`: la reconciliación es responsabilidad exclusiva de la función de API, no del componente. **Este es el gap con mayor efecto cascada de los documentados en `specs/08-api-contract-gaps.md` (G5)** — sin `user_id` confiable, ni `/garments/upload` ni `/outfits/recommend` pueden asociar datos de forma consistente; su fase de corte recomendada es antes de Fase 1, no de Fase 2 como los demás gaps de API.

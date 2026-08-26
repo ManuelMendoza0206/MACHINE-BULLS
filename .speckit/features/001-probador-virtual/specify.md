@@ -1,5 +1,7 @@
 # Feature 001: Probador Virtual
 
+> **Nota de vigencia (2026-08-24):** las user stories, requisitos funcionales y edge cases de este documento siguen vigentes y son agnósticos de plataforma. Su companion técnico original, `plan.md` (React Native + AWS), quedó **superseded** por la decisión actual de plataforma (Next.js web + Supabase) — ver la nota en ese archivo y `openspec/specs/frontend/vton-flow/spec.md` para el diseño vigente de este flujo.
+
 ## Resumen
 
 Permitir que un usuario suba su armario (prendas propias o del catálogo del comercio) y una foto suya, y visualizar cómo le quedarían prendas específicas que él mismo elige — sin necesidad de probárselas físicamente.

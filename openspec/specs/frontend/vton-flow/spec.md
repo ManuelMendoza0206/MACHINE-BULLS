@@ -1,14 +1,42 @@
+## Purpose
+Captura/selecciona la foto del usuario, dispara el trabajo de generación VTON, comunica honestamente el progreso de un proceso asíncrono que puede tardar más de 15 segundos, y presenta el resultado o el fallo de forma accionable.
+
+## Requirements
+
+### Requirement: Polling con backoff y timeout local sin cancelar el job
+El sistema SHALL consultar el estado de un `VTONJob` con backoff exponencial y un techo de tiempo, sin cancelar el job en backend al alcanzar el timeout.
+
+#### Scenario: Timeout de UI alcanzado
+- **WHEN** el polling alcanza el techo de tiempo configurado sin que el job llegue a un estado terminal
+- **THEN** la UI muestra un estado de timeout local, y el job sigue activo en backend, consultable manualmente después
+
+### Requirement: Protección contra doble-submit en la mutación más costosa
+El sistema SHALL impedir que un doble click dispare dos trabajos VTON simultáneos para la misma solicitud.
+
+#### Scenario: Doble click en el CTA de generación
+- **WHEN** el usuario hace doble click en "Generar prueba virtual" antes de que la primera respuesta resuelva
+- **THEN** solo se ejecuta una llamada a la creación del trabajo VTON
+
+### Requirement: Reuso de resultados cacheados
+El sistema SHALL evitar generar un nuevo trabajo VTON si ya existe un resultado completado para la misma combinación de outfit y foto en la sesión.
+
+#### Scenario: Combinación ya generada
+- **WHEN** el usuario solicita el mismo par (outfit, foto) que ya generó un resultado completado en esta sesión
+- **THEN** se navega directo al resultado cacheado sin crear un nuevo trabajo
+
+---
+
 # Spec 04 — Virtual Try-On (VTON) Flow
 
 **Estado:** Draft para implementación · **Depende de:** spec 00, spec 01, spec 03 (recibe `outfitId`) · **Consumido por:** ninguna
 
-Deriva de `docs/frontend-plan.md` §3.4 (Flujo D — el más crítico), §4.8, §7 (mapeo de riesgos), `CLAUDE.md` §5 (`VtonJobTimeoutError`). Cubre rutas `/try-on`, `/try-on/jobs/[jobId]`, `/try-on/history`.
+Deriva de `docs/context/frontend-plan.md` §3.4 (Flujo D — el más crítico), §4.8, §7 (mapeo de riesgos), `CLAUDE.md` §5 (`VtonJobTimeoutError`). Cubre rutas `/try-on`, `/try-on/jobs/[jobId]`, `/try-on/history`.
 
 ---
 
 ## 1. Propósito y SLA
 
-**Propósito:** capturar/seleccionar la foto del usuario, disparar el trabajo de generación VTON, comunicar honestamente el progreso de un proceso asíncrono que puede tardar >15s (§8 de `base-plan.MD`), y presentar el resultado o el fallo de forma accionable.
+**Propósito:** capturar/seleccionar la foto del usuario, disparar el trabajo de generación VTON, comunicar honestamente el progreso de un proceso asíncrono que puede tardar >15s (§8 de `plan-base.md`), y presentar el resultado o el fallo de forma accionable.
 
 **SLA de rendimiento y comportamiento asíncrono:**
 - Validación de blur + guía de encuadre en cliente antes de habilitar el submit (reutiliza `detectBlur` de spec 02 §2.2).
@@ -34,7 +62,7 @@ export function useCreateVtonJob(): UseCreateVtonJobResult;
 ```
 Antes de invocar `createVtonJob` (spec 01 §2.4), consulta `checkCachedVtonResult(outfitId, userImageHash)` (§2.4) — si hay HIT, no ejecuta la mutación, expone `data` sintético apuntando al job cacheado.
 
-**Protección contra doble-submit (hallazgo de auditoría, agosto 2026):** el CTA "Generar prueba virtual" (`UserPhotoCapture`, §2.5) SHALL deshabilitarse mientras `status === 'pending'`, evitando disparar dos `POST /vton/try-on` concurrentes por doble click. `POST /vton/try-on` es la mutación de mayor costo del sistema (inferencia GPU, `base-plan.md` §8) — recibe, como mínimo, la misma protección que ya es obligatoria para `AuthForm` (spec 06 §5).
+**Protección contra doble-submit (hallazgo de auditoría, agosto 2026):** el CTA "Generar prueba virtual" (`UserPhotoCapture`, §2.5) SHALL deshabilitarse mientras `status === 'pending'`, evitando disparar dos `POST /vton/try-on` concurrentes por doble click. `POST /vton/try-on` es la mutación de mayor costo del sistema (inferencia GPU, `plan-base.md` §8) — recibe, como mínimo, la misma protección que ya es obligatoria para `AuthForm` (spec 06 §5).
 
 ### 2.2 Hook de polling (`src/features/vton/hooks/useVtonJobStatus.ts`) — núcleo de esta spec
 
@@ -95,7 +123,7 @@ export async function hashUserImage(file: File): Promise<string>; // SHA-256 ví
 export function checkCachedVtonResult(outfitId: string, userImageHash: string): VtonJobStatusResponse | undefined;
 export function storeCachedVtonResult(outfitId: string, userImageHash: string, result: VtonJobStatusResponse): void;
 ```
-Almacenamiento: `Map` en memoria respaldado por TanStack Query cache (clave `['vton', 'cache', outfitId, userImageHash]`) — vive solo durante la sesión del navegador, no se persiste (el backend es la fuente de verdad de caché a largo plazo, según `base-plan.MD` §8).
+Almacenamiento: `Map` en memoria respaldado por TanStack Query cache (clave `['vton', 'cache', outfitId, userImageHash]`) — vive solo durante la sesión del navegador, no se persiste (el backend es la fuente de verdad de caché a largo plazo, según `plan-base.md` §8).
 
 ### 2.5 Componentes
 
@@ -271,7 +299,7 @@ GET (listado de VTONJob del usuario, ver gap §6)
 ## 5. Criterios de Aceptación
 
 - [ ] `useVtonJobStatus` implementa exactamente el algoritmo de backoff/timeout de §2.2, cubierto por tests con fake timers.
-- [ ] `VtonJobTimeoutError` se lanza únicamente tras alcanzar `timeoutMs` con el job aún no terminal, y **nunca** cancela el job en backend (no se llama a ningún endpoint de cancelación — no existe en `base-plan.MD` §11).
+- [ ] `VtonJobTimeoutError` se lanza únicamente tras alcanzar `timeoutMs` con el job aún no terminal, y **nunca** cancela el job en backend (no se llama a ningún endpoint de cancelación — no existe en `plan-base.md` §11).
 - [ ] Polling se pausa/reanuda correctamente según `document.visibilityState`.
 - [ ] `checkCachedVtonResult` evita una llamada de red duplicada para el mismo par `(outfit, foto)` en la misma sesión — verificado con aserción de contador de llamadas MSW.
 - [ ] `VtonFailedView` maneja tanto `error_message` presente como `null` sin mostrar texto roto.
@@ -288,11 +316,11 @@ GET (listado de VTONJob del usuario, ver gap §6)
 
 ## 6. Gap Explícito
 
-`base-plan.MD` §11 no define un endpoint de **listado** de `VTONJob` por usuario, necesario para `/try-on/history` (mismo tipo de gap que en spec 02 §6 y spec 03 §6). Se desarrolla contra mocks MSW documentados como tales; la conexión real queda bloqueada hasta confirmación de `GET /api/v1/vton/jobs?user_id=` (o equivalente) con el backend.
+`plan-base.md` §11 no define un endpoint de **listado** de `VTONJob` por usuario, necesario para `/try-on/history` (mismo tipo de gap que en spec 02 §6 y spec 03 §6). Se desarrolla contra mocks MSW documentados como tales; la conexión real queda bloqueada hasta confirmación de `GET /api/v1/vton/jobs?user_id=` (o equivalente) con el backend.
 
 Adicionalmente: el documento base no define un endpoint de **cancelación** de `VTONJob`. Por diseño, esta spec asume que un job iniciado no puede cancelarse desde el frontend — el timeout de UI (§2.2) es puramente una decisión de presentación local, nunca una operación de backend.
 
-**Ver `specs/08-api-contract-gaps.md` (G3)** para el estado consolidado del gap de listado. El gap de licenciamiento del proveedor de inferencia VTON (IDM-VTON/OOTDiffusion vía Replicate — modelos con licencia no comercial, hallazgo de auditoría agosto 2026) está documentado como riesgo de producto en `.speckit/.../constitution.md` §7 y `docs/context/base-plan.md` §8 — no es un gap de contrato de API, pero condiciona si `/try-on` es una feature permanente o un prototipo con alcance no comercial; se referencia aquí porque toda esta spec depende de la resolución de ese riesgo antes de Fase 3.
+**Ver `specs/08-api-contract-gaps.md` (G3)** para el estado consolidado del gap de listado. El gap de licenciamiento del proveedor de inferencia VTON (IDM-VTON/OOTDiffusion vía Replicate — modelos con licencia no comercial, hallazgo de auditoría agosto 2026) está documentado como riesgo de producto en `.speckit/.../constitution.md` §7 y `docs/context/plan-base.md` §8 — no es un gap de contrato de API, pero condiciona si `/try-on` es una feature permanente o un prototipo con alcance no comercial; se referencia aquí porque toda esta spec depende de la resolución de ese riesgo antes de Fase 3.
 
 ---
 

@@ -1,8 +1,22 @@
+## Purpose
+Consolida en un único documento, con dueño y criterio de cierre, los endpoints de backend que las specs de UI necesitan pero que el contrato de API todavía no define.
+
+## Requirements
+
+### Requirement: Ningún gap se resuelve inventando un contrato
+El sistema SHALL desarrollarse contra mocks MSW documentados mientras un gap de este documento permanezca abierto, sin llamadas reales a endpoints hipotéticos.
+
+#### Scenario: Gap abierto durante desarrollo
+- **WHEN** una spec de UI depende de un gap listado como pendiente en este documento
+- **THEN** su implementación usa mocks MSW explícitamente documentados como tales, nunca una llamada real al endpoint no confirmado
+
+---
+
 # Spec 08 — Contrato de API Pendiente (Gaps Consolidados)
 
 **Estado:** Draft para seguimiento · **Depende de:** ninguna · **Referenciado por:** specs 02, 03, 04, 06, 07
 
-Consolida en un único documento, con dueño y criterio de cierre, los endpoints de backend que las specs de UI necesitan pero que `docs/context/base-plan.md` §11 no define todavía. Nace de una auditoría externa de QA/arquitectura (agosto 2026) que encontró estos cinco gaps documentados de forma dispersa — cada uno en la sección "Gap Explícito" de su propia spec — sin un punto único de verdad para planificación de sprint. Este documento no reemplaza esas notas locales (se mantienen como referencia cruzada corta); es la fuente de verdad sobre el estado de cada gap.
+Consolida en un único documento, con dueño y criterio de cierre, los endpoints de backend que las specs de UI necesitan pero que `docs/context/plan-base.md` §11 no define todavía. Nace de una auditoría externa de QA/arquitectura (agosto 2026) que encontró estos cinco gaps documentados de forma dispersa — cada uno en la sección "Gap Explícito" de su propia spec — sin un punto único de verdad para planificación de sprint. Este documento no reemplaza esas notas locales (se mantienen como referencia cruzada corta); es la fuente de verdad sobre el estado de cada gap.
 
 **Regla no negociable, heredada de `CLAUDE.md` §8:** ningún gap de este documento se resuelve inventando un contrato. Toda spec de UI que dependa de un gap abierto se desarrolla contra mocks MSW documentados como tales. Ninguna llamada real a un endpoint hipotético se implementa en `src/features/*/api/` hasta que el gap se cierre aquí.
 
@@ -39,7 +53,7 @@ Consolida en un único documento, con dueño y criterio de cierre, los endpoints
 **Criterio de cierre:** confirmación del mecanismo exacto con backend antes de implementar la confirmación del paso 2 de onboarding contra datos reales.
 
 ### G5 — Sincronización de identidad `auth.users` ↔ `User`
-**Consumido por:** `specs/06-landing-and-auth-flow.md` §6. **Ruta preferida recomendada:** trigger de base de datos sobre `auth.users` (`AFTER INSERT`) que inserta la fila correspondiente en `User` con el mismo `id` — preferible a un endpoint HTTP de sincronización porque ambos sistemas ya comparten el mismo Postgres (`base-plan.md` §6.1), lo que elimina una clase entera de fallos de sincronización (reintentos, orden de operaciones, fallos parciales) que un endpoint adicional no elimina.
+**Consumido por:** `specs/06-landing-and-auth-flow.md` §6. **Ruta preferida recomendada:** trigger de base de datos sobre `auth.users` (`AFTER INSERT`) que inserta la fila correspondiente en `User` con el mismo `id` — preferible a un endpoint HTTP de sincronización porque ambos sistemas ya comparten el mismo Postgres (`plan-base.md` §6.1), lo que elimina una clase entera de fallos de sincronización (reintentos, orden de operaciones, fallos parciales) que un endpoint adicional no elimina.
 **Criterio de cierre:** el equipo backend confirma la implementación del trigger (o, si opta por el endpoint alternativo, lo publica) — `signUpWithEmail` (spec 06 §2.4) ya está diseñado para que ambas rutas sean swappable sin tocar `AuthForm`.
 
 ---

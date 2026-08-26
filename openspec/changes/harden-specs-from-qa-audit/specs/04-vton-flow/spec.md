@@ -7,7 +7,7 @@ El CTA "Generar prueba virtual" SHALL deshabilitarse mientras `useCreateVtonJob(
 - **WHEN** el usuario hace doble click sobre "Generar prueba virtual" antes de que la primera solicitud resuelva
 - **THEN** solo se ejecuta una mutación `createVtonJob`, verificado por un test de integración que cuenta las llamadas MSW al endpoint (aserción de contador = 1), replicando el mismo estándar ya exigido para `AuthForm` en `specs/06-landing-and-auth-flow`
 
-**Justificación:** `POST /vton/try-on` es la mutación de mayor costo del sistema (inferencia GPU, `base-plan.md` §8) — debe recibir como mínimo la misma protección que ya es obligatoria para signup/login.
+**Justificación:** `POST /vton/try-on` es la mutación de mayor costo del sistema (inferencia GPU, `plan-base.md` §8) — debe recibir como mínimo la misma protección que ya es obligatoria para signup/login.
 
 ### Requirement: Alt text en las vistas de resultado y comparación VTON
 `VtonResultView` SHALL exponer un `alt` descriptivo tanto para la foto original como para el resultado generado (ej. "Foto original del usuario" / "Resultado con el outfit {estética} aplicado"), nunca `alt=""`, dado que es la pantalla de mayor peso visual del producto.

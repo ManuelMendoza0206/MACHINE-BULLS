@@ -1,6 +1,6 @@
 ## Purpose
 
-Consolida en un único contrato pendiente los endpoints de backend que las specs 02, 03, 04, 06 y 07 necesitan pero que `docs/context/base-plan.md` §11 no define todavía, para que dejen de resolverse de forma dispersa e implícita en cada spec de UI.
+Consolida en un único contrato pendiente los endpoints de backend que las specs 02, 03, 04, 06 y 07 necesitan pero que `docs/context/plan-base.md` §11 no define todavía, para que dejen de resolverse de forma dispersa e implícita en cada spec de UI.
 
 ## ADDED Requirements
 
@@ -12,7 +12,7 @@ El sistema SHALL exponer un endpoint que devuelva las prendas asociadas a un usu
 - **THEN** `specs/02-wardrobe-flow` reemplaza su tipo placeholder `GarmentSummary` por el schema Zod real y elimina la dependencia exclusiva de mocks MSW para `/wardrobe`
 
 #### Scenario: Backend no confirma antes de Fase 2
-- **WHEN** la Fase 2 del cronograma (`base-plan.md` §7.1) comienza sin este contrato confirmado
+- **WHEN** la Fase 2 del cronograma (`plan-base.md` §7.1) comienza sin este contrato confirmado
 - **THEN** el equipo escala el bloqueo explícitamente en la ceremonia de planificación del sprint, en vez de dejar `/wardrobe` conectado silenciosamente a datos simulados en el entregable de fase
 
 ### Requirement: Listado de outfits recomendados por usuario

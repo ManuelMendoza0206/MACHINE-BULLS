@@ -1,8 +1,12 @@
 # CLAUDE.md — StyleMe Frontend
 
-Memoria persistente del agente para el repositorio **`styleme-webapp`** (frontend de StyleMe). Este documento es la fuente de verdad operativa: toda sesión futura de Claude Code en este repo debe leerlo y respetarlo antes de escribir código.
+Memoria persistente del agente para el repositorio **`MACHINE-BULLS`** (frontend de StyleMe/StyleSync IA — proyecto de equipo, Taller de Sistemas Inteligentes). Este documento es la fuente de verdad operativa: toda sesión futura de Claude Code en este repo debe leerlo y respetarlo antes de escribir código.
 
-> **Alcance de este repositorio:** SOLO frontend (Next.js). El backend Python/FastAPI/ML descrito en `docs/base-plan.MD` (clasificador CLIP, motor de compatibilidad, pipeline VTON) vive en un repositorio/servicio separado y se consume aquí exclusivamente vía HTTP/JSON, según los contratos de la Sección 11 de `docs/base-plan.MD`.
+> **Alcance de este repositorio:** SOLO frontend (Next.js). El backend Python/FastAPI/ML descrito en `docs/context/plan-base.md` (clasificador CLIP, motor de compatibilidad, pipeline VTON) vive en un repositorio/servicio separado y se consume aquí exclusivamente vía HTTP/JSON, según los contratos de la Sección 11 de `docs/context/plan-base.md`.
+>
+> **Decisión de plataforma vigente [registrada retroactivamente]:** el frontend es una **aplicación web Next.js**, no la app móvil React Native descrita en el plan técnico anterior (`.speckit/features/001-probador-virtual/plan.md`, superseded — ver nota en ese archivo). Toda spec en `openspec/specs/` asume web.
+>
+> **Gobernanza del equipo (no negociable, `.speckit/constitution.md` §3):** rama `main` protegida, cero commits directos, todo cambio vía Pull Request con ≥1 revisor aprobando, y **declaración explícita de uso de IA en cada PR** (qué %/sección fue asistida y qué pruebas la validaron). Esto aplica también a sesiones de Claude Code: ningún cambio de esta sesión se fusiona a `main` sin ese proceso.
 
 ---
 
@@ -43,7 +47,7 @@ El frontend NO reimplementa lógica de dominio (clasificación, scoring cromáti
 
 El backend aún no existe en este momento del proyecto. Para que la integración futura no degrade el estándar:
 
-- Todo schema Zod que representa una respuesta del backend debe vivir en `src/schemas/api/` y **espejar exactamente** los modelos Pydantic descritos en la Sección 11 de `docs/base-plan.MD` (nombres de campo, tipos, enums, nullability).
+- Todo schema Zod que representa una respuesta del backend debe vivir en `src/schemas/api/` y **espejar exactamente** los modelos Pydantic descritos en la Sección 11 de `docs/context/plan-base.md` (nombres de campo, tipos, enums, nullability).
 - Cuando el backend exponga su OpenAPI schema, evaluar generación automática de tipos/Zod (ej. `openapi-zod-client`) en vez de mantenerlos a mano — dejar esta tarea explícitamente pendiente en un spec futuro, no improvisarla ad-hoc.
 - Ningún componente o hook debe asumir la forma de una respuesta sin pasarla por su schema Zod correspondiente. Un `parse` fallido se traduce siempre en un `ValidationError` tipado (ver §5), nunca en un fallo silencioso.
 - Los `job_id`, `status` enums (`pending|processing|completed|failed`) y demás valores literales deben tipar-se como Zod `enum`/`literal`, nunca como `string` genérico.
@@ -55,27 +59,35 @@ El backend aún no existe en este momento del proyecto. Para que la integración
 **Flujo obligatorio, sin excepciones:**
 
 ```
-SPEC (/specs/*.md)  →  TEST (falla en rojo)  →  CODE (src/)  →  REFACTOR
+SPEC (openspec/specs/*.md)  →  TEST (falla en rojo)  →  CODE (src/)  →  REFACTOR
 ```
 
-1. **SPEC primero:** ninguna función, componente, hook o store se implementa sin que exista antes un archivo en `/specs/` que defina su propósito, contrato (props/inputs/outputs tipados), casos de prueba y criterios de aceptación.
+1. **SPEC primero:** ninguna función, componente, hook o store se implementa sin que exista antes un archivo en `openspec/specs/` que defina su propósito, contrato (props/inputs/outputs tipados), casos de prueba y criterios de aceptación. Un cambio a una spec existente sigue el flujo del CLI de OpenSpec (`openspec/changes/<nombre>/proposal.md` + `design.md` + `tasks.md`, ver ejemplo real en `openspec/changes/harden-specs-from-qa-audit/`) antes de fusionarse en `openspec/specs/`.
 2. **TEST en rojo:** se escribe la prueba (Vitest/RTL o Playwright) derivada de la spec, y se confirma que falla antes de escribir la implementación.
 3. **CODE mínimo:** se implementa solo lo necesario para pasar la prueba, respetando tipado estricto y la arquitectura de carpetas (§4).
 4. **REFACTOR:** se limpia manteniendo la suite en verde. No se introduce alcance no cubierto por la spec.
 
-Está prohibido escribir código funcional en `src/` que no tenga spec y test asociados. Si el usuario pide una feature sin spec previa, la sesión debe primero proponer/generar la spec correspondiente en `/specs/` antes de tocar `src/`.
+Está prohibido escribir código funcional en `src/` que no tenga spec y test asociados. Si el usuario pide una feature sin spec previa, la sesión debe primero proponer/generar la spec correspondiente en `openspec/specs/` antes de tocar `src/`.
 
 ---
 
 ## 4. Estructura de Directorios
 
 ```
-styleme-webapp/
+MACHINE-BULLS/
 ├── CLAUDE.md
+├── .speckit/
+│   └── constitution.md           # Gobernanza del equipo (PR, DoD, riesgos) — ver §9 abajo
 ├── docs/
-│   └── base-plan.MD              # Documento fuente del proyecto completo (full-stack)
-├── specs/                        # Especificaciones SDD (frontend) — ver /specs/README.md
-├── src/
+│   ├── context/
+│   │   ├── plan-base.md          # Documento fuente del proyecto completo (full-stack)
+│   │   └── frontend-plan.md      # Planteamiento UX/flujos/design system del frontend
+│   └── clickup/                  # Team charter, priorización de casos, estructura de tablero
+├── openspec/
+│   ├── config.yaml
+│   ├── specs/                    # Especificaciones SDD (frontend) — fuente de verdad de contratos
+│   └── changes/                  # Propuestas de cambio de spec (proposal/design/tasks, CLI OpenSpec)
+├── src/                          # No existe aún — se crea solo tras spec (openspec/specs/) + test en rojo
 │   ├── app/                      # Next.js App Router: rutas, layouts, pages, route handlers
 │   ├── components/
 │   │   ├── ui/                   # shadcn/ui — primitivos generados
@@ -174,4 +186,19 @@ Antes de considerar cualquier feature "hecha": `npm run typecheck && npm run lin
 
 ## 8. Fuente de Verdad del Producto
 
-`docs/base-plan.MD` es el documento de planteamiento completo (full-stack) del proyecto. Este `CLAUDE.md` es su traducción operativa **solo para la porción frontend**. Ante cualquier ambigüedad sobre reglas de negocio (categorías de prenda, estéticas soportadas, reglas de armonía cromática, estados de un `VTONJob`), la fuente de verdad es `docs/base-plan.MD` §10-11 — no inventar campos ni estados no listados ahí.
+`docs/context/plan-base.md` es el documento de planteamiento completo (full-stack) del proyecto. Este `CLAUDE.md` es su traducción operativa **solo para la porción frontend**. Ante cualquier ambigüedad sobre reglas de negocio (categorías de prenda, estéticas soportadas, reglas de armonía cromática, estados de un `VTONJob`), la fuente de verdad es `docs/context/plan-base.md` §10-11 — no inventar campos ni estados no listados ahí.
+
+---
+
+## 9. Gobernanza del Equipo (vinculante, `.speckit/constitution.md`)
+
+Este repositorio pertenece a un equipo de 4 personas (Manuel Jiménez — Scrum Master, Leonardo Ibarra — Product Owner, Huascar Durán y Jaicel Velasco — Development Team) para un proyecto académico de 18 semanas. Reglas no negociables que rigen cómo se integra cualquier trabajo de esta sesión:
+
+- **Rama `main` protegida:** cero commits directos. Todo cambio entra vía Pull Request.
+- **1 revisor mínimo** antes de merge.
+- **Declaración de uso de IA obligatoria en cada PR:** qué % o sección fue asistida por IA (incluye Claude Code) y qué pruebas validaron ese trabajo. La responsabilidad técnica es siempre del equipo, nunca de la IA — ver commit `64be0d2` en `openspec/` para el formato de declaración ya usado en este repo.
+- **Rechazo automático de PR** si contiene: credenciales/API keys/tokens/datos personales sensibles, pruebas fallidas, o criterios de aceptación incompletos.
+- **Trazabilidad:** toda decisión de alcance, datos, arquitectura o evaluación debe quedar registrada en ClickUp o GitHub — si no está registrada, no cuenta como avance del equipo (`.speckit/constitution.md` §5).
+- **Prohibido** ingresar secretos o datos personales en prompts de herramientas de IA (`.speckit/constitution.md` §3, §6).
+
+Cualquier sesión de Claude Code que trabaje en este repo debe operar dentro de estas reglas — nunca asumir autorización implícita para saltárselas por conveniencia (ej. commitear directo a `main`, u omitir la declaración de IA en un PR).

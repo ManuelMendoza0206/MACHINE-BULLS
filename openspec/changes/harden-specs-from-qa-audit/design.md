@@ -32,12 +32,12 @@ Alternativa considerada: dejarlo como nota de implementación para cuando se esc
 
 - **[Riesgo]** Los deltas de este cambio usan el formato `### Requirement` / `#### Scenario` del schema `spec-driven` de OpenSpec, mientras que las 8 specs originales (00-07) usan un formato narrativo distinto (§ numerados, tablas, sin bloques `### Requirement`) heredado de la migración inicial del repositorio `styleme-webapp`. → **Mitigación**: al fusionar (`openspec archive` o edición manual), estos requisitos se integran como nuevas subsecciones dentro del formato narrativo existente de cada spec (ej. nueva entrada en "Criterios de Aceptación" + su tabla de estados si aplica), preservando la consistencia visual del documento en vez de mezclar dos convenciones dentro del mismo archivo.
 - **[Riesgo]** La recomendación D3 (trigger de base de datos) es una opinión técnica de este equipo frontend sobre una decisión que pertenece, en última instancia, al equipo backend. → **Mitigación**: se documenta como preferencia justificada y reversible (criterio de aceptación exige swappability), no como decisión cerrada — el gap sigue marcado como pendiente de confirmación en `06-landing-and-auth-flow` §6 original.
-- **[Riesgo]** El riesgo de licenciamiento VTON afecta un documento (`base-plan.md`) que describe el sistema full-stack completo, fuera del alcance exclusivo de este repositorio frontend. → **Mitigación**: se añade únicamente como entrada de riesgo documentada (constitution.md §7 y base-plan.md §8), sin prescribir la solución — la resolución queda para el equipo completo, no solo frontend.
+- **[Riesgo]** El riesgo de licenciamiento VTON afecta un documento (`plan-base.md`) que describe el sistema full-stack completo, fuera del alcance exclusivo de este repositorio frontend. → **Mitigación**: se añade únicamente como entrada de riesgo documentada (constitution.md §7 y plan-base.md §8), sin prescribir la solución — la resolución queda para el equipo completo, no solo frontend.
 
 ## Migration Plan
 
 1. Aplicar los deltas de `specs/02, 03, 04, 06, 08` a sus archivos correspondientes en `openspec/specs/`, integrados en el formato narrativo existente.
-2. Añadir la entrada de riesgo de licenciamiento VTON a `.speckit/.../constitution.md` §7 y a `docs/context/base-plan.md` §8.
+2. Añadir la entrada de riesgo de licenciamiento VTON a `.speckit/.../constitution.md` §7 y a `docs/context/plan-base.md` §8.
 3. Actualizar las referencias cruzadas de gap en specs 02 §6, 03 §6, 04 §6, 06 §6, 07 §6 para apuntar a `08-api-contract-gaps` como fuente única.
 4. Commit en la rama `audit/qa-hardening-improvements`; no se hace push ni merge a `main` — la constitución del proyecto (§3) exige PR con al menos 1 revisor, por lo que este cambio se entrega como rama lista para PR, no como cambio directo a `main`.
 

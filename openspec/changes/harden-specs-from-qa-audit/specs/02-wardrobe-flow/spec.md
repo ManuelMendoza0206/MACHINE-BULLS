@@ -16,7 +16,7 @@ El catálogo "Básicos StyleMe" SHALL cumplir un criterio de curación verificab
 
 #### Scenario: Cobertura de categorías mínima
 - **WHEN** se publica o actualiza el catálogo cápsula
-- **THEN** contiene al menos una prenda por cada posición de outfit definida en `base-plan.md` §10.1 (`top`, `bottom`, `footwear`, `outerwear`) y por cada estética objetivo listada en el documento base, de forma que ningún filtro de `/outfits` quede sin combinaciones posibles usando solo prendas cápsula
+- **THEN** contiene al menos una prenda por cada posición de outfit definida en `plan-base.md` §10.1 (`top`, `bottom`, `footwear`, `outerwear`) y por cada estética objetivo listada en el documento base, de forma que ningún filtro de `/outfits` quede sin combinaciones posibles usando solo prendas cápsula
 
 #### Scenario: Consistencia visual con la identidad de marca
 - **WHEN** se revisa una prenda candidata para el catálogo cápsula
