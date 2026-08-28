@@ -2,6 +2,13 @@ schema: spec-driven
 githubCopilot:
   cloudAgent: true
 
+context: |
+  Tech stack: Next.js 15 (web) + React Native Expo (mobile) + Python 3.11 FastAPI (backend), TypeScript strict, Pydantic v2, PostgreSQL/RDS, S3, SQS, SageMaker (IDM-VTON/OOTDiffusion), TanStack Query + Zustand + Zod, Vitest + Playwright/Maestro, Ruff + mypy --strict + pytest.
+  Domain: Moda masculina — problema "qué me pongo". Plataforma web + móvil que digitaliza armario, recomienda outfits por estética/color con motor propio (no wrapper de API externa), y probador virtual VTON con pipeline MLOps en la nube.
+  Monorepo: web/ (Next.js) + mobile/ (Expo RN) + backend/ (FastAPI) — contratos HTTP/JSON en docs/base-plan.MD §11, fuente de verdad Pydantic, Zod espeja.
+  Constitution: openspec/.speckit/constitution.md — 4 fases DOME (1 Clasificación, 2 Compatibilidad, 3 VTON, 4 Lanzamiento UI), main protegida, 1 revisor humano por PR, IA nunca aprueba PR, auditoría obligatoria de código IA, 12h respuesta, 24h regla de bloqueo, 18 semanas.
+  Team: Manuel Delgadillo, Jaicel Jesús, Huascar Durán Avendaño, Leonardo Ibarra López.
+
 # Project context (optional)
 # This is shown to AI when creating artifacts.
 # Add your tech stack, conventions, style guides, domain knowledge, etc.

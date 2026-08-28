@@ -1,8 +1,8 @@
-# CLAUDE.md — StyleMe Fullstack (React Native + FastAPI)
+# CLAUDE.md — StyleMe Fullstack (Web + Móvil + FastAPI)
 
 Memoria persistente del agente para el repositorio **`MACHINE-BULLS`** (StyleMe / StyleSync IA). Este documento es la fuente de verdad operativa: toda sesión futura de Claude Code / OpenCode en este repo debe leerlo y respetarlo antes de escribir código.
 
-> **Alcance de este repositorio:** Monorepo fullstack — **App móvil React Native** + **Backend Python FastAPI** + pipeline VTON/MLOps. El frontend móvil y el backend viven en el mismo repo (directorios separados) y se comunican exclusivamente vía HTTP/JSON según los contratos de `docs/base-plan.MD` §11 y `openspec/.speckit/features/001-probador-virtual/plan.md`. No hay repositorio separado.
+> **Alcance de este repositorio:** Monorepo fullstack — **Plataforma web (Next.js)** + **App móvil (React Native / Expo)** + **Backend Python FastAPI** + pipeline VTON/MLOps. Ambos frontends y el backend viven en el mismo repo (directorios separados) y se comunican exclusivamente vía HTTP/JSON según los contratos de `docs/base-plan.MD` §11 y `openspec/.speckit/features/001-probador-virtual/plan.md`. No hay repositorio separado. Web y móvil comparten el mismo backend y contratos.
 
 ---
 
@@ -10,12 +10,15 @@ Memoria persistente del agente para el repositorio **`MACHINE-BULLS`** (StyleMe 
 
 **StyleMe** es una plataforma que permite a un usuario digitalizar su guardarropa, recibir combinaciones de outfits basadas en teoría del color y compatibilidad aprendida, y visualizar el resultado sobre su propia foto mediante un probador virtual (VTON) asíncrono.
 
-Este repositorio implementa **ambas caras** del producto:
+Este repositorio implementa **tres caras** del producto:
 
 | Capa | Responsabilidad | Se comunica vía |
 | :--- | :--- | :--- |
-| **App móvil (React Native)** | Digitalizar guardarropa (foto de prenda), subir foto base del usuario, seleccionar prendas y visualizar VTON | HTTP/JSON contra el backend |
+| **Plataforma web (Next.js)** | Plataforma principal "qué me pongo" — digitalizar armario, recomendar outfits y VTON en navegador | HTTP/JSON contra el backend |
+| **App móvil (React Native)** | Misma experiencia en iOS/Android — captura de prendas con cámara, selección y VTON | HTTP/JSON contra el mismo backend |
 | **Backend (Python FastAPI)** | Validación de imágenes, clasificación, scoring cromático/embedding, encolado en SQS, orquestación de inferencia VTON en SageMaker, persistencia en RDS/S3 | Expone 3 familias de endpoints |
+
+**Objetivo central (inteligencia propia):** resolver "qué me pongo" en moda masculina entregando inteligencia propia (motor de recomendación y reglas estéticas/color de creación propia), no solo conectar servicios de terceros. La lógica central del motor de compatibilidad es de creación propia — ver Constitution §2 y Team Charter.
 
 | Dominio | Endpoint backend (contrato) | Naturaleza |
 | :--- | :--- | :--- |
@@ -29,24 +32,41 @@ El frontend NO reimplementa lógica de dominio (clasificación, scoring cromáti
 
 ## 2. Stack Tecnológico (Decisión Cerrada)
 
-### 2.0 Frontend — App Móvil React Native
+### 2.0 Frontend — Plataforma Web (Next.js)
+
+| Categoría | Tecnología | Notas |
+| :--- | :--- | :--- |
+| Framework | **Next.js 14/15, App Router** | Server Components por defecto; Client Components solo donde haya interactividad/estado. |
+| Lenguaje | TypeScript, **modo `strict` obligatorio** | Equivalente al mandato de type hints estrictos del backend. |
+| Estilos | Tailwind CSS | Utility-first, sin CSS-in-JS. |
+| Componentes UI | shadcn/ui (Radix UI + Tailwind) | Viven en `src/components/ui` (o `web/components/ui`), no en `node_modules` — se auditan como código propio. |
+| Iconos | Lucide Icons | Según documento base. |
+| Estado de servidor / caché | TanStack Query (React Query) | Toda comunicación con el backend pasa por hooks de TanStack Query, nunca `fetch` directo en componentes. |
+| Estado de UI global | Zustand | Solo para estado de cliente puro (wizard onboarding, selección prendas). Nunca para cachear datos del servidor. |
+| Validación de contratos | Zod | Equivalente web de Pydantic v2: todo payload red↔app se parsea con Zod. Cero `as` / cero `any` de `fetch`. |
+| Testing unitario/integración | Vitest + React Testing Library | Rápido, nativo ESM/TS, compatible con Next.js. |
+| Testing E2E | Playwright | Flujos críticos: upload prenda, recomendación outfit, ciclo VTON completo. |
+| Linting | ESLint (`next/core-web-vitals` + `typescript-eslint` strict) | Cero warnings tolerados en CI. |
+| Formateo | Prettier | Integrado con ESLint, sin reglas de formato duplicadas. |
+
+### 2.1 Frontend — App Móvil React Native
 
 | Categoría | Tecnología | Notas |
 | :--- | :--- | :--- |
 | Framework | **React Native + Expo** (Expo Router o React Navigation) | Un solo codebase iOS/Android. Recomendado en `openspec/.speckit/features/001-probador-virtual/plan.md` sobre Flutter. |
 | Lenguaje | TypeScript, **modo `strict` obligatorio** | Equivalente móvil al mandato de type hints estrictos del backend. |
-| Estilos | NativeWind (Tailwind para RN) o StyleSheet | Utility-first sin CSS-in-JS pesado. Si se usa web paralela, Tailwind/CSS comparte tokens. |
-| Componentes UI | Primitivos propios + Radix-compat (ej. `react-native-paper` o custom) | Viven en `app/components/ui`, no en `node_modules` — se auditan como código propio. |
+| Estilos | NativeWind (Tailwind para RN) o StyleSheet | Utility-first sin CSS-in-JS pesado. Comparte tokens con web si existe. |
+| Componentes UI | Primitivos propios + Radix-compat (ej. `react-native-paper` o custom) | Viven en `mobile/components/ui`, no en `node_modules` — se auditan como código propio. |
 | Iconos | Lucide Icons (`lucide-react-native`) | Según documento base. |
 | Estado de servidor / caché | TanStack Query (React Query) | Toda comunicación con el backend pasa por hooks de TanStack Query, nunca `fetch` directo en componentes. |
 | Estado de UI global | Zustand | Solo para estado de cliente puro (ej. wizard de onboarding, selección de prendas en curso). Nunca para cachear datos del servidor. |
 | Validación de contratos | Zod | Equivalente móvil de Pydantic v2: todo payload que cruza la frontera red↔app se parsea con un schema Zod antes de usarse. Cero `as` / cero confianza ciega en `any` proveniente de `fetch`. |
 | Testing unitario/integración | Vitest + React Native Testing Library | Rápido, nativo ESM/TS, compatible con Expo. |
-| Testing E2E | Maestro / Detox + Playwright (si hay web) | Flujos críticos: upload de prenda, recomendación de outfit, ciclo completo de VTON (submit → polling → resultado). |
+| Testing E2E | Maestro / Detox | Flujos críticos: upload de prenda, recomendación de outfit, ciclo completo de VTON (submit → polling → resultado). |
 | Linting | ESLint (`typescript-eslint` strict + `eslint-plugin-react-native`) | Cero warnings tolerados en CI. |
 | Formateo | Prettier | Integrado con ESLint, sin reglas de formato duplicadas en ESLint. |
 
-### 2.1 Backend — Python FastAPI
+### 2.2 Backend — Python FastAPI
 
 | Categoría | Tecnología | Notas |
 | :--- | :--- | :--- |
@@ -60,7 +80,7 @@ El frontend NO reimplementa lógica de dominio (clasificación, scoring cromáti
 | Linting / Types | **Ruff + mypy --strict** | Cero warnings tolerados en CI. Equivalente backend de `tsc --noEmit`. |
 | Formateo | Ruff format (o Black) | Integrado, sin duplicar reglas en linter. |
 
-### 2.2 Disciplina de Contratos Frontend↔Backend (crítico)
+### 2.3 Disciplina de Contratos Frontend↔Backend (crítico)
 
 La frontera móvil↔backend es contrato HTTP/JSON estricto. Pydantic (backend) es fuente de verdad, Zod (móvil) la espeja:
 
@@ -99,56 +119,58 @@ MACHINE-BULLS/
 ├── openspec/                     # Specs y constitution (fuente de verdad SDD)
 │   ├── specs/                    # 00..07 — specs ejecutables
 │   └── .speckit/                 # constitution + feature 001 plan
-├── app/                          # App móvil React Native (Expo)
-│   ├── app/                      # Expo Router: rutas, layouts, screens
+├── web/                          # Plataforma web Next.js (ver §2.0)
+│   ├── app/                      # App Router: rutas, layouts, pages
 │   ├── components/
-│   │   ├── ui/                   # primitivos UI (Button, Card, etc.)
+│   │   ├── ui/                   # shadcn/ui primitivos
 │   │   └── shared/
 │   ├── features/
-│   │   ├── garments/
-│   │   │   ├── components/
-│   │   │   ├── hooks/            # useUploadGarment, etc. (TanStack Query)
-│   │   │   ├── api/              # funciones fetch tipadas para este dominio
-│   │   │   └── schemas/          # Zod schemas específicos del dominio
+│   │   ├── garments/             # hooks useUploadGarment, api/, schemas/
 │   │   ├── outfits/
 │   │   └── vton/
 │   ├── lib/
-│   │   ├── api/                  # cliente HTTP base, manejo de errores
+│   │   ├── api/                  # cliente HTTP base (TanStack Query + Zod)
 │   │   └── utils/
-│   ├── hooks/                    # hooks genéricos
-│   ├── stores/                   # Zustand stores
-│   ├── schemas/
-│   │   └── api/                  # Zod schemas que espejan contratos backend (§2.2)
-│   ├── types/
-│   └── config/
-├── backend/                      # Backend Python FastAPI
+│   ├── stores/                   # Zustand
+│   ├── schemas/api/              # Zod que espeja backend (§2.3)
+│   ├── tests/
+│   ├── public/
+│   └── package.json
+├── mobile/                       # App móvil React Native Expo (ver §2.1)
+│   ├── app/                      # Expo Router: rutas, layouts, screens
+│   ├── components/
+│   │   ├── ui/
+│   │   └── shared/
+│   ├── features/
+│   │   ├── garments/
+│   │   ├── outfits/
+│   │   └── vton/
+│   ├── lib/api/                  # cliente HTTP base (mismo contrato que web)
+│   ├── stores/
+│   ├── schemas/api/              # Zod que espeja backend (§2.3) — compartir con web si se puede
+│   └── package.json
+├── backend/                      # Backend Python FastAPI (ver §2.2)
 │   ├── app/
-│   │   ├── main.py               # FastAPI app, routers
-│   │   ├── api/
-│   │   │   └── v1/
-│   │   │       ├── garments.py
-│   │   │       ├── outfits.py
-│   │   │       └── vton.py
-│   │   ├── models/               # SQLAlchemy models
-│   │   ├── schemas/              # Pydantic v2 schemas (espejan Zod)
-│   │   ├── services/             # lógica de dominio
-│   │   ├── workers/              # consumer SQS + invocación SageMaker
+│   │   ├── main.py
+│   │   ├── api/v1/
+│   │   │   ├── garments.py
+│   │   │   ├── outfits.py
+│   │   │   └── vton.py
+│   │   ├── models/               # SQLAlchemy
+│   │   ├── schemas/              # Pydantic v2 (fuente de verdad)
+│   │   ├── services/             # dominio: clasificación, motor compatibilidad
+│   │   ├── workers/              # SQS consumer + SageMaker
 │   │   └── core/                 # config, errors, deps
-│   ├── alembic/                  # migraciones
+│   ├── alembic/
 │   ├── tests/
 │   │   ├── unit/
-│   │   ├── integration/          # httpx AsyncClient + mocks S3/SQS
+│   │   ├── integration/          # httpx AsyncClient + mocks AWS
 │   │   └── fixtures/
 │   ├── pyproject.toml
 │   └── .env.example
-├── tests/                        # Tests frontend (si se mantiene separado)
-│   ├── unit/
-│   ├── integration/
-│   └── e2e/
-├── .env.example
-├── package.json                  # workspace mobile
+├── package.json                  # workspaces (opcional) o separado web/mobile
 ├── tsconfig.json
-└── pyproject.toml                # workspace backend (o backend/pyproject.toml)
+└── pyproject.toml
 ```
 
 ---
@@ -171,9 +193,22 @@ Reglas:
 
 ---
 
+## 5.1 DOME — Fases del Proyecto (del Team Charter)
+
+| Fase | Meta | Scope técnico |
+| :--- | :--- | :--- |
+| **1 — Análisis y Clasificación** | Backend recibe foto de prenda, quita fondo y clasifica tipo/estética | `backend/app/api/v1/garments.py` + `services/classifier` + S3 |
+| **2 — Motor de Compatibilidad** | Analiza color/estilo de prendas guardadas y sugiere outfits armónicos | `backend/app/services/compatibility` (motor propio, ver §6) + `POST /outfits/recommend` |
+| **3 — Probador Virtual VTON** | Proyecta outfit sobre foto del usuario respetando postura/proporciones | `backend/app/workers/` + SageMaker (IDM-VTON/OOTDiffusion) + polling VTON |
+| **4 — Lanzamiento y UI** | Plataforma web + móvil pulida, todo conectado, usable end-to-end | `web/` + `mobile/` + integración completa |
+
+Ninguna fase puede saltearse el flujo SDD §3. La lógica central de Fase 1 y 2 es de creación propia — no wrapper de API externa.
+
+---
+
 ## 6. Guía de Estilo y Calidad
 
-### Frontend (React Native / TypeScript)
+### Frontend (Web + React Native / TypeScript)
 - **TypeScript estricto:** `strict: true` en `tsconfig.json`. Cero `any` explícito. `any` implícito es error de build. Preferir `unknown` + narrowing/Zod sobre `any`.
 - **Cero hardcode de contratos:** cualquier forma de dato externo (API, `AsyncStorage`, query params) se valida con Zod antes de tiparse como confiable.
 - **Componentes:** un componente = una responsabilidad. Lógica de fetching vive en hooks (`useX`), no en el JSX del componente.
@@ -192,13 +227,21 @@ Reglas:
 ## 7. Comandos CLI Estándar
 
 ```bash
-# ── Frontend (React Native / Expo) ──
-npm run dev                  # expo start
-npm run android / ios        # expo run:android / run:ios
-npm run lint                 # eslint . (cero warnings)
-npm run typecheck            # tsc --noEmit
-npm run test                 # vitest run
-npm run test:e2e             # maestro / detox test
+# ── Frontend Web (Next.js) ──
+npm run dev --workspace=web         # next dev
+npm run lint --workspace=web        # eslint . (cero warnings)
+npm run typecheck --workspace=web   # tsc --noEmit
+npm run test --workspace=web        # vitest run
+npm run test:e2e --workspace=web    # playwright test
+
+# ── Frontend Móvil (React Native / Expo) ──
+npm run dev --workspace=mobile      # expo start
+npm run android --workspace=mobile
+npm run ios --workspace=mobile
+npm run lint --workspace=mobile
+npm run typecheck --workspace=mobile
+npm run test --workspace=mobile
+npm run test:e2e --workspace=mobile # maestro / detox
 
 # ── Backend (Python FastAPI) ──
 uv run fastapi dev backend/app/main.py   # dev server
@@ -208,7 +251,7 @@ uv run mypy backend/                     # typecheck --strict
 uv run pytest                            # tests (httpx + moto)
 ```
 
-Antes de considerar cualquier feature "hecha": frontend `npm run typecheck && npm run lint && npm run test` y backend `uv run mypy backend && uv run ruff check backend && uv run pytest` deben pasar en verde.
+Antes de considerar cualquier feature "hecha": web/mobile `npm run typecheck && npm run lint && npm run test` y backend `uv run mypy backend && uv run ruff check backend && uv run pytest` deben pasar en verde.
 
 ---
 
