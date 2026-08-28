@@ -12,19 +12,19 @@ Memoria persistente del agente para el repositorio **`MACHINE-BULLS`** (StyleMe 
 
 Este repositorio implementa **tres caras** del producto:
 
-| Capa | Responsabilidad | Se comunica vía |
-| :--- | :--- | :--- |
-| **Plataforma web (Next.js)** | Plataforma principal "qué me pongo" — digitalizar armario, recomendar outfits y VTON en navegador | HTTP/JSON contra el backend |
-| **App móvil (React Native)** | Misma experiencia en iOS/Android — captura de prendas con cámara, selección y VTON | HTTP/JSON contra el mismo backend |
-| **Backend (Python FastAPI)** | Validación de imágenes, clasificación, scoring cromático/embedding, encolado en SQS, orquestación de inferencia VTON en SageMaker, persistencia en RDS/S3 | Expone 3 familias de endpoints |
+| Capa                         | Responsabilidad                                                                                                                                           | Se comunica vía                   |
+| :--------------------------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------- | :-------------------------------- |
+| **Plataforma web (Next.js)** | Plataforma principal "qué me pongo" — digitalizar armario, recomendar outfits y VTON en navegador                                                         | HTTP/JSON contra el backend       |
+| **App móvil (React Native)** | Misma experiencia en iOS/Android — captura de prendas con cámara, selección y VTON                                                                        | HTTP/JSON contra el mismo backend |
+| **Backend (Python FastAPI)** | Validación de imágenes, clasificación, scoring cromático/embedding, encolado en SQS, orquestación de inferencia VTON en SageMaker, persistencia en RDS/S3 | Expone 3 familias de endpoints    |
 
 **Objetivo central (inteligencia propia):** resolver "qué me pongo" en moda masculina entregando inteligencia propia (motor de recomendación y reglas estéticas/color de creación propia), no solo conectar servicios de terceros. La lógica central del motor de compatibilidad es de creación propia — ver Constitution §2 y Team Charter.
 
-| Dominio | Endpoint backend (contrato) | Naturaleza |
-| :--- | :--- | :--- |
-| Prendas | `POST /api/v1/garments/upload` | Síncrono (respuesta directa) |
-| Outfits | `POST /api/v1/outfits/recommend` | Síncrono (respuesta directa) |
-| VTON | `POST /api/v1/vton/try-on` + `GET /api/v1/vton/status/{job_id}` | Asíncrono (job + polling) |
+| Dominio | Endpoint backend (contrato)                                     | Naturaleza                   |
+| :------ | :-------------------------------------------------------------- | :--------------------------- |
+| Prendas | `POST /api/v1/garments/upload`                                  | Síncrono (respuesta directa) |
+| Outfits | `POST /api/v1/outfits/recommend`                                | Síncrono (respuesta directa) |
+| VTON    | `POST /api/v1/vton/try-on` + `GET /api/v1/vton/status/{job_id}` | Asíncrono (job + polling)    |
 
 El frontend NO reimplementa lógica de dominio (clasificación, scoring cromático, generación de imágenes). Su responsabilidad es: captura de datos del usuario, validación de forma en el borde, orquestación de llamadas, estado de UI/carga/error, y renderizado. El backend NO renderiza UI; su responsabilidad es: validación de negocio, autorización, persistencia y orquestación del pipeline MLOps.
 
@@ -34,51 +34,51 @@ El frontend NO reimplementa lógica de dominio (clasificación, scoring cromáti
 
 ### 2.0 Frontend — Plataforma Web (Next.js)
 
-| Categoría | Tecnología | Notas |
-| :--- | :--- | :--- |
-| Framework | **Next.js 14/15, App Router** | Server Components por defecto; Client Components solo donde haya interactividad/estado. |
-| Lenguaje | TypeScript, **modo `strict` obligatorio** | Equivalente al mandato de type hints estrictos del backend. |
-| Estilos | Tailwind CSS | Utility-first, sin CSS-in-JS. |
-| Componentes UI | shadcn/ui (Radix UI + Tailwind) | Viven en `src/components/ui` (o `web/components/ui`), no en `node_modules` — se auditan como código propio. |
-| Iconos | Lucide Icons | Según documento base. |
-| Estado de servidor / caché | TanStack Query (React Query) | Toda comunicación con el backend pasa por hooks de TanStack Query, nunca `fetch` directo en componentes. |
-| Estado de UI global | Zustand | Solo para estado de cliente puro (wizard onboarding, selección prendas). Nunca para cachear datos del servidor. |
-| Validación de contratos | Zod | Equivalente web de Pydantic v2: todo payload red↔app se parsea con Zod. Cero `as` / cero `any` de `fetch`. |
-| Testing unitario/integración | Vitest + React Testing Library | Rápido, nativo ESM/TS, compatible con Next.js. |
-| Testing E2E | Playwright | Flujos críticos: upload prenda, recomendación outfit, ciclo VTON completo. |
-| Linting | ESLint (`next/core-web-vitals` + `typescript-eslint` strict) | Cero warnings tolerados en CI. |
-| Formateo | Prettier | Integrado con ESLint, sin reglas de formato duplicadas. |
+| Categoría                    | Tecnología                                                   | Notas                                                                                                           |
+| :--------------------------- | :----------------------------------------------------------- | :-------------------------------------------------------------------------------------------------------------- |
+| Framework                    | **Next.js 14/15, App Router**                                | Server Components por defecto; Client Components solo donde haya interactividad/estado.                         |
+| Lenguaje                     | TypeScript, **modo `strict` obligatorio**                    | Equivalente al mandato de type hints estrictos del backend.                                                     |
+| Estilos                      | Tailwind CSS                                                 | Utility-first, sin CSS-in-JS.                                                                                   |
+| Componentes UI               | shadcn/ui (Radix UI + Tailwind)                              | Viven en `src/components/ui` (o `web/components/ui`), no en `node_modules` — se auditan como código propio.     |
+| Iconos                       | Lucide Icons                                                 | Según documento base.                                                                                           |
+| Estado de servidor / caché   | TanStack Query (React Query)                                 | Toda comunicación con el backend pasa por hooks de TanStack Query, nunca `fetch` directo en componentes.        |
+| Estado de UI global          | Zustand                                                      | Solo para estado de cliente puro (wizard onboarding, selección prendas). Nunca para cachear datos del servidor. |
+| Validación de contratos      | Zod                                                          | Equivalente web de Pydantic v2: todo payload red↔app se parsea con Zod. Cero `as` / cero `any` de `fetch`.      |
+| Testing unitario/integración | Vitest + React Testing Library                               | Rápido, nativo ESM/TS, compatible con Next.js.                                                                  |
+| Testing E2E                  | Playwright                                                   | Flujos críticos: upload prenda, recomendación outfit, ciclo VTON completo.                                      |
+| Linting                      | ESLint (`next/core-web-vitals` + `typescript-eslint` strict) | Cero warnings tolerados en CI.                                                                                  |
+| Formateo                     | Prettier                                                     | Integrado con ESLint, sin reglas de formato duplicadas.                                                         |
 
 ### 2.1 Frontend — App Móvil React Native
 
-| Categoría | Tecnología | Notas |
-| :--- | :--- | :--- |
-| Framework | **React Native + Expo** (Expo Router o React Navigation) | Un solo codebase iOS/Android. Recomendado en `openspec/.speckit/features/001-probador-virtual/plan.md` sobre Flutter. |
-| Lenguaje | TypeScript, **modo `strict` obligatorio** | Equivalente móvil al mandato de type hints estrictos del backend. |
-| Estilos | NativeWind (Tailwind para RN) o StyleSheet | Utility-first sin CSS-in-JS pesado. Comparte tokens con web si existe. |
-| Componentes UI | Primitivos propios + Radix-compat (ej. `react-native-paper` o custom) | Viven en `mobile/components/ui`, no en `node_modules` — se auditan como código propio. |
-| Iconos | Lucide Icons (`lucide-react-native`) | Según documento base. |
-| Estado de servidor / caché | TanStack Query (React Query) | Toda comunicación con el backend pasa por hooks de TanStack Query, nunca `fetch` directo en componentes. |
-| Estado de UI global | Zustand | Solo para estado de cliente puro (ej. wizard de onboarding, selección de prendas en curso). Nunca para cachear datos del servidor. |
-| Validación de contratos | Zod | Equivalente móvil de Pydantic v2: todo payload que cruza la frontera red↔app se parsea con un schema Zod antes de usarse. Cero `as` / cero confianza ciega en `any` proveniente de `fetch`. |
-| Testing unitario/integración | Vitest + React Native Testing Library | Rápido, nativo ESM/TS, compatible con Expo. |
-| Testing E2E | Maestro / Detox | Flujos críticos: upload de prenda, recomendación de outfit, ciclo completo de VTON (submit → polling → resultado). |
-| Linting | ESLint (`typescript-eslint` strict + `eslint-plugin-react-native`) | Cero warnings tolerados en CI. |
-| Formateo | Prettier | Integrado con ESLint, sin reglas de formato duplicadas en ESLint. |
+| Categoría                    | Tecnología                                                            | Notas                                                                                                                                                                                       |
+| :--------------------------- | :-------------------------------------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Framework                    | **React Native + Expo** (Expo Router o React Navigation)              | Un solo codebase iOS/Android. Recomendado en `openspec/.speckit/features/001-probador-virtual/plan.md` sobre Flutter.                                                                       |
+| Lenguaje                     | TypeScript, **modo `strict` obligatorio**                             | Equivalente móvil al mandato de type hints estrictos del backend.                                                                                                                           |
+| Estilos                      | NativeWind (Tailwind para RN) o StyleSheet                            | Utility-first sin CSS-in-JS pesado. Comparte tokens con web si existe.                                                                                                                      |
+| Componentes UI               | Primitivos propios + Radix-compat (ej. `react-native-paper` o custom) | Viven en `mobile/components/ui`, no en `node_modules` — se auditan como código propio.                                                                                                      |
+| Iconos                       | Lucide Icons (`lucide-react-native`)                                  | Según documento base.                                                                                                                                                                       |
+| Estado de servidor / caché   | TanStack Query (React Query)                                          | Toda comunicación con el backend pasa por hooks de TanStack Query, nunca `fetch` directo en componentes.                                                                                    |
+| Estado de UI global          | Zustand                                                               | Solo para estado de cliente puro (ej. wizard de onboarding, selección de prendas en curso). Nunca para cachear datos del servidor.                                                          |
+| Validación de contratos      | Zod                                                                   | Equivalente móvil de Pydantic v2: todo payload que cruza la frontera red↔app se parsea con un schema Zod antes de usarse. Cero `as` / cero confianza ciega en `any` proveniente de `fetch`. |
+| Testing unitario/integración | Vitest + React Native Testing Library                                 | Rápido, nativo ESM/TS, compatible con Expo.                                                                                                                                                 |
+| Testing E2E                  | Maestro / Detox                                                       | Flujos críticos: upload de prenda, recomendación de outfit, ciclo completo de VTON (submit → polling → resultado).                                                                          |
+| Linting                      | ESLint (`typescript-eslint` strict + `eslint-plugin-react-native`)    | Cero warnings tolerados en CI.                                                                                                                                                              |
+| Formateo                     | Prettier                                                              | Integrado con ESLint, sin reglas de formato duplicadas en ESLint.                                                                                                                           |
 
 ### 2.2 Backend — Python FastAPI
 
-| Categoría | Tecnología | Notas |
-| :--- | :--- | :--- |
-| Framework | **Python 3.11+ + FastAPI (async)** | Async nativo — crítico para no bloquear mientras se espera GPU/SQS (ver `001-probador-virtual/plan.md`). |
-| Validación / Schemas | **Pydantic v2** | Fuente de verdad de los contratos §11. Todo request/response tipado con `BaseModel` estricto. Espeja 1:1 con Zod del frontend. |
-| ORM / DB | SQLAlchemy 2.0 (async) + PostgreSQL (RDS) | Modelos `Garment`, `User`, `VTONJob`. Migraciones con Alembic. |
-| Cola / Jobs | **Amazon SQS + worker async** (arq. `001-probador-virtual/plan.md` §Arquitectura) | `POST /vton/try-on` encola, worker invoca SageMaker. |
-| Storage | **Amazon S3** (buckets separados) | Fotos de usuario (dato sensible) vs prendas catálogo — políticas de retención distintas (Constitution §6). |
-| Inferencia | **AWS SageMaker Endpoints** + diffusers (IDM-VTON / OOTDiffusion) | Autoscaling, no EC2 fijo — controla costo GPU (Constitution §7). |
-| Testing | **pytest + httpx + pytest-asyncio** | Tests de endpoint con `TestClient`/`AsyncClient`, mocks de S3/SQS/SageMaker. |
-| Linting / Types | **Ruff + mypy --strict** | Cero warnings tolerados en CI. Equivalente backend de `tsc --noEmit`. |
-| Formateo | Ruff format (o Black) | Integrado, sin duplicar reglas en linter. |
+| Categoría            | Tecnología                                                                        | Notas                                                                                                                          |
+| :------------------- | :-------------------------------------------------------------------------------- | :----------------------------------------------------------------------------------------------------------------------------- |
+| Framework            | **Python 3.11+ + FastAPI (async)**                                                | Async nativo — crítico para no bloquear mientras se espera GPU/SQS (ver `001-probador-virtual/plan.md`).                       |
+| Validación / Schemas | **Pydantic v2**                                                                   | Fuente de verdad de los contratos §11. Todo request/response tipado con `BaseModel` estricto. Espeja 1:1 con Zod del frontend. |
+| ORM / DB             | SQLAlchemy 2.0 (async) + PostgreSQL (RDS)                                         | Modelos `Garment`, `User`, `VTONJob`. Migraciones con Alembic.                                                                 |
+| Cola / Jobs          | **Amazon SQS + worker async** (arq. `001-probador-virtual/plan.md` §Arquitectura) | `POST /vton/try-on` encola, worker invoca SageMaker.                                                                           |
+| Storage              | **Amazon S3** (buckets separados)                                                 | Fotos de usuario (dato sensible) vs prendas catálogo — políticas de retención distintas (Constitution §6).                     |
+| Inferencia           | **AWS SageMaker Endpoints** + diffusers (IDM-VTON / OOTDiffusion)                 | Autoscaling, no EC2 fijo — controla costo GPU (Constitution §7).                                                               |
+| Testing              | **pytest + httpx + pytest-asyncio**                                               | Tests de endpoint con `TestClient`/`AsyncClient`, mocks de S3/SQS/SageMaker.                                                   |
+| Linting / Types      | **Ruff + mypy --strict**                                                          | Cero warnings tolerados en CI. Equivalente backend de `tsc --noEmit`.                                                          |
+| Formateo             | Ruff format (o Black)                                                             | Integrado, sin duplicar reglas en linter.                                                                                      |
 
 ### 2.3 Disciplina de Contratos Frontend↔Backend (crítico)
 
@@ -186,6 +186,7 @@ Jerarquía base en `src/lib/errors.ts`, análoga a la jerarquía de excepciones 
   - **`NetworkError`** — fallo de red (sin respuesta del servidor), distinto de un `ApiError`.
 
 Reglas:
+
 - Los hooks de TanStack Query nunca devuelven errores no tipados: el `queryFn`/`mutationFn` captura y relanza como una subclase de `StyleMeError`.
 - Cada `app/**/error.tsx` (Error Boundary de Next.js) debe distinguir entre estas subclases para mostrar mensajes accionables (ej. `VTONJobTimeoutError` → "el proceso está tardando más de lo esperado, puedes seguir esperando o reintentar").
 - Prohibido el patrón `catch (e) { console.log(e) }` sin re-lanzar o manejar tipadamente.
@@ -195,12 +196,12 @@ Reglas:
 
 ## 5.1 DOME — Fases del Proyecto (del Team Charter)
 
-| Fase | Meta | Scope técnico |
-| :--- | :--- | :--- |
-| **1 — Análisis y Clasificación** | Backend recibe foto de prenda, quita fondo y clasifica tipo/estética | `backend/app/api/v1/garments.py` + `services/classifier` + S3 |
-| **2 — Motor de Compatibilidad** | Analiza color/estilo de prendas guardadas y sugiere outfits armónicos | `backend/app/services/compatibility` (motor propio, ver §6) + `POST /outfits/recommend` |
-| **3 — Probador Virtual VTON** | Proyecta outfit sobre foto del usuario respetando postura/proporciones | `backend/app/workers/` + SageMaker (IDM-VTON/OOTDiffusion) + polling VTON |
-| **4 — Lanzamiento y UI** | Plataforma web + móvil pulida, todo conectado, usable end-to-end | `web/` + `mobile/` + integración completa |
+| Fase                             | Meta                                                                   | Scope técnico                                                                           |
+| :------------------------------- | :--------------------------------------------------------------------- | :-------------------------------------------------------------------------------------- |
+| **1 — Análisis y Clasificación** | Backend recibe foto de prenda, quita fondo y clasifica tipo/estética   | `backend/app/api/v1/garments.py` + `services/classifier` + S3                           |
+| **2 — Motor de Compatibilidad**  | Analiza color/estilo de prendas guardadas y sugiere outfits armónicos  | `backend/app/services/compatibility` (motor propio, ver §6) + `POST /outfits/recommend` |
+| **3 — Probador Virtual VTON**    | Proyecta outfit sobre foto del usuario respetando postura/proporciones | `backend/app/workers/` + SageMaker (IDM-VTON/OOTDiffusion) + polling VTON               |
+| **4 — Lanzamiento y UI**         | Plataforma web + móvil pulida, todo conectado, usable end-to-end       | `web/` + `mobile/` + integración completa                                               |
 
 Ninguna fase puede saltearse el flujo SDD §3. La lógica central de Fase 1 y 2 es de creación propia — no wrapper de API externa.
 
@@ -209,6 +210,7 @@ Ninguna fase puede saltearse el flujo SDD §3. La lógica central de Fase 1 y 2 
 ## 6. Guía de Estilo y Calidad
 
 ### Frontend (Web + React Native / TypeScript)
+
 - **TypeScript estricto:** `strict: true` en `tsconfig.json`. Cero `any` explícito. `any` implícito es error de build. Preferir `unknown` + narrowing/Zod sobre `any`.
 - **Cero hardcode de contratos:** cualquier forma de dato externo (API, `AsyncStorage`, query params) se valida con Zod antes de tiparse como confiable.
 - **Componentes:** un componente = una responsabilidad. Lógica de fetching vive en hooks (`useX`), no en el JSX del componente.
@@ -216,6 +218,7 @@ Ninguna fase puede saltearse el flujo SDD §3. La lógica central de Fase 1 y 2 
 - **Nombres:** archivos de componentes en `PascalCase.tsx`, hooks en `useCamelCase.ts`, schemas Zod exportados como `XSchema` con su tipo inferido `type X = z.infer<typeof XSchema>`.
 
 ### Backend (Python / FastAPI)
+
 - **Type hints estrictos:** `mypy --strict` obligatorio. Cero `Any` sin justificación. Todo `def` tipado, `BaseModel` con `strict=True`.
 - **Pydantic v2:** todo request/response validado con `BaseModel` estricto; `model_config = ConfigDict(extra="forbid")` para rechazar campos desconocidos.
 - **Ruff:** lint + format único. Cero warnings en CI (`ruff check` + `ruff format --check`).
