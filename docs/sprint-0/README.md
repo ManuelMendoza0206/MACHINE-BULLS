@@ -1,7 +1,9 @@
 # docs/sprint-0/ — pre-project trail
 
-**Authoritative status of the scaffold:** [`SCAFFOLD-VERIFICATION.md`](./SCAFFOLD-VERIFICATION.md)
-+ `CLAUDE.md` §10–11.
+**Authoritative:**
+- [`SCAFFOLD-VERIFICATION.md`](./SCAFFOLD-VERIFICATION.md) — what the scaffold is, gate output, findings mitigated.
+- [`GO-NO-GO.md`](./GO-NO-GO.md) — Sprint 1 start evaluation (PO).
+- `CLAUDE.md` §10–11 — decisions of record.
 
 Everything else in this folder is **historical**. It documents three rounds of
 pre-project remediation (26–31 Aug 2026) that repeatedly declared the repo "READY" /

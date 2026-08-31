@@ -3,7 +3,7 @@ node_modules/
 /.pnp
 .pnp.js
 
-# Testing
+# Testing / coverage
 /coverage
 /test-results
 /playwright-report
@@ -13,6 +13,7 @@ node_modules/
 /.next/
 /out/
 /build/
+next-env.d.ts.timestamp-*
 
 # Environment (CRITICAL - never commit secrets)
 .env
@@ -28,7 +29,7 @@ yarn-debug.log*
 yarn-error.log*
 lerna-debug.log*
 
-# IDE & Tools
+# Editor / agent local settings (the shared skill/command files ARE tracked)
 .vscode/
 .idea/
 *.swp
@@ -37,14 +38,14 @@ lerna-debug.log*
 .DS_Store
 Thumbs.db
 .atl/
-.cursor/
-.claude/
+.claude/settings.local.json
+.cursor/mcp.json
 
-# Build & Cache
+# Build & cache
 dist/
 .cache/
+.turbo/
 *.tsbuildinfo
 
-# OS
+# Keys
 *.pem
-.turbo/

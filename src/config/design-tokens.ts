@@ -1,11 +1,17 @@
 /**
  * Design tokens — single source of truth for color, typography and spacing.
- * Values mirror `openspec/specs/frontend/design-system/spec.md` §2.1 (which mirrors
- * `CLAUDE.md` §5.1). Nothing else in the codebase may hardcode a colour:
+ * Authoritative values: this file. `openspec/specs/frontend/design-system/spec.md` §2.1
+ * and `docs/context/frontend-plan.md` §5.1 mirror it. Nothing else may hardcode a colour:
  *  - `tailwind.config.ts` derives its colour scale from `colorTokens` keys.
  *  - `src/app/globals.css` publishes the HSL channels as CSS variables; the test
  *    `tests/unit/config/design-tokens.contrast.test.ts` (Tarea 1) keeps that file in
  *    sync with `hexToHslChannels(...)` and enforces the WCAG-AA contrast budget.
+ *
+ * WCAG-AA tune (decision, CLAUDE.md §10 — 31 ago 2026): the light-theme
+ * `mutedForeground`, `success` and `destructive` were moved one step darker (zinc-600 /
+ * green-700 / red-700) and a `warning` pair was added, so every text pair — including
+ * light-foreground text on a `success`/`warning`/`destructive` fill — meets 4.5:1.
+ * Dark-theme values are unchanged (already compliant).
  */
 
 type ThemeValue = { readonly light: `#${string}`; readonly dark: `#${string}` };
@@ -14,15 +20,17 @@ export const colorTokens = {
   background: { light: '#FAFAF9', dark: '#0C0C0D' },
   foreground: { light: '#18181B', dark: '#F4F4F5' },
   muted: { light: '#F1F0EE', dark: '#1A1A1C' },
-  mutedForeground: { light: '#71717A', dark: '#A1A1AA' },
+  mutedForeground: { light: '#52525B', dark: '#A1A1AA' },
   border: { light: '#E4E4E7', dark: '#27272A' },
   input: { light: '#E4E4E7', dark: '#27272A' },
   accent: { light: '#1C1C1E', dark: '#F4F4F5' },
   accentForeground: { light: '#F4F4F5', dark: '#1C1C1E' },
-  success: { light: '#16A34A', dark: '#22C55E' },
-  successForeground: { light: '#F4F4F5', dark: '#0C0C0D' },
-  destructive: { light: '#DC2626', dark: '#EF4444' },
-  destructiveForeground: { light: '#F4F4F5', dark: '#0C0C0D' },
+  success: { light: '#15803D', dark: '#22C55E' },
+  successForeground: { light: '#FAFAF9', dark: '#0C0C0D' },
+  warning: { light: '#B45309', dark: '#F59E0B' },
+  warningForeground: { light: '#FAFAF9', dark: '#0C0C0D' },
+  destructive: { light: '#B91C1C', dark: '#EF4444' },
+  destructiveForeground: { light: '#FAFAF9', dark: '#0C0C0D' },
 } as const satisfies Record<string, ThemeValue>;
 
 export const typeScale = {

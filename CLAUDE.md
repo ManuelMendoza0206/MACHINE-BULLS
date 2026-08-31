@@ -229,6 +229,30 @@ Cualquier sesión de Claude Code que trabaje en este repo debe operar dentro de 
 - CLIP/ResNet, embeddings, EDA, entrenamiento viven en el repo backend (§1).
 - Leonardo Sprint 1 = SOLO frontend (tokens, shell, 5 componentes, esqueleto de API client).
 
+### Decisiones de diseño (Sprint 0)
+
+**D1: Ajuste de paleta a WCAG AA (31 ago 2026, ratificado por el PO)**
+- `frontend-plan.md` §5.1 fijaba `muted-foreground #71717A`, `success #16A34A`,
+  `warning #D97706`, `destructive #DC2626`. Varios de esos pares de texto **no llegaban a 4.5:1**
+  (p. ej. `muted-foreground` sobre `muted` ≈ 4.3:1; texto claro sobre `success` ≈ 3.4:1).
+- Valores **light** movidos un paso más oscuros: `muted-foreground #52525B` (zinc-600),
+  `success #15803D` (green-700), `destructive #B91C1C` (red-700). Añadidos `warning #B45309`
+  (amber-700) y los cuatro `*-foreground`. Valores **dark** sin cambio (ya cumplían).
+- Resultado verificado: los 6 pares de texto ≥ 4.5:1 en ambos temas (mín. 4.80:1).
+- SoT de valores: `src/config/design-tokens.ts`. La prueba
+  `tests/unit/config/design-tokens.contrast.test.ts` (Tarea 1) lo blinda en CI.
+
+**D2: CSP baseline en `next.config.js`** — política enforced con `default-src 'self'`,
+`frame-ancestors 'none'`, `object-src 'none'`, `img-src` acotado a Cloudinary, `connect-src` a la
+API + Supabase. `script-src` conserva `'unsafe-inline'` (Next inyecta scripts inline y hay rutas
+estáticas — una política nonce + `strict-dynamic` rompería la hidratación de esas rutas sin
+forzarlas a dinámicas). **Follow-up (track infra):** endurecer a nonce + `strict-dynamic` en las
+rutas autenticadas (dinámicas) vía `middleware.ts`. Se probó en Sprint 0 y se descartó para el
+scaffold por incompatibilidad con el prerender estático.
+
+**D3: Contrato de env** — `NEXT_PUBLIC_API_BASE_URL` (nombre de `api-client-and-schemas/spec.md`
+§111), no `NEXT_PUBLIC_API_URL`. `.env.example` es la plantilla; falla en build si falta en runtime real.
+
 ### P1: Inconsistencias Congeladas
 
 **P1#4: Conteo de tareas — ClickUp es la fuente única**
@@ -247,9 +271,9 @@ Cualquier sesión de Claude Code que trabaje en este repo debe operar dentro de 
 
 **P2#1: Trazabilidad** — este §10 es el registro. El prep se entregó por PR (no commit directo a `main`), con declaración de IA. Trail histórico en `docs/sprint-0/`.
 
-**P2#2: Migración a formato OpenSpec nativo**
-- `design-system/spec.md`: **migrada** (Requirement + Scenario + AC).
-- `app-shell-and-navigation/spec.md`: **pendiente** — se migra al empezar la Tarea 5. No bloquea Sprint 0/1.
+**P2#2: Migración a formato OpenSpec nativo** — `design-system/spec.md` y
+`app-shell-and-navigation/spec.md`: **ambas migradas** (Requirement + Scenario + AC). El resto
+de specs de flujo se migran spec-first al empezar su Tarea correspondiente.
 
 **P2#3: Sin secretos** — cero credenciales en prompts/commits/código. Tokens → GitHub Actions secrets (`CODECOV_TOKEN`, Supabase, etc.).
 

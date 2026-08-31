@@ -1,20 +1,34 @@
 /** @type {import('next').NextConfig} */
 
-// NOTE: a nonce-based CSP (dropping 'unsafe-inline' / 'unsafe-eval' from script-src) is a
-// hardening follow-up owned by the infra track — it needs middleware to inject a per-request
-// nonce. The policy below is the enforced baseline for the scaffold.
+const isDev = process.env.NODE_ENV !== 'production';
+const apiOrigin = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000';
+
+// Baseline CSP. `script-src` keeps `'unsafe-inline'` because Next injects inline bootstrap
+// scripts and the app has statically-rendered routes (a nonce + `strict-dynamic` policy would
+// block hydration on those without forcing every route to dynamic rendering). Tightening to
+// nonce + `strict-dynamic` on the authenticated, dynamically-rendered routes is an infra-track
+// follow-up — see CLAUDE.md §10 D2.
 const csp = [
   "default-src 'self'",
-  "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+  `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ''}`,
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob: https://res.cloudinary.com",
   "font-src 'self' data:",
-  `connect-src 'self' ${process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000'}`,
+  `connect-src 'self' ${apiOrigin} https://*.supabase.co`,
   "frame-ancestors 'none'",
   "base-uri 'self'",
   "form-action 'self'",
   "object-src 'none'",
+  ...(isDev ? [] : ['upgrade-insecure-requests']),
 ].join('; ');
+
+const securityHeaders = [
+  { key: 'Content-Security-Policy', value: csp },
+  { key: 'X-Content-Type-Options', value: 'nosniff' },
+  { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+  { key: 'X-Frame-Options', value: 'DENY' },
+  { key: 'Permissions-Policy', value: 'camera=(self), microphone=(), geolocation=()' },
+];
 
 const nextConfig = {
   reactStrictMode: true,
@@ -28,17 +42,7 @@ const nextConfig = {
   experimental: {
     typedRoutes: true,
   },
-  headers: async () => [
-    {
-      source: '/:path*',
-      headers: [
-        { key: 'X-Content-Type-Options', value: 'nosniff' },
-        { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
-        { key: 'X-Frame-Options', value: 'DENY' },
-        { key: 'Content-Security-Policy', value: csp },
-      ],
-    },
-  ],
+  headers: async () => [{ source: '/:path*', headers: securityHeaders }],
 };
 
 module.exports = nextConfig;

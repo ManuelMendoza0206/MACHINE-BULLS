@@ -115,11 +115,14 @@ All features are derived from formal specifications in `openspec/specs/frontend/
 
 ## Contributing
 
-1. Create a feature branch from `main`
-2. Follow specs (openspec/specs/)
-3. Write tests (unit + integration)
-4. Run `npm run lint && npm run typecheck && npm run test`
-5. Open PR (request review from @Leonardo-Ibarra + @Jaicel)
+Governance: `.speckit/constitution.md` §3 — `main` is protected, all changes via PR,
+≥1 reviewer **who is not the author**, AI-usage declared in the PR body.
+
+1. Branch from `main`: `feat/<slug>` or `chore/<slug>` (one branch per Tarea).
+2. Spec first: the change must trace to a Requirement in `openspec/specs/frontend/`.
+3. TDD: failing test → minimal code → refactor. Unit + integration; e2e for critical flows.
+4. `npm run typecheck && npm run lint && npm run test && npm run test:e2e && npm run build` — all green.
+5. Open the PR (template auto-fills). Reviewer is assigned via `.github/CODEOWNERS` and must differ from the author.
 
 ## License
 
