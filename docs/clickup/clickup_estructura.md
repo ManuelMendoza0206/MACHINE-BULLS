@@ -1,6 +1,11 @@
 # Estructura y Operativa del Tablero ClickUp
 
-## Estado Actual del Tablero (snapshot 2026-08-26, verificado contra la API real)
+> ⚠️ **Snapshot del 2026-08-26.** El Sprint 1 se reconcilió con la documentación el 31 ago
+> (scaffold entregado, 5 componentes no 8, sin Storybook, etc.) — ver `docs/sprint-plans/sprint-1-manifest.md`
+> §7 para el checklist de re-sincronización del tablero (dueño: Manuel / Asiento D). Este doc
+> vuelve a ser fiel al tablero cuando ese checklist esté aplicado y `SPRINT-1-MASTER.csv` exportado.
+
+## Estado del Tablero (snapshot 2026-08-26)
 
 El espacio **MachineBulls⚙️🐂** (Workspace "Leonardo Ibarra López") ya existe y está poblado — esto no es un plan a futuro, es el estado real verificado con paginación completa:
 

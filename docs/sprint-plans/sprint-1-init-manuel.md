@@ -1,10 +1,18 @@
 # Sprint 1 — Prompt de Inicialización | Asiento D (Manuel)
 
-**Rol:** Infra / MLOps / Release / Documentación  
-**Duración:** 26 ago - 8 sep 2026 (14 días)  
+**Rol:** Infra / Release / Documentación + **coordinación de ClickUp** (Asiento D, rotación §1)  
+**Ventana:** Sprint 1 features **2–8 sep 2026** (Sprint 0 cerró el 1 sep)  
 **Epics:** Q2 (CI/CD), Q4 (Observabilidad), Q6 (Release Management)  
-**6 tareas** | SP estimado: ~30-35  
-**Contexto:** Cimiento operacional. Sin CI/CD, el proyecto no puede iterar rápidamente. Sin observabilidad, no sabemos qué falla en producción. Sin changelog, releases son opacas.
+**6 tareas** | SP ~30-35 — ver `sprint-1-manifest.md` §6.
+
+> **Ajustes post-scaffold** (`sprint-1-manifest.md` §6 — importante, este prompt es previo al scaffold):
+> - El `ci.yml` **ya existe** (3 jobs `quality`/`build`/`e2e`, Node 20, `actions/*@v4`). Tarea `86e301e09` =
+>   endurecerlo + **configurar branch protection en `main`** (require PR, ≥1 review CODEOWNERS, status
+>   checks obligatorios, sin push directo — **hoy está OFF**) + añadir secreto `CODECOV_TOKEN`.
+> - **Repo frontend-only** (§1): fuera de este repo el CI de backend, Prometheus/Grafana, métricas de
+>   `/api/v1/vton/try-on`, `@sentry/react`→`@sentry/nextjs`, `structlog`/`sentry-sdk` (Python).
+> - **Reconciliación ClickUp**: ejecutar el checklist de `sprint-1-manifest.md` §7 y exportar `SPRINT-1-MASTER.csv`.
+> - Changelog `v0.1.0-alpha`: **5** componentes (Button, Card, Badge, Skeleton, Progress), no 8. Auth = Supabase (sin bcrypt propio).
 
 ---
 

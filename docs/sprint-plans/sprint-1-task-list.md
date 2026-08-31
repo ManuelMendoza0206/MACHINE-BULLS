@@ -1,8 +1,11 @@
-# Sprint 1 (26 ago - 8 sep 2026) — Tareas por Rol
+# Sprint 1 — Tareas por Rol (mirror del tablero ClickUp)
 
-**Ventana:** 26 agosto 2026 – 8 septiembre 2026 (2 semanas)  
-**Total de tareas:** 38 + 3 epics = 41  
-**Equipos:** Leonardo (Seat A / Feature Lead), Jaicel (Seat B / Feature Support), Huascar (Seat C / QA), Manuel (Seat D / Infra/Release)
+**Ventana:** Sprint 0 (scaffold) 31 ago–1 sep · **Sprint 1 features 2–8 sep 2026**  
+**Total:** 38 tareas + 3 epics = 41 (de las cuales 4 de Jaicel ejecutan en el repo backend)  
+**Asientos:** Leonardo (A / Feature Lead), Jaicel (B / Feature Support), Huascar (C / QA), Manuel (D / Infra·Release)
+
+> **Estructura canónica y correcciones:** `sprint-1-manifest.md`. Este documento refleja el
+> tablero; el manifiesto refleja las specs. Ambos ya alineados (31 ago 2026).
 
 ---
 
@@ -19,7 +22,7 @@ Tareas del epic:
    - ID: `86e301dd8` | Due: 07-09-2026
    - List: Build | Owner: Leonardo
 
-2. **Todos los pares texto/fondo de §2.1 pasan el test de contraste AA en ambos temas**
+2. **Los 6 pares de texto cumplen contraste AA (≥ 4.5:1) en claro y oscuro + `globals.css` sincronizado con `design-tokens.ts`**
    - ID: `86e301dda` | Due: 07-09-2026
    - List: Build | Owner: Leonardo
 
@@ -27,7 +30,7 @@ Tareas del epic:
    - ID: `86e301ddf` | Due: 07-09-2026
    - List: Build | Owner: Leonardo
 
-4. **Los 8 componentes de §2.4 existen en `src/components/ui/`, tipados sin `any`, con Storybook**
+4. **Los 5 componentes de §2.4 (Button, Card, Badge, Skeleton, Progress) existen en `src/components/ui/`, tipados sin `any`, usando `cn()`. Sin Storybook.**
    - ID: `86e301ddn` | Due: 07-09-2026
    - List: Build | Owner: Leonardo
 
@@ -39,7 +42,7 @@ Tareas del epic:
    - ID: `86e301ddy` | Due: 07-09-2026
    - List: Build | Owner: Leonardo
 
-7. **Los 6 requisitos de accesibilidad de §2.5 están cubiertos por un test cada uno**
+7. **Los requisitos de a11y de la Requirement "Accessibility compliance" cubiertos por test (aria-disabled Button, aria-busy Skeleton, role Progress, texto-no-solo-color Badge)**
    - ID: `86e301de2` | Due: 07-09-2026
    - List: Build | Owner: Leonardo
 
@@ -60,7 +63,7 @@ Tareas del epic:
     - ID: `86e301dp8` | Due: 07-09-2026
     - List: Build | Owner: Leonardo
 
-11. **`GlobalError` cubre los 5 casos de la tabla de tipos de error, cada uno con fallback UI**
+11. **`GlobalError` cubre las 4 ramas (`ApiError`, `NetworkError`, `ValidationError`, `Error` genérico), cada una con copy y fallback UI**
     - ID: `86e301dpf` | Due: 07-09-2026
     - List: Build | Owner: Leonardo
 
@@ -72,7 +75,7 @@ Tareas del epic:
     - ID: `86e301dpm` | Due: 07-09-2026
     - List: Build | Owner: Leonardo
 
-14. **Cobertura de tests ≥ 80% en `src/components/shell/` y `src/app/providers.ts`**
+14. **Cobertura medida en `src/components/shell/` y `src/app/providers.tsx` (el gate ≥ 80% entra en Sprint 2 — P1#8)**
     - ID: `86e301dpw` | Due: 07-09-2026
     - List: Build | Owner: Leonardo
 
@@ -92,7 +95,7 @@ Tareas del epic:
    - ID: `86e301de7` | Due: 07-09-2026
    - List: Build | Owner: Jaicel
 
-2. **Jerarquía de errores de §2.1 implementada exactamente como en `CLAUDE.md` §3.3**
+2. **Tests de la jerarquía de errores (`src/lib/errors.ts` ya existe desde el scaffold) — verificar que coincide con la spec `CLAUDE.md` §5**
    - ID: `86e301dea` | Due: 07-09-2026
    - List: Build | Owner: Jaicel
 
@@ -138,9 +141,11 @@ Tareas del epic:
 ### [EPIC] backend/domain-and-database (parte 1)
 - **Nota:** Jaicel lidera las historias de Sprint 1 de este epic
 
+> **Nota (§1 alcance):** las 4 tareas siguientes ejecutan en el **repo backend**, no en `MACHINE-BULLS`. Etiquetar `repo:backend` en ClickUp.
+
 12. **Los 6 modelos SQLAlchemy (User, Garment, GarmentOwnership, Outfit, OutfitGarment, VTONJob) existen con exactamente los campos definidos, sin columnas no autorizadas**
     - ID: `86e3122fr` | Due: 07-09-2026
-    - List: Build | Owner: Jaicel
+    - List: Build | Owner: Jaicel | `repo:backend`
 
 13. **Los schemas Pydantic coinciden campo a campo con los Zod de api-client-and-schemas/spec.md**
     - ID: `86e3122fv` | Due: 07-09-2026
@@ -166,7 +171,7 @@ Tareas del epic:
    - ID: `86e302a2n` | Due: 07-09-2026
    - List: QA | Owner: Huascar
 
-2. **Visual regression testing sobre los 8 componentes base del design-system (h**[eader, button, card, etc.]
+2. **Visual regression sobre los 5 componentes base (Button, Card, Badge, Skeleton, Progress), claro + oscuro; baselines en runner determinista (Docker/ubuntu)**
    - ID: `86e302a2b` | Due: 07-09-2026
    - List: QA | Owner: Huascar
 
@@ -185,7 +190,7 @@ Tareas del epic:
 
 Tareas del epic:
 
-1. **Pipeline GitHub Actions: lint->typecheck->test->build en cada PR; +e2e+deploy a staging**
+1. **Endurecer el `ci.yml` existente (ya trae quality/build/e2e, Node 20) + CONFIGURAR BRANCH PROTECTION en `main` (require PR, ≥1 review CODEOWNERS, status checks obligatorios, sin push directo) + secreto `CODECOV_TOKEN`. Sin CI de backend en este repo, sin deploy a staging (Sprint 2+).**
    - ID: `86e301e09` | Due: 07-09-2026
    - List: Deploy | Owner: Manuel
 
@@ -217,22 +222,22 @@ Tareas del epic:
 
 ## Verificación de Completitud
 
-| Rol | Count | Asignado | Pendiente |
-| --- | --- | --- | --- |
-| **Asiento A (Leonardo)** | 14 | ✅ | 0 |
-| **Asiento B (Jaicel)** | 16 | ✅ | 0 |
-| **Asiento C (Huascar)** | 2 + pair | ✅ | 0 |
-| **Asiento D (Manuel)** | 6 | ✅ | 0 |
-| **Epics** | 3 | ✅ | 0 |
-| **TOTAL** | **41** | **✅** | **0** |
+| Rol | Count | Nota |
+| --- | --- | --- |
+| **Asiento A (Leonardo)** | 14 tareas ClickUp / 6 work-tareas (Tareas 0–5) | Tarea 1 y 2 implementadas (PRs abiertos). "Tarea 6" era duplicado → es de Jaicel. |
+| **Asiento B (Jaicel)** | 16 (4 de ellas `repo:backend`) | — |
+| **Asiento C (Huascar)** | 2 + pair | Gate de cobertura: setup Sprint 1, enforcement Sprint 2 (P1#8) |
+| **Asiento D (Manuel)** | 6 | `86e301e09` incluye branch protection (hoy OFF) |
+| **Epics** | 3 | F1, F2 (Leonardo), F3 (Jaicel) |
+| **TOTAL proyecto** | **41** (38 + 3) | **34 en este repo** + 4 en repo backend |
 
 ---
 
 ## Notas de Implementación
 
-- **No hay tareas sin asignar** en Sprint 1 (100% cobertura de asignación)
-- **Todas las tareas tienen fecha clara** (07-09-2026 = fin de Sprint 1)
-- **Épics de feature son "en bloques"**: Leonardo lidera 2 épics (design-system, app-shell); Jaicel lidera 3 (api-client, landing-auth, domain-db); Huascar refuerza seguridad; Manuel coordina infra
-- **No hay validación de Sprint 0 en Sprint 1** (Huascar enfocado en cobertura + pair en auth, no en regresión)
-- **Documentación lista para ejecutar** — cada rol tiene su lista de tareas con IDs de ClickUp para referencia directa
+- Correcciones de título y de alcance: **`sprint-1-manifest.md` §3–§7** (checklist de reconciliación para Manuel).
+- Fechas: el tablero puede mantener `due 07-09-2026`; el arranque real de *features* es **2 sep** (Sprint 0 cerró el 1 sep).
+- **Épics en bloques:** Leonardo lidera F1+F2; Jaicel lidera F3+F4 (+B1 en repo backend); Huascar refuerza seguridad + Q1; Manuel Q2/Q4/Q6.
+- Huascar **no** valida Sprint 0 en este ciclo (rezago no aplica en Sprint 1 — refuerza auth + monta gates).
+- La reconciliación del tablero ClickUp la ejecuta el **Asiento D (Manuel)** — ver `sprint-1-manifest.md` §7.
 

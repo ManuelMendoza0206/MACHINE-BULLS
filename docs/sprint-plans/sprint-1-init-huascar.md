@@ -1,10 +1,14 @@
 # Sprint 1 — Prompt de Inicialización | Asiento C (Huascar)
 
 **Rol:** QA & Validación — Coverage Gates + Auth Security Pair  
-**Duración:** 26 ago - 8 sep 2026 (14 días)  
+**Ventana:** Sprint 1 features **2–8 sep 2026** (Sprint 0 cerró el 1 sep)  
 **Epics:** Q1 (Test Automation), frontend/landing-and-auth-flow (support)  
-**2 tareas principales + pair programming** | SP estimado: ~20-25  
-**Contexto:** No hay sprint anterior que validar (Asiento C típicamente valida Sprint N-1). En Sprint 1, Huascar refuerza la tarea de mayor riesgo (auth) como tercer par, y establece cobertura mínima gates para evitar regressions.
+**2 tareas + pair** | SP ~20-25 — ver `sprint-1-manifest.md` §5.  
+**Contexto:** Sin sprint previo que validar; Huascar refuerza auth como tercer par y monta los gates de cobertura.
+
+> **Ajustes post-scaffold** (`sprint-1-manifest.md` §5): visual regression sobre **5** componentes
+> (Button, Card, Badge, Skeleton, Progress), no 8. Gate de cobertura: **setup** en Sprint 1,
+> **enforcement como merge-gate** en Sprint 2 (P1#8). Requiere `CODECOV_TOKEN` (secreto — Manuel).
 
 ---
 

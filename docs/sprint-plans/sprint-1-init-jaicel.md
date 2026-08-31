@@ -1,10 +1,15 @@
 # Sprint 1 — Prompt de Inicialización | Asiento B (Jaicel)
 
 **Rol:** Feature Support — Frontend API Client + Backend Domain Layer (Parte 1)  
-**Duración:** 26 ago - 8 sep 2026 (14 días)  
-**Epics:** frontend/api-client-and-schemas (F3), frontend/landing-and-auth-flow (F4), backend/domain-and-database (B1)  
-**16 tareas** | SP estimado: ~45-55  
-**Contexto:** Contrato frontera entre frontend y backend. Sin esto, no hay comunicación de datos. Auth es la tarea de mayor riesgo de seguridad.
+**Ventana:** Sprint 1 features **2–8 sep 2026** (Sprint 0 cerró el 1 sep)  
+**Epics:** frontend/api-client-and-schemas (F3), frontend/landing-and-auth-flow (F4), backend/domain-and-database (B1 — **repo backend**)  
+**Tareas:** ver `sprint-1-manifest.md` §4 (16 en el tablero, 4 de ellas `repo:backend`). SP ~45-55.  
+**Contexto:** Contrato frontera frontend↔backend. Auth (F4) es el mayor riesgo de seguridad.
+
+> **Ajustes post-scaffold** (`sprint-1-manifest.md` §4): `src/lib/errors.ts` **ya existe** — `86e301dea`
+> pasa a *tests + verificación contra la spec* (`CLAUDE.md` §5, no §3.3). `defaultQueryClientConfig`
+> se comparte con la Tarea 3 de Leonardo. Env var: `NEXT_PUBLIC_API_BASE_URL`.
+> Este prompt aún tiene detalles previos al scaffold — cotejar contra las specs y el manifiesto.
 
 ---
 
