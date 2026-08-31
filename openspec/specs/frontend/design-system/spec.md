@@ -74,12 +74,14 @@ The system SHALL provide a `cn()` utility that merges Tailwind CSS classes witho
 - **THEN** result is `'px-6'` (last value wins, no duplication)
 
 #### Scenario: Merge conditional classes
-- **WHEN** `cn('text-sm', { 'text-lg': true, 'font-bold': false })` is called
-- **THEN** result is `'text-sm text-lg'` (truthy included, falsy excluded)
+- **WHEN** `cn('text-sm', { 'font-bold': true, italic: false })` is called
+- **THEN** result is `'text-sm font-bold'` (truthy key included, falsy key excluded)
 
 #### Scenario: Handle undefined and arrays
 - **WHEN** `cn(['text-base', undefined], 'p-4', null)` is called
 - **THEN** result is `'text-base p-4'` (undefined/null ignored, arrays flattened)
+
+> Note: conflicting Tailwind utilities still collapse to the last one — `cn('text-sm', 'text-lg')` is `'text-lg'` (that is `tailwind-merge` doing its job, not a bug).
 
 #### Acceptance Criteria
 - [ ] `src/lib/utils/cn.ts` exports `cn` function using clsx + tailwind-merge
