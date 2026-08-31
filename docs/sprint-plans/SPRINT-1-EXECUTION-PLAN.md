@@ -1,4 +1,9 @@
-# SPRINT 1 EXECUTION PLAN (26 ago - 8 sep 2026)
+# SPRINT 1 EXECUTION PLAN
+
+> ⚠️ **Documento previo al scaffold.** Estructura canónica y correcciones (5 componentes no 8,
+> sin Storybook, `providers.tsx`, 4 ramas de error, Tareas 0–5, fechas 2–8 sep, "Tarea 6" es de
+> Jaicel): **`sprint-1-manifest.md`**. Este plan conserva ceremonias y timeline como referencia.
+
 
 ## Resumen Ejecutivo
 

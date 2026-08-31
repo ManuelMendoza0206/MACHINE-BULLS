@@ -253,19 +253,20 @@ scaffold por incompatibilidad con el prerender estático.
 **D3: Contrato de env** — `NEXT_PUBLIC_API_BASE_URL` (nombre de `api-client-and-schemas/spec.md`
 §111), no `NEXT_PUBLIC_API_URL`. `.env.example` es la plantilla; falla en build si falta en runtime real.
 
-**D4: Tarea 6 (API client skeleton) → Sprint 2** — pertenece al epic `api-client-and-schemas`
-(F3), que arranca en Sprint 2 con Jaicel como Asiento A (rotación §7.1). Nunca fue trabajo del
-Asiento A de Sprint 1 (cross-epic). Sacarla cierra la brecha de cronograma del Asiento A
-(Sprint 1 Leonardo = Tareas 0–5, sus dos epics: design-system + app-shell). `src/lib/errors.ts`
-ya existe (scaffold) y Jaicel lo consume desde su epic.
+**D4: "Tarea 6" (API client skeleton) — sale del Asiento A**. El esqueleto del API client y los
+tests de `errors.ts` **ya son de Jaicel** en Sprint 1: tareas ClickUp `86e301de7` / `86e301dea`
+del epic `api-client-and-schemas` (F3), que Jaicel lidera este sprint (`sprint-1-task-list.md`,
+no rotación §7.1 que dice Sprint 2 — esa tabla es imprecisa). La "Tarea 6" del prompt de Leonardo
+era un duplicado. `src/lib/errors.ts` ya existe (scaffold). Sprint 1 Leonardo = **Tareas 0–5**
+(sus dos epics: design-system + app-shell) — cierra la brecha de cronograma del Asiento A.
 
-**D5: Fuente de verdad del alcance por asiento** — para *arrancar*, cada asiento se guía por su
-`docs/sprint-plans/sprint-1-init-<name>.md` + las specs + `team-rotation-plan.md`. Estos son
-internamente consistentes y suficientes. La reconciliación completa del tablero (44 tareas, 4
-asientos, fechas, tags) contra ClickUp es tarea de coordinación de **Manuel/PO antes del
-kickoff** — no bloquea el arranque del Asiento A. *Nota:* los prompts de Jaicel/Huascar/Manuel
-aún llevan fechas y conteos viejos ("26 ago – 8 sep / 14 días / N tareas"); cada uno se corrige
-con el mismo tratamiento que recibió el de Leonardo, al preparar ese asiento.
+**D5: Fuente de verdad del alcance** — estructura canónica del Sprint 1 en
+`docs/sprint-plans/sprint-1-manifest.md` (derivada de specs + rotación); `sprint-1-task-list.md`
+(mirror del tablero) ya alineado con él. La reconciliación de ClickUp la ejecuta el **Asiento D
+(Manuel)** con su acceso legítimo — checklist en el manifiesto §7; una persona sola no puede
+saltarse ese control de equipo con una credencial en un prompt (§9). *Pendiente:* los prompts
+de Jaicel/Huascar/Manuel aún llevan fechas/conteos viejos — se corrigen al preparar cada asiento
+(el manifiesto §4–§6 ya lista qué cambiar).
 
 ### P1: Inconsistencias Congeladas
 

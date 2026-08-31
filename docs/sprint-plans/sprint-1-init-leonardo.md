@@ -3,7 +3,7 @@
 **Rol:** Feature Lead — Frontend Foundation
 **Ventana:** Sprint 0 (scaffold, ya entregado) + Sprint 1 features **2–8 sep 2026** (~28 h @ 4h/día)
 **Epics:** [EPIC] frontend/design-system, [EPIC] frontend/app-shell-and-navigation
-**Tareas ejecutables:** 6 (Tarea 0–5). *Tarea 6 (API skeleton) diferida a Sprint 2 — epic F3, Asiento A = Jaicel.*
+**Tareas ejecutables:** 6 (Tarea 0–5). *La "Tarea 6" (API skeleton) era duplicado — es de Jaicel, `86e301de7`/`86e301dea`.*
 **Stack fijo:** Next.js 14.2 · React 18.3 · Node 20 · TypeScript strict
 
 > **Gobernanza (no negociable):** cada Tarea entra por su rama `feat/tareaN-<slug>` → PR →
@@ -164,13 +164,12 @@ El scaffold ya trae `AppProviders` (con `useState(() => new QueryClient(...))`, 
 
 ---
 
-### Tarea 6 — DIFERIDA a Sprint 2
+### Tarea 6 — NO es del Asiento A
 
-El esqueleto de API client + los tests de `errors.ts` pertenecen al epic
-`api-client-and-schemas` (F3), que **arranca en Sprint 2 con Jaicel como Asiento A**
-(rotación §7.1). No es trabajo del Asiento A en Sprint 1 y sacarlo cierra la brecha de
-cronograma. `src/lib/errors.ts` ya existe (scaffold); Jaicel lo consume desde su epic.
-Decisión registrada en `CLAUDE.md` §10 D4.
+El esqueleto de API client + los tests de `errors.ts` **ya son de Jaicel** en Sprint 1:
+tareas `86e301de7` / `86e301dea` (epic F3, que Jaicel lidera este sprint). La "Tarea 6" del
+prompt anterior era un duplicado. `src/lib/errors.ts` ya existe (scaffold). `CLAUDE.md` §10 D4.
+Sprint 1 del Asiento A = **Tareas 0–5**.
 
 ---
 
