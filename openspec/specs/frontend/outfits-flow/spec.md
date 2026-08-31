@@ -1,8 +1,29 @@
+## Purpose
+Presenta combinaciones de outfits generadas por el motor de compatibilidad del backend, con su justificación (score cromático + embedding), permitiendo filtrar por estética y navegar al probador virtual.
+
+## Requirements
+
+### Requirement: Estado vacío distingue causa raíz
+El sistema SHALL diferenciar un resultado vacío por falta de combinaciones de uno causado por una categoría faltante en el armario del usuario.
+
+#### Scenario: Falta una categoría del armario
+- **WHEN** no se generan outfits porque el armario filtrado carece de una categoría (ej. calzado)
+- **THEN** se muestra el hint de categoría faltante con la posición exacta, no un estado vacío genérico
+
+### Requirement: Navegación de detalle sin refetch innecesario
+El sistema SHALL reutilizar la caché de cliente al navegar del grid al detalle de un outfit ya cargado.
+
+#### Scenario: Navegación desde el grid
+- **WHEN** el usuario navega a `/outfits/[outfitId]` desde una card ya renderizada en el grid
+- **THEN** no se dispara una nueva llamada de red para ese outfit
+
+---
+
 # Spec 03 — Outfits Flow
 
 **Estado:** Draft para implementación · **Depende de:** spec 00 (design system), spec 01 (api client/schemas) · **Consumido por:** spec 04 (VTON toma un `outfit_id` como input)
 
-Deriva de `docs/frontend-plan.md` §3.3 (Flujo C), §4.7. Cubre rutas `/outfits` y `/outfits/[outfitId]`.
+Deriva de `docs/context/frontend-plan.md` §3.3 (Flujo C), §4.7. Cubre rutas `/outfits` y `/outfits/[outfitId]`.
 
 ---
 
@@ -129,7 +150,7 @@ queryClient.getQueryData(['outfit', outfitId]) ──► HIT (venía del grid)
         v
 Fallback: re-derivar del último useRecommendOutfits ejecutado, o
 mostrar estado "outfit no encontrado en esta sesión" con CTA a /outfits
-        │  (no existe GET /outfits/{id} individual en base-plan.MD §11 —
+        │  (no existe GET /outfits/{id} individual en plan-base.md §11 —
         │   ver gap §6)
         v
 Render: imagen combinada, lista de prendas por posición,
@@ -167,6 +188,8 @@ onClick CTA ──► router.push(`/try-on?outfitId=${outfitId}`)  [entrada a sp
 - `OutfitScoreBreakdown`: colapsado por defecto, expande al click, valores numéricos formateados como porcentaje (ej. `0.92` → `"92%"`).
 - Detalle: navegación desde grid (cache HIT) no dispara nueva request de red (aserción sobre contador de llamadas MSW).
 - Detalle: acceso directo por URL sin cache (MISS) → muestra fallback "no encontrado en esta sesión" (dado el gap de §6).
+- `OutfitCard`: con estética y prendas conocidas, el `alt` describe el outfit (ej. "Outfit estética old_money: camisa, pantalón, calzado"), no vacío ni genérico.
+- Grid `/outfits` con `prefers-reduced-motion: reduce` simulado: la transición skeleton → resultado no anima, el contenido informativo es el mismo.
 
 **E2E (Playwright):**
 - Flujo: `/outfits` con armario precargado (fixture) → aplicar filtro de estética → click en primer outfit → detalle visible → click "Probar este outfit" → navega a `/try-on` con `outfitId` en query param.
@@ -182,6 +205,8 @@ onClick CTA ──► router.push(`/try-on?outfitId=${outfitId}`)  [entrada a sp
 - [ ] `OutfitScoreBreakdown` implementa progressive disclosure (colapsado por defecto).
 - [ ] Navegación grid→detalle reutiliza cache de TanStack Query sin re-fetch cuando el dato ya existe.
 - [ ] CTA de detalle navega a `/try-on` pasando el `outfitId` correctamente.
+- [ ] `OutfitCard` y el detalle exponen `alt` no vacío derivado de estética/prendas reales, verificado por test.
+- [ ] Las transiciones del grid respetan `prefers-reduced-motion`, verificado por test.
 - [ ] Cobertura de tests ≥ 80% en `src/features/outfits/`.
 - [ ] `npm run typecheck && npm run lint && npm run test && npm run test:e2e` pasan en verde.
 
@@ -189,7 +214,9 @@ onClick CTA ──► router.push(`/try-on?outfitId=${outfitId}`)  [entrada a sp
 
 ## 6. Gap Explícito
 
-`base-plan.MD` §11 no define un endpoint `GET /api/v1/outfits/{outfit_id}` para recuperar un outfit individual de forma independiente al listado de recomendaciones — solo `POST /outfits/recommend` (que devuelve un array). Esta spec asume que el detalle se sirve **desde el cache del cliente** (outfit ya visto en un grid previo) y define un fallback explícito de "no encontrado en esta sesión" para accesos directos por URL. **Acción de seguimiento:** confirmar con backend si se agregará un endpoint de detalle individual o si el frontend debe siempre re-derivar del último `recommend` — esto determina si el fallback de esta spec es permanente o temporal.
+`plan-base.md` §11 no define un endpoint `GET /api/v1/outfits/{outfit_id}` para recuperar un outfit individual de forma independiente al listado de recomendaciones — solo `POST /outfits/recommend` (que devuelve un array). Esta spec asume que el detalle se sirve **desde el cache del cliente** (outfit ya visto en un grid previo) y define un fallback explícito de "no encontrado en esta sesión" para accesos directos por URL. **Acción de seguimiento:** confirmar con backend si se agregará un endpoint de detalle individual o si el frontend debe siempre re-derivar del último `recommend` — esto determina si el fallback de esta spec es permanente o temporal.
+
+**Ver `specs/08-api-contract-gaps.md` (G2)** para el estado consolidado de este gap.
 
 ---
 

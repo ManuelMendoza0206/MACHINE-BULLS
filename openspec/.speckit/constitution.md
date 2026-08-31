@@ -1,40 +1,25 @@
 # Constitution — StyleSync IA
 
-> Generado a partir de: Team Charter, Project Goal y Estructura ClickUp del equipo (Manuel Delgadillo, Jaicel Jesús, Huascar Durán Avendaño, Leonardo Ibarra López) — actualizado 2026-08-27.
+> Generado a partir de: Team Charter, Priorización de Casos y Estructura ClickUp del equipo (Manuel Jiménez, Leonardo Ibarra, Huascar Durán, Jaicel Velasco).
 
 ## 1. Product Goal (fuente de verdad)
 
-Resolver el problema de **"qué me pongo" en la moda masculina** mediante una plataforma **web + móvil** que digitaliza el armario del usuario, recomienda combinaciones de ropa basadas en reglas estéticas y de color, y permite visualizar los resultados a través de un **probador virtual (VTON)**. El objetivo es entregar **inteligencia propia** — motor de recomendación y reglas de compatibilidad de creación propia — no solo conectar servicios de terceros. Para compradores y comercios de indumentaria online, el sistema reduce devoluciones y aumenta conversión mediante un pipeline MLOps desplegado en la nube.
+Para compradores y comercios de indumentaria online, construiremos un sistema inteligente de probador virtual y asesor de estilo que permite visualizar prendas sobre el cuerpo del usuario y generar combinaciones coherentes según estilos, reduciendo devoluciones y aumentando la conversión de venta, utilizando un pipeline MLOps desplegado en la nube.
 
 ## 2. Principios de Calidad y Alcance
 
-- **Inteligencia propia, no wrapper**: la lógica central del motor de compatibilidad (Fase 2) y clasificación estética/cromática (Fase 1) debe ser de creación propia. Se permite autocompletado de código repetitivo y ayuda con librerías, pero el diseño del scoring/compatibilidad no se delega a una API externa.
 - **Alcance acotado en 18 semanas**: cualquier feature nueva debe justificarse contra la restricción de tiempo del semestre. Si no cabe, se recorta o se pasa a "future enhancement".
 - **Complejidad técnica genuina, no trivial**: el proyecto se eligió por sobre alternativas más simples (Arte-Match, Tutor Musical) precisamente porque combina IA generativa (VTON) + recomendación de estilo + MLOps real. No se debe simplificar el proyecto a un CRUD con un modelo pegado encima.
 - **Pipeline MLOps completo obligatorio**: entrenamiento/reentrenamiento, versionado de modelos, inferencia en la nube con GPU, y monitoreo de calidad. El despliegue real es un requisito no negociable, no un "nice to have".
 - **Riesgo gestionado, no eliminado**: se acepta riesgo Medio en calidad de generación (distorsiones de cuerpo/tela) siempre que esté acotado por catálogo reducido y monitoreo activo (ver Registro de Riesgos en ClickUp).
-- **Responsabilidad compartida y rigor académico**: todos los miembros comprenden la arquitectura general del sistema (web + móvil + backend). Comunicación transparente sobre avances — ver §3.1.
 
 ## 3. Gobernanza del Equipo (no negociable)
 
 - **Rama `main` protegida**: prohibidos los commits directos. Todo cambio entra vía Pull Request.
-- **Aprobación mínima**: 1 revisor por PR antes de merge, distinto al creador. El revisor comprueba que no rompe funcionalidad existente.
+- **Aprobación mínima**: 1 revisor por PR antes de merge.
 - **Rechazo automático de PR** si contiene: credenciales/API keys/tokens/datos personales sensibles, pruebas fallidas, o falta de criterios de aceptación documentados.
 - **Declaración de uso de IA obligatoria** en cada PR: qué % o sección fue asistida por IA (Gemini, ChatGPT, Copilot, Claude) y qué pruebas validaron ese código. La responsabilidad técnica es siempre del equipo, nunca de la IA.
 - **Prohibido ingresar secretos o datos personales** en prompts de herramientas de IA.
-- **Ninguna IA puede aprobar un Pull Request**: la aprobación es humana y responsable.
-- **Auditoría de código IA**: todo código generado o sugerido por IA debe ser revisado obligatoriamente — por un agente automatizado de QA o manualmente por un integrante — antes del merge.
-
-### 3.1 Canales, Tiempos y Sincronización
-
-- **Canales**: WhatsApp para urgencias/logística rápida. Discord o Slack para discusiones técnicas, enlaces y alertas del repositorio.
-- **Tiempo de respuesta**: máximo **12 horas** para confirmación de lectura o respuesta.
-- **Sincronización**: 1 reunión semanal corta (Google Meet o presencial) para planificar la semana y revisar avance.
-
-### 3.2 Manejo de Bloqueos
-
-- **Regla de las 24 horas**: si un integrante pasa más de 24 horas atascado en el mismo error/problema lógico, es obligatorio avisar en el chat grupal.
-- **Resolución**: se organiza una llamada rápida de revisión conjunta (pair programming) para destrabar y evitar desvíos del cronograma.
 
 ## 4. Definition of Done (DoD)
 
@@ -61,19 +46,17 @@ Una tarea se considera Terminada solo si:
 - Costo de inferencia GPU y latencia del modelo generativo (VTON).
 - Calidad realista del try-on (distorsiones de cuerpo/tela) — requiere monitoreo continuo, no solo validación inicial.
 - Dependencia del catálogo de un comercio específico limita la generalización del recomendador de estilos.
+- **Licenciamiento del modelo VTON (riesgo Legal/Alto, hallazgo de auditoría agosto 2026):** los modelos de referencia para el pipeline generativo (IDM-VTON, OOTDiffusion) se publican bajo licencia **no comercial**. Consumirlos vía una API gestionada (Replicate/RunPod, `plan-base.md` §6.1) delega la infraestructura pero no despeja el uso comercial de la salida generada — la licencia de los pesos subyacentes no cambia. Debe resolverse antes de la Fase 3 del cronograma (integración VTON, `plan-base.md` §7.1) por una de tres rutas, decisión pendiente del equipo completo (no solo frontend):
+  1. Confirmar un proveedor con licencia comercial explícita para el modelo servido (distinta del checkpoint de investigación crudo).
+  2. Mantener el alcance del proyecto estrictamente académico/no comercial y documentarlo como restricción de producto — consistente con el carácter de proyecto de semestre (§2).
+  3. Entrenar/ajustar un modelo propio sobre una arquitectura con licencia permisiva.
 
-## 8. DOME — Fases del Proyecto
+## 8. Decisiones de Arquitectura Registradas
 
-| Fase | Meta |
-| :--- | :--- |
-| **1 — Análisis y Clasificación** | Backend recibe foto de prenda, quita fondo y clasifica tipo/estética |
-| **2 — Motor de Compatibilidad** | Analiza color/estilo y sugiere outfits armónicos (motor propio) |
-| **3 — Probador Virtual VTON** | Proyecta outfit sobre foto del usuario respetando postura/proporciones |
-| **4 — Lanzamiento y UI** | Plataforma web + móvil pulida, todo conectado, usable end-to-end |
-
-## 9. Equipo
-
-- Manuel Delgadillo
-- Jaicel Jesús
-- Huascar Durán Avendaño
-- Leonardo Ibarra López
+- **Plataforma de frontend: aplicación web (Next.js), no app móvil.** El plan técnico original de Feature 001 (`.speckit/features/001-probador-virtual/plan.md`, commit `9fecf33`) eligió React Native + AWS (SageMaker/RDS/S3/SQS). El commit `6c89b64` introdujo `docs/context/plan-base.md` y todo `openspec/specs/` sobre un stack distinto (Next.js web + FastAPI/PyTorch + PostgreSQL/pgvector + Supabase Auth + Replicate/RunPod) **sin que el pivote quedara registrado como decisión** en su momento, en violación de facto de §5. Se registra aquí retroactivamente: **el stack vigente es el de `plan-base.md` §6.1**, ratificado con el Product Owner (Leonardo Ibarra) el 2026-08-24. Pendiente: ratificación explícita del resto del equipo (Manuel, Huascar, Jaicel) en la próxima ceremonia, con entrada en ClickUp — hasta entonces esta entrada es la evidencia mínima de trazabilidad exigida por §5, no un reemplazo de la ceremonia del equipo.
+- **Autenticación: Supabase Auth**, no credenciales propias — justificado en que `User` (`plan-base.md` §10.1) no define `password_hash` y el stack ya compromete PostgreSQL+pgvector, que Supabase provee gestionado. Detalle en `openspec/specs/frontend/landing-and-auth-flow/spec.md` §1.1.
+- **Modelo de datos: tabla `GarmentOwnership`** añadida a `plan-base.md` §10.1 para soportar la adopción del catálogo cápsula por múltiples usuarios sin duplicar prendas ya analizadas. Detalle y justificación en `docs/context/backend-plan.md` §5.2. Ratificado con el Product Owner el 2026-08-26.
+- **Almacenamiento de objetos: Cloudinary** (no S3 ni Supabase Storage) — transformaciones on-the-fly necesarias para el pipeline de garment analysis. Detalle en `docs/context/backend-plan.md` §12.1. Ratificado 2026-08-26.
+- **Alcance del proyecto: académico/no comercial, sin cliente final (Ruta 2 del riesgo de licenciamiento VTON, §7)** — confirmado con el Product Owner (2026-08-26): no es una concesión, es la formalización de lo que §2 de esta constitución ya declaraba. Habilita usar un checkpoint community de IDM-VTON/OOTDiffusion vía Replicate sin bloquear Fase 3, y sin violación de licencia real (el uso cae dentro de lo permitido, no en zona gris). Análisis completo en `docs/context/backend-plan.md` §12.2. **Pendiente de ratificación formal por el resto del equipo (Manuel, Huascar, Jaicel)** — mismo estándar que el pivote de plataforma de §8.
+- **Riesgo activo derivado (no licenciamiento, sino uso responsable):** las licencias RAIL de los modelos VTON restringen, independientemente de si el uso es comercial, generar contenido que represente a una persona real de forma no consentida o dañina. Como el pipeline procesa fotos reales de usuarios, este es ahora el eje de riesgo a controlar — ver acción pendiente en §6 de esta constitución (mecanismo de consentimiento/retención aún no definido en detalle, solo mencionado).
+- **Human parsing VTON: SCHP** (no SAM) — compatible por diseño con IDM-VTON/OOTDiffusion, sin capa de clasificación adicional que construir. Detalle en `docs/context/backend-plan.md` §12.3. Ratificado 2026-08-26 (decisión técnica, no requiere ceremonia de equipo).

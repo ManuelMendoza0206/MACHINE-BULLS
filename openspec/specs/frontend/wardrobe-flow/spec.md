@@ -1,8 +1,36 @@
+## Purpose
+Permite al usuario digitalizar su guardarropa con fricción mínima (subida propia y/o catálogo cápsula) y revisar/corregir el análisis automático de cada prenda antes de que alimente el motor de recomendación.
+
+## Requirements
+
+### Requirement: Subida por lote con techo de concurrencia
+El sistema SHALL limitar la subida simultánea de prendas a un techo configurable, encolando el excedente sin detener el proceso ante fallos individuales.
+
+#### Scenario: Exceso de archivos en un lote
+- **WHEN** el usuario suelta más archivos que el techo de concurrencia configurado
+- **THEN** el excedente pasa a estado `queued` y se procesa en orden FIFO, sin bloquearse por el fallo de un archivo activo
+
+### Requirement: Resultado de análisis editable antes de confirmar
+El sistema SHALL permitir corregir la categoría y estética detectadas antes de guardar una prenda.
+
+#### Scenario: Corrección manual de categoría
+- **WHEN** el usuario edita la categoría detectada en el resultado de análisis
+- **THEN** el valor editado, no el original detectado, es el que se persiste al confirmar
+
+### Requirement: Catálogo cápsula con cobertura mínima verificable
+El sistema SHALL exigir que el catálogo "Básicos StyleMe" cubra al menos una prenda por posición de outfit y por estética objetivo.
+
+#### Scenario: Validación de cobertura del catálogo
+- **WHEN** se publica o actualiza el catálogo cápsula
+- **THEN** existe al menos una prenda por cada posición (`top/bottom/footwear/outerwear`) y por cada estética objetivo definida
+
+---
+
 # Spec 02 — Wardrobe Flow (Onboarding, Upload, Armario, Catálogo Cápsula)
 
 **Estado:** Draft para implementación · **Depende de:** spec 00 (design system), spec 01 (api client/schemas) · **Consumido por:** ninguna
 
-Deriva de `docs/frontend-plan.md` §3.1 (Flujo A), §3.2 (Flujo B), §4.2-4.6 (inventario de pantallas). Cubre rutas `/onboarding`, `/wardrobe`, `/wardrobe/upload`, `/wardrobe/[garmentId]`, `/wardrobe/capsule`.
+Deriva de `docs/context/frontend-plan.md` §3.1 (Flujo A), §3.2 (Flujo B), §4.2-4.6 (inventario de pantallas). Cubre rutas `/onboarding`, `/wardrobe`, `/wardrobe/upload`, `/wardrobe/[garmentId]`, `/wardrobe/capsule`.
 
 ---
 
@@ -13,7 +41,7 @@ Deriva de `docs/frontend-plan.md` §3.1 (Flujo A), §3.2 (Flujo B), §4.2-4.6 (i
 **SLA de rendimiento:**
 - Feedback visual de "analizando" visible en < 100ms desde que el usuario suelta/selecciona un archivo (skeleton inmediato, no esperar respuesta de red para mostrar estado).
 - Validación de blur en cliente (heurística de varianza Laplaciana sobre `<canvas>`) debe resolver en < 300ms para una imagen de hasta 8MB, para no percibirse como bloqueo antes del submit.
-- Subida por lote: cada archivo procesa su propio ciclo upload→análisis de forma independiente y paralela (fallo de uno no bloquea a los demás).
+- Subida por lote: cada archivo procesa su propio ciclo upload→análisis de forma independiente y paralela (fallo de uno no bloquea a los demás), con un **techo de concurrencia de 4-6 subidas simultáneas** (configurable en `src/config/vision.ts`) — el resto se encola en orden FIFO y visible como estado `queued`, para no disparar decenas de `multipart/form-data` a la vez cuando el onboarding sube un armario completo (hallazgo de auditoría, agosto 2026).
 - `/wardrobe` con grid de hasta 50 items debe alcanzar interactividad (TTI) en < 2s en conexión 4G simulada (Lighthouse).
 
 ---
@@ -60,7 +88,21 @@ interface UseUploadGarmentResult {
 }
 export function useUploadGarment(): UseUploadGarmentResult;
 ```
-Internamente: `useMutation` de TanStack Query sobre `uploadGarment` (spec 01 §2.4). Un componente que sube N archivos instancia N veces este hook (uno por `GarmentCard` en estado de análisis) — no hay una mutación batch a nivel de red, el "batch" es paralelismo en el cliente.
+Internamente: `useMutation` de TanStack Query sobre `uploadGarment` (spec 01 §2.4). Un componente que sube N archivos instancia N veces este hook (uno por `GarmentCard` en estado de análisis) — no hay una mutación batch a nivel de red, el "batch" es paralelismo en el cliente, acotado por el gestor de cola de §2.3.1.
+
+#### 2.3.1 Límite de concurrencia (`src/features/garments/lib/uploadQueue.ts`)
+
+```ts
+interface UploadQueueOptions {
+  maxConcurrent?: number; // default: config.vision.maxConcurrentUploads (4-6)
+}
+
+export function useUploadQueue(files: File[], options?: UploadQueueOptions): {
+  active: File[];   // archivos actualmente en estado 'uploading'
+  queued: File[];   // archivos en espera, orden FIFO
+};
+```
+Cuando un archivo activo resuelve (éxito o error), el siguiente en la cola FIFO inicia su propio ciclo `detectBlur → useUploadGarment` sin esperar a que el usuario reintente el fallido — preserva el invariante existente de "un fallo no bloquea ni cancela a los demás" (§3.1) y añade uno nuevo: **la cola nunca se detiene por un fallo individual**.
 
 ### 2.4 Componentes (props mínimas)
 
@@ -93,6 +135,14 @@ interface CapsuleCatalogGridProps {
   onToggle: (id: string) => void;
 }
 ```
+
+#### 2.4.1 Criterio de calidad de curación del catálogo cápsula
+
+El catálogo "Básicos StyleMe" (`plan-base.md` §5.2) es el diferenciador de producto frente a la fricción de alta que hunde a la competencia directa (Whering, Acloset, Stylebook — ver auditoría de agosto 2026: la queja #1 en reseñas de esas apps es exigir un armario mínimo antes de dar valor). Por eso no basta con el rótulo genérico "curado" — debe cumplir un checklist verificable antes de publicarse o actualizarse:
+
+- **Cobertura mínima por posición:** al menos una prenda por cada posición de outfit (`top`, `bottom`, `footwear`, `outerwear`, `plan-base.md` §10.1), de forma que ningún filtro de `/outfits` quede sin combinaciones posibles usando solo prendas cápsula.
+- **Cobertura mínima por estética:** al menos una prenda etiquetada por cada estética objetivo listada en `plan-base.md` (Old Money, Streetwear, Soft Boy, Starboy, Gorpcore).
+- **Estándar visual consistente:** cada fotografía del catálogo cumple el mismo estándar de fondo removido y encuadre que `processed_image_url` de `POST /garments/upload` (spec 01 §2.5) — el catálogo no debe percibirse visualmente distinto de una prenda subida por el usuario.
 
 ### 2.5 Componente de onboarding
 
@@ -167,7 +217,8 @@ Formaliza el diagrama de §3.1 como máquina de estados explícita — implement
 | Estado | Entrada que dispara la transición | Siguiente estado | UI renderizada |
 | :--- | :--- | :--- | :--- |
 | `idle` | Archivo aún no procesado (no debería ser visible — se monta ya en `checking-blur`) | — | — |
-| `checking-blur` | Montaje del componente con un `File` | `detectBlur` resuelve | Skeleton neutro |
+| `queued` | El archivo excede el techo de concurrencia activo (§2.3.1) al momento de soltarse | Un slot de subida se libera (otro archivo activo resuelve) → pasa a `checking-blur` | Card en estado de espera, sin skeleton de análisis — indica posición en cola |
+| `checking-blur` | Montaje del componente con un `File`, o liberación desde `queued` | `detectBlur` resuelve | Skeleton neutro |
 | `blur-warning` | `detectBlur` retorna `isBlurry: true` | Usuario confirma envío o descarta el archivo | Badge de warning + preview + botón "Subir de todas formas" / "Elegir otra" |
 | `uploading` | `detectBlur` retorna `isBlurry: false`, o usuario confirma pese al warning | Respuesta de `useUploadGarment` | Skeleton + shimmer, texto "Analizando tu prenda..." |
 | `error` | `useUploadGarment` resuelve con `status: 'error'` | Usuario click "Reintentar" → vuelve a `uploading` | Card de error tipada por clase de `StyleMeError` (mensaje distinto para `ApiError` vs `NetworkError` vs `ValidationError`, reutilizando `mapStatusToUserMessage` de spec 01 §2.6) |
@@ -205,6 +256,10 @@ GET (listado de garments, ver gap §6)
 - `OnboardingWizard`: navegación paso 1 → paso 2 → confirmación → `router.push` a `/outfits` (mock de `next/navigation`).
 - `CapsuleCatalogGrid`: toggle de selección, contador de seleccionados refleja el estado.
 - Estado vacío de `/wardrobe`: sin datos → EmptyState visible con ambos CTAs.
+- `useUploadQueue`: con `maxConcurrent: 2` y 5 archivos soltados a la vez, verifica que solo 2 entran en `uploading` de inmediato y 3 quedan en `queued`; al resolver uno de los activos (éxito o error vía MSW), el siguiente en la cola FIFO pasa a `checking-blur` automáticamente.
+- `GarmentCard`: con datos de categoría/estética conocidos, el `alt` de la imagen sigue el patrón `"{categoría}, estética {estética_dominante}"` (no vacío, no genérico).
+- `GarmentAnalysisResult` con `prefers-reduced-motion: reduce` simulado (mock de `matchMedia`): el shimmer de carga se reemplaza por un estado estático con el mismo texto informativo.
+- `CapsuleCatalogGrid`: fixture del catálogo cumple cobertura mínima por posición y por estética (test de datos, no de componente — valida el fixture usado en MSW contra el checklist de §2.4.1).
 
 **E2E (Playwright):**
 - Flujo completo: signup mock → onboarding paso 1 (skip estética) → paso 2 (subir 1 archivo fixture) → esperar resultado → confirmar → landing en `/outfits`.
@@ -225,6 +280,10 @@ GET (listado de garments, ver gap §6)
 - [ ] Categoría y estética del resultado son editables inline antes de "confirmar" (según `frontend-plan.md` §3.2).
 - [ ] `OnboardingWizard` permite completar el flujo usando SOLO subida propia, SOLO catálogo cápsula, o ambas combinadas.
 - [ ] Estado vacío de `/wardrobe` presenta el mismo doble CTA que el onboarding paso 2 (consistencia de patrón).
+- [ ] Subida por lote respeta el techo de concurrencia configurado (§2.3.1); el excedente se refleja en estado `queued` visible y procesa en orden FIFO sin detenerse ante fallos individuales.
+- [ ] El catálogo cápsula cumple el checklist de curación de §2.4.1 (cobertura por posición, por estética, estándar visual consistente con `GarmentCard`).
+- [ ] `GarmentCard` expone `alt` no vacío derivado de categoría/estética real (nunca `alt=""` ni genérico), verificado por test.
+- [ ] Los estados de shimmer/skeleton respetan `prefers-reduced-motion`, cayendo a un estado estático con el mismo texto informativo, verificado por test.
 - [ ] Cobertura de tests ≥ 80% en `src/features/garments/` y `src/features/onboarding/`.
 - [ ] `npm run typecheck && npm run lint && npm run test && npm run test:e2e` pasan en verde.
 
@@ -232,11 +291,13 @@ GET (listado de garments, ver gap §6)
 
 ## 6. Gap Explícito (bloqueante parcial)
 
-Como se documentó en `frontend-plan.md` §6, no existe en `base-plan.MD` §11 un endpoint de **listado** de prendas del usuario ni de **asociación** de prendas del catálogo cápsula a un usuario. Esta spec define `GarmentSummary` como un tipo placeholder mínimo (`{ id, processed_image_url, category, dominant_aesthetic }`) para permitir desarrollar `/wardrobe` contra mocks MSW (Fase 1 de `frontend-plan.md` §10), pero **la conexión real queda bloqueada** hasta que el backend confirme:
+Como se documentó en `frontend-plan.md` §6, no existe en `plan-base.md` §11 un endpoint de **listado** de prendas del usuario ni de **asociación** de prendas del catálogo cápsula a un usuario. Esta spec define `GarmentSummary` como un tipo placeholder mínimo (`{ id, processed_image_url, category, dominant_aesthetic }`) para permitir desarrollar `/wardrobe` contra mocks MSW (Fase 1 de `frontend-plan.md` §10), pero **la conexión real queda bloqueada** hasta que el backend confirme:
 1. `GET /api/v1/garments?user_id=` (o equivalente) para el grid de `/wardrobe`.
 2. El mecanismo para "agregar" prendas del catálogo cápsula al armario del usuario (¿es un `POST` separado, o el `user_id` se asigna directamente al seleccionar?).
 
 No se debe implementar ninguna llamada real a estos endpoints hipotéticos en `src/features/garments/api/` hasta confirmarlo — solo mocks MSW documentados como tales.
+
+**Ver `specs/08-api-contract-gaps.md` (G1, G4)** para el estado consolidado de estos gaps, su fase de corte recomendada y el proceso de cierre — este documento mantiene la nota local, esa spec es la fuente única de verdad sobre su estado.
 
 ---
 
@@ -247,6 +308,7 @@ src/stores/onboardingStore.ts
 src/lib/vision/detectBlur.ts
 src/config/vision.ts
 src/features/garments/hooks/useUploadGarment.ts
+src/features/garments/lib/uploadQueue.ts
 src/features/garments/components/GarmentDropzone.tsx
 src/features/garments/components/GarmentCard.tsx
 src/features/garments/components/GarmentAnalysisResult.tsx
@@ -261,6 +323,7 @@ tests/fixtures/images/sharp.jpg
 tests/fixtures/images/blurry.jpg
 tests/unit/lib/vision/detectBlur.test.ts
 tests/unit/stores/onboardingStore.test.ts
+tests/unit/features/garments/uploadQueue.test.ts
 tests/integration/garments/GarmentAnalysisResult.test.tsx
 tests/integration/garments/GarmentDropzone.test.tsx
 tests/integration/garments/CapsuleCatalogGrid.test.tsx

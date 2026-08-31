@@ -1,8 +1,33 @@
+## Purpose
+Encapsula toda comunicación HTTP con el backend en un cliente único y tipado, garantizando que ninguna respuesta cruza al código de aplicación sin pasar por su schema Zod, y traduce cualquier fallo a una subclase de `StyleMeError`.
+
+## Requirements
+
+### Requirement: Validación obligatoria de toda respuesta de red
+El sistema SHALL rechazar cualquier respuesta del backend que no cumpla su schema Zod antes de exponerla a un componente.
+
+#### Scenario: Payload inválido
+- **WHEN** el backend responde `2xx` con un payload que no cumple el schema Zod esperado
+- **THEN** el cliente lanza `ValidationError` y ningún componente recibe el dato sin validar
+
+### Requirement: Errores tipados por clase, nunca genéricos
+El sistema SHALL traducir todo fallo de red o HTTP a una subclase de `StyleMeError`.
+
+#### Scenario: Respuesta HTTP no exitosa
+- **WHEN** la respuesta del backend no es `2xx`
+- **THEN** se lanza `ApiError` con el `status` HTTP correcto y el cuerpo de respuesta adjunto
+
+#### Scenario: Fallo de red o timeout
+- **WHEN** `fetch` rechaza o el timeout configurado se cumple antes de recibir respuesta
+- **THEN** se lanza `NetworkError`, distinguible de un `ApiError`
+
+---
+
 # Spec 01 — API Client, Error Hierarchy & Zod Schemas
 
 **Estado:** Draft para implementación · **Depende de:** ninguna · **Consumido por:** specs 02, 03, 04
 
-Deriva de `docs/base-plan.MD` §11 (contratos REST), `docs/frontend-plan.md` §6 (mapeo de integraciones) y `CLAUDE.md` §2.1, §5. Es la única capa autorizada a hacer `fetch` en todo el proyecto — ningún componente o hook de las specs 02-04 debe importar `fetch` directamente.
+Deriva de `docs/context/plan-base.md` §11 (contratos REST), `docs/context/frontend-plan.md` §6 (mapeo de integraciones) y `CLAUDE.md` §2.1, §5. Es la única capa autorizada a hacer `fetch` en todo el proyecto — ningún componente o hook de las specs 02-04 debe importar `fetch` directamente.
 
 ---
 
@@ -93,7 +118,7 @@ Comportamiento obligatorio:
 
 ### 2.3 Zod Schemas (`src/schemas/api/`)
 
-Derivados campo por campo de `base-plan.MD` §11. Donde el documento base no fija un enum cerrado, se usa `z.string()` con comentario explícito — **no se inventan valores de enum no confirmados por el backend** (regla de `CLAUDE.md` §8).
+Derivados campo por campo de `plan-base.md` §11. Donde el documento base no fija un enum cerrado, se usa `z.string()` con comentario explícito — **no se inventan valores de enum no confirmados por el backend** (regla de `CLAUDE.md` §8).
 
 ```ts
 // src/schemas/api/garments.ts
@@ -123,7 +148,7 @@ export type GarmentUploadResponse = z.infer<typeof GarmentUploadResponseSchema>;
 
 ```ts
 // src/schemas/api/outfits.ts
-export const OutfitPositionSchema = z.enum(['top', 'bottom', 'footwear', 'outerwear']); // cerrado: enum explícito en base-plan.MD §10.1
+export const OutfitPositionSchema = z.enum(['top', 'bottom', 'footwear', 'outerwear']); // cerrado: enum explícito en plan-base.md §10.1
 
 export const OutfitGarmentRefSchema = z.object({
   garment_id: z.string().uuid(),
@@ -153,7 +178,7 @@ export type OutfitRecommendRequest = z.infer<typeof OutfitRecommendRequestSchema
 
 ```ts
 // src/schemas/api/vton.ts
-export const VtonJobStatusSchema = z.enum(['pending', 'processing', 'completed', 'failed']); // cerrado: enum explícito en base-plan.MD §10.1
+export const VtonJobStatusSchema = z.enum(['pending', 'processing', 'completed', 'failed']); // cerrado: enum explícito en plan-base.md §10.1
 
 export const VtonJobCreateResponseSchema = z.object({
   job_id: z.string().uuid(),
@@ -312,7 +337,7 @@ Todo caller (hooks de TanStack Query en specs 02-04) recibe siempre **o bien** u
 - [ ] Jerarquía de errores de §2.1 implementada exactamente como en `CLAUDE.md` §5 (mismas 5 clases, mismos nombres).
 - [ ] Los 4 schemas de §2.3 existen, tipados sin `any`, exportando su `z.infer` correspondiente.
 - [ ] `category` (Garment) y `aesthetic` (Outfit) permanecen como `z.string()` con el comentario de gap explícito — no se cierra el enum sin confirmación backend.
-- [ ] `OutfitPositionSchema` y `VtonJobStatusSchema` son `z.enum` cerrados (estos sí están explícitos en `base-plan.MD` §10.1).
+- [ ] `OutfitPositionSchema` y `VtonJobStatusSchema` son `z.enum` cerrados (estos sí están explícitos en `plan-base.md` §10.1).
 - [ ] `VtonJobStatusResponseSchema` tiene un `.refine()` probado que exige `result_url` cuando `status === 'completed'`.
 - [ ] Las 4 funciones de dominio de §2.4 implementadas, sin lógica más allá de invocar `apiRequest`.
 - [ ] Cobertura de tests ≥ 90% para `src/lib/api/`, `src/lib/errors.ts` y `src/schemas/api/` (módulos críticos de integridad de datos).

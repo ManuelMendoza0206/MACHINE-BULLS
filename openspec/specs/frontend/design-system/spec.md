@@ -1,8 +1,29 @@
+## Purpose
+Provee los tokens de diseño (color, tipografía, espaciado) y los componentes shadcn/ui base sobre los que se construye toda pantalla del producto, consistentes en modo claro y oscuro, y accesibles por defecto.
+
+## Requirements
+
+### Requirement: Contraste de color verificable
+El sistema SHALL garantizar que todo par texto/fondo de los tokens de diseño cumple WCAG AA en ambos temas.
+
+#### Scenario: Verificación de contraste
+- **WHEN** se evalúa cualquier par `(foreground, background)` o `(mutedForeground, muted)` definido en los tokens
+- **THEN** el ratio de contraste es igual o mayor a 4.5:1 en modo claro y en modo oscuro
+
+### Requirement: Componentes accesibles por teclado
+El sistema SHALL asegurar que `Dialog` y `Sheet` gestionan el foco correctamente al abrir y cerrar.
+
+#### Scenario: Restauración de foco
+- **WHEN** el usuario cierra un `Dialog` o `Sheet`
+- **THEN** el foco vuelve al elemento que lo abrió, sin quedar perdido en el documento
+
+---
+
 # Spec 00 — Design System
 
 **Estado:** Draft para implementación · **Depende de:** ninguna · **Consumido por:** todas las specs de UI (02, 03, 04)
 
-Deriva de `docs/frontend-plan.md` §5 y `CLAUDE.md` §2, §6. Establece los tokens, utilidades y componentes base de shadcn/ui sobre los que se construye toda pantalla del producto. Ninguna spec posterior debe redefinir un token de color/espaciado/tipografía — solo consumirlos.
+Deriva de `docs/context/frontend-plan.md` §5 y `CLAUDE.md` §2, §6. Establece los tokens, utilidades y componentes base de shadcn/ui sobre los que se construye toda pantalla del producto. Ninguna spec posterior debe redefinir un token de color/espaciado/tipografía — solo consumirlos.
 
 ---
 

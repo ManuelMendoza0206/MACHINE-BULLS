@@ -214,6 +214,7 @@ SEMANA  13 - 16 :  [ Phase 4: Frontend UI, Pruebas End-to-End y Ajuste Final ]
 | Fotos de baja calidad subidas por el usuario. | Medio | Alta | Validación previa con varianza de Laplaciano (detección de borrosidad) y MediaPipe antes de la inferencia. |
 | Costo de llamadas a APIs GPU en la nube. | Alto | Media | Sistema de caché de resultados VTON para outfits y prendas repetidas en PostgreSQL. |
 | Baja precisión en estéticas ambiguas. | Medio | Media | Respuesta Top-N estéticas con score de confianza en lugar de un único valor determinista. |
+| **Licenciamiento no comercial de los modelos VTON de referencia (IDM-VTON, OOTDiffusion).** *(Hallazgo de auditoría, agosto 2026)* | Alto | Alta (si el proyecto excede el alcance académico) | Confirmar antes de Fase 3 un proveedor con licencia comercial explícita para el modelo servido, **o** mantener el alcance estrictamente académico/no comercial documentado como restricción de producto, **o** entrenar/ajustar un modelo propio sobre arquitectura con licencia permisiva. Servir el modelo vía una API gestionada (Replicate/RunPod) delega la infraestructura pero no cambia la licencia de los pesos subyacentes — ver `.speckit/constitution.md` §7. |
 
 ---
 
@@ -238,6 +239,7 @@ SEMANA  13 - 16 :  [ Phase 4: Frontend UI, Pruebas End-to-End y Ajuste Final ]
 [ User ] 1 --- N [ Outfit ]
 [ Outfit ] N --- M [ Garment ] (a través de OutfitGarment)
 [ User ] 1 --- N [ VTONJob ]
+[ User ] N --- M [ Garment ] (a través de GarmentOwnership — adopción del catálogo cápsula)
 
 
 *   **Users:** `id` (UUID), `email` (string), `name` (string), `created_at` (timestamp).
@@ -245,6 +247,7 @@ SEMANA  13 - 16 :  [ Phase 4: Frontend UI, Pruebas End-to-End y Ajuste Final ]
 *   **Outfits:** `id` (UUID), `user_id` (UUID), `score` (float), `aesthetic` (string), `created_at` (timestamp).
 *   **OutfitGarments:** `outfit_id` (UUID), `garment_id` (UUID), `position` (enum: top, bottom, footwear, outerwear).
 *   **VTONJobs:** `id` (UUID), `user_id` (UUID), `user_photo_url` (string), `outfit_id` (UUID), `status` (enum: pending, processing, completed, failed), `result_url` (string), `error_message` (string), `created_at` (timestamp).
+*   **GarmentOwnership** *(añadido — decisión de arquitectura backend, ver `backend-plan.md` §5.2)*: `user_id` (UUID), `garment_id` (UUID), `source` (enum: uploaded, capsule), `added_at` (timestamp) — PK compuesta `(user_id, garment_id)`. Permite que una misma prenda del catálogo cápsula (`user_id` nulo en `Garments`) sea "adoptada" por N usuarios sin duplicar la fila ni su análisis ya computado (categoría/estética/colores). Resuelve el gap G4 de `openspec/specs/frontend/api-contract-gaps/spec.md`.
 
 ---
 
@@ -262,5 +265,7 @@ SEMANA  13 - 16 :  [ Phase 4: Frontend UI, Pruebas End-to-End y Ajuste Final ]
 4.  `GET /api/v1/vton/status/{job_id}`
     *   *Input:* Path param `job_id`.
     *   *Output:* JSON (`job_id`, `status`, `result_url` [if completed]).
+
+> **Endpoints adicionales confirmados** *(añadido — `backend-plan.md` §6.2)*: listado de prendas (`GET /garments`), detalle de outfit individual (`GET /outfits/{id}`), listado de trabajos VTON (`GET /vton/jobs`), y adopción de catálogo cápsula (`POST /garments/capsule/{id}/adopt`) — resuelven los gaps G1-G4 que `openspec/specs/frontend/api-contract-gaps/spec.md` documentaba como pendientes. Ver `backend-plan.md` §6-7 para la forma exacta de cada uno, incluyendo la sincronización de identidad `auth.users`↔`User` (G5) vía trigger de base de datos.
 
 ---

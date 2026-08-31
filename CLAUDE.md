@@ -1,8 +1,12 @@
-# CLAUDE.md — StyleMe Fullstack (Web + Móvil + FastAPI)
+# CLAUDE.md — StyleMe Frontend
 
-Memoria persistente del agente para el repositorio **`MACHINE-BULLS`** (StyleMe / StyleSync IA). Este documento es la fuente de verdad operativa: toda sesión futura de Claude Code / OpenCode en este repo debe leerlo y respetarlo antes de escribir código.
+Memoria persistente del agente para el repositorio **`MACHINE-BULLS`** (frontend de StyleMe/StyleSync IA — proyecto de equipo, Taller de Sistemas Inteligentes). Este documento es la fuente de verdad operativa: toda sesión futura de Claude Code en este repo debe leerlo y respetarlo antes de escribir código.
 
-> **Alcance de este repositorio:** Monorepo fullstack — **Plataforma web (Next.js)** + **App móvil (React Native / Expo)** + **Backend Python FastAPI** + pipeline VTON/MLOps. Ambos frontends y el backend viven en el mismo repo (directorios separados) y se comunican exclusivamente vía HTTP/JSON según los contratos de `docs/base-plan.MD` §11 y `openspec/.speckit/features/001-probador-virtual/plan.md`. No hay repositorio separado. Web y móvil comparten el mismo backend y contratos.
+> **Alcance de este repositorio:** SOLO frontend (Next.js). El backend Python/FastAPI/ML descrito en `docs/context/plan-base.md` (clasificador CLIP, motor de compatibilidad, pipeline VTON) vive en un repositorio/servicio separado y se consume aquí exclusivamente vía HTTP/JSON, según los contratos de la Sección 11 de `docs/context/plan-base.md`.
+>
+> **Decisión de plataforma vigente [registrada retroactivamente]:** el frontend es una **aplicación web Next.js**, no la app móvil React Native descrita en el plan técnico anterior (`.speckit/features/001-probador-virtual/plan.md`, superseded — ver nota en ese archivo). Toda spec en `openspec/specs/` asume web.
+>
+> **Gobernanza del equipo (no negociable, `.speckit/constitution.md` §3):** rama `main` protegida, cero commits directos, todo cambio vía Pull Request con ≥1 revisor aprobando, y **declaración explícita de uso de IA en cada PR** (qué %/sección fue asistida y qué pruebas la validaron). Esto aplica también a sesiones de Claude Code: ningún cambio de esta sesión se fusiona a `main` sin ese proceso.
 
 ---
 
@@ -10,102 +14,60 @@ Memoria persistente del agente para el repositorio **`MACHINE-BULLS`** (StyleMe 
 
 **StyleMe** es una plataforma que permite a un usuario digitalizar su guardarropa, recibir combinaciones de outfits basadas en teoría del color y compatibilidad aprendida, y visualizar el resultado sobre su propia foto mediante un probador virtual (VTON) asíncrono.
 
-Este repositorio implementa **tres caras** del producto:
+Este repositorio implementa la **interfaz web** que consume tres familias de endpoints del backend:
 
-| Capa                         | Responsabilidad                                                                                                                                           | Se comunica vía                   |
-| :--------------------------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------- | :-------------------------------- |
-| **Plataforma web (Next.js)** | Plataforma principal "qué me pongo" — digitalizar armario, recomendar outfits y VTON en navegador                                                         | HTTP/JSON contra el backend       |
-| **App móvil (React Native)** | Misma experiencia en iOS/Android — captura de prendas con cámara, selección y VTON                                                                        | HTTP/JSON contra el mismo backend |
-| **Backend (Python FastAPI)** | Validación de imágenes, clasificación, scoring cromático/embedding, encolado en SQS, orquestación de inferencia VTON en SageMaker, persistencia en RDS/S3 | Expone 3 familias de endpoints    |
+| Dominio | Endpoint backend (contrato) | Naturaleza |
+| :--- | :--- | :--- |
+| Prendas | `POST /api/v1/garments/upload` | Síncrono (respuesta directa) |
+| Outfits | `POST /api/v1/outfits/recommend` | Síncrono (respuesta directa) |
+| VTON | `POST /api/v1/vton/try-on` + `GET /api/v1/vton/status/{job_id}` | Asíncrono (job + polling) |
 
-**Objetivo central (inteligencia propia):** resolver "qué me pongo" en moda masculina entregando inteligencia propia (motor de recomendación y reglas estéticas/color de creación propia), no solo conectar servicios de terceros. La lógica central del motor de compatibilidad es de creación propia — ver Constitution §2 y Team Charter.
-
-| Dominio | Endpoint backend (contrato)                                     | Naturaleza                   |
-| :------ | :-------------------------------------------------------------- | :--------------------------- |
-| Prendas | `POST /api/v1/garments/upload`                                  | Síncrono (respuesta directa) |
-| Outfits | `POST /api/v1/outfits/recommend`                                | Síncrono (respuesta directa) |
-| VTON    | `POST /api/v1/vton/try-on` + `GET /api/v1/vton/status/{job_id}` | Asíncrono (job + polling)    |
-
-El frontend NO reimplementa lógica de dominio (clasificación, scoring cromático, generación de imágenes). Su responsabilidad es: captura de datos del usuario, validación de forma en el borde, orquestación de llamadas, estado de UI/carga/error, y renderizado. El backend NO renderiza UI; su responsabilidad es: validación de negocio, autorización, persistencia y orquestación del pipeline MLOps.
+El frontend NO reimplementa lógica de dominio (clasificación, scoring cromático, generación de imágenes). Su responsabilidad es: captura de datos del usuario, validación de forma en el borde, orquestación de llamadas, estado de UI/carga/error, y renderizado.
 
 ---
 
 ## 2. Stack Tecnológico (Decisión Cerrada)
 
-### 2.0 Frontend — Plataforma Web (Next.js)
+| Categoría | Tecnología | Notas |
+| :--- | :--- | :--- |
+| Framework | Next.js 14/15, **App Router** | Server Components por defecto; Client Components solo donde haya interactividad/estado. |
+| Lenguaje | TypeScript, **modo `strict` obligatorio** | Equivalente frontend al mandato de type hints estrictos del backend. |
+| Estilos | Tailwind CSS | Utility-first, sin CSS-in-JS. |
+| Componentes UI | shadcn/ui (Radix UI + Tailwind) | Componentes viven en el repo (`src/components/ui`), no en `node_modules` — se auditan y versionan como código propio. |
+| Iconos | Lucide Icons | Según documento base. |
+| Estado de servidor / caché | TanStack Query (React Query) | Toda comunicación con el backend pasa por hooks de TanStack Query, nunca `fetch` directo en componentes. |
+| Estado de UI global | Zustand | Solo para estado de cliente puro (ej. wizard de onboarding, selección de prendas en curso). Nunca para cachear datos del servidor. |
+| Validación de contratos | Zod | Equivalente frontend de Pydantic v2: todo payload que cruza la frontera red↔app se parsea con un schema Zod antes de usarse. Cero `as` / cero confianza ciega en `any` proveniente de `fetch`. |
+| Testing unitario/integración | Vitest + React Testing Library | Rápido, nativo ESM/TS, compatible con Next.js. |
+| Testing E2E | Playwright | Flujos críticos: upload de prenda, recomendación de outfit, ciclo completo de VTON (submit → polling → resultado). |
+| Linting | ESLint (`next/core-web-vitals` + `typescript-eslint` strict) | Cero warnings tolerados en CI. |
+| Formateo | Prettier | Integrado con ESLint, sin reglas de formato duplicadas en ESLint. |
 
-| Categoría                    | Tecnología                                                   | Notas                                                                                                           |
-| :--------------------------- | :----------------------------------------------------------- | :-------------------------------------------------------------------------------------------------------------- |
-| Framework                    | **Next.js 14/15, App Router**                                | Server Components por defecto; Client Components solo donde haya interactividad/estado.                         |
-| Lenguaje                     | TypeScript, **modo `strict` obligatorio**                    | Equivalente al mandato de type hints estrictos del backend.                                                     |
-| Estilos                      | Tailwind CSS                                                 | Utility-first, sin CSS-in-JS.                                                                                   |
-| Componentes UI               | shadcn/ui (Radix UI + Tailwind)                              | Viven en `src/components/ui` (o `web/components/ui`), no en `node_modules` — se auditan como código propio.     |
-| Iconos                       | Lucide Icons                                                 | Según documento base.                                                                                           |
-| Estado de servidor / caché   | TanStack Query (React Query)                                 | Toda comunicación con el backend pasa por hooks de TanStack Query, nunca `fetch` directo en componentes.        |
-| Estado de UI global          | Zustand                                                      | Solo para estado de cliente puro (wizard onboarding, selección prendas). Nunca para cachear datos del servidor. |
-| Validación de contratos      | Zod                                                          | Equivalente web de Pydantic v2: todo payload red↔app se parsea con Zod. Cero `as` / cero `any` de `fetch`.      |
-| Testing unitario/integración | Vitest + React Testing Library                               | Rápido, nativo ESM/TS, compatible con Next.js.                                                                  |
-| Testing E2E                  | Playwright                                                   | Flujos críticos: upload prenda, recomendación outfit, ciclo VTON completo.                                      |
-| Linting                      | ESLint (`next/core-web-vitals` + `typescript-eslint` strict) | Cero warnings tolerados en CI.                                                                                  |
-| Formateo                     | Prettier                                                     | Integrado con ESLint, sin reglas de formato duplicadas.                                                         |
+### 2.1 Disciplina de Contratos Frontend↔Backend (crítico)
 
-### 2.1 Frontend — App Móvil React Native
+El backend aún no existe en este momento del proyecto. Para que la integración futura no degrade el estándar:
 
-| Categoría                    | Tecnología                                                            | Notas                                                                                                                                                                                       |
-| :--------------------------- | :-------------------------------------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Framework                    | **React Native + Expo** (Expo Router o React Navigation)              | Un solo codebase iOS/Android. Recomendado en `openspec/.speckit/features/001-probador-virtual/plan.md` sobre Flutter.                                                                       |
-| Lenguaje                     | TypeScript, **modo `strict` obligatorio**                             | Equivalente móvil al mandato de type hints estrictos del backend.                                                                                                                           |
-| Estilos                      | NativeWind (Tailwind para RN) o StyleSheet                            | Utility-first sin CSS-in-JS pesado. Comparte tokens con web si existe.                                                                                                                      |
-| Componentes UI               | Primitivos propios + Radix-compat (ej. `react-native-paper` o custom) | Viven en `mobile/components/ui`, no en `node_modules` — se auditan como código propio.                                                                                                      |
-| Iconos                       | Lucide Icons (`lucide-react-native`)                                  | Según documento base.                                                                                                                                                                       |
-| Estado de servidor / caché   | TanStack Query (React Query)                                          | Toda comunicación con el backend pasa por hooks de TanStack Query, nunca `fetch` directo en componentes.                                                                                    |
-| Estado de UI global          | Zustand                                                               | Solo para estado de cliente puro (ej. wizard de onboarding, selección de prendas en curso). Nunca para cachear datos del servidor.                                                          |
-| Validación de contratos      | Zod                                                                   | Equivalente móvil de Pydantic v2: todo payload que cruza la frontera red↔app se parsea con un schema Zod antes de usarse. Cero `as` / cero confianza ciega en `any` proveniente de `fetch`. |
-| Testing unitario/integración | Vitest + React Native Testing Library                                 | Rápido, nativo ESM/TS, compatible con Expo.                                                                                                                                                 |
-| Testing E2E                  | Maestro / Detox                                                       | Flujos críticos: upload de prenda, recomendación de outfit, ciclo completo de VTON (submit → polling → resultado).                                                                          |
-| Linting                      | ESLint (`typescript-eslint` strict + `eslint-plugin-react-native`)    | Cero warnings tolerados en CI.                                                                                                                                                              |
-| Formateo                     | Prettier                                                              | Integrado con ESLint, sin reglas de formato duplicadas en ESLint.                                                                                                                           |
-
-### 2.2 Backend — Python FastAPI
-
-| Categoría            | Tecnología                                                                        | Notas                                                                                                                          |
-| :------------------- | :-------------------------------------------------------------------------------- | :----------------------------------------------------------------------------------------------------------------------------- |
-| Framework            | **Python 3.11+ + FastAPI (async)**                                                | Async nativo — crítico para no bloquear mientras se espera GPU/SQS (ver `001-probador-virtual/plan.md`).                       |
-| Validación / Schemas | **Pydantic v2**                                                                   | Fuente de verdad de los contratos §11. Todo request/response tipado con `BaseModel` estricto. Espeja 1:1 con Zod del frontend. |
-| ORM / DB             | SQLAlchemy 2.0 (async) + PostgreSQL (RDS)                                         | Modelos `Garment`, `User`, `VTONJob`. Migraciones con Alembic.                                                                 |
-| Cola / Jobs          | **Amazon SQS + worker async** (arq. `001-probador-virtual/plan.md` §Arquitectura) | `POST /vton/try-on` encola, worker invoca SageMaker.                                                                           |
-| Storage              | **Amazon S3** (buckets separados)                                                 | Fotos de usuario (dato sensible) vs prendas catálogo — políticas de retención distintas (Constitution §6).                     |
-| Inferencia           | **AWS SageMaker Endpoints** + diffusers (IDM-VTON / OOTDiffusion)                 | Autoscaling, no EC2 fijo — controla costo GPU (Constitution §7).                                                               |
-| Testing              | **pytest + httpx + pytest-asyncio**                                               | Tests de endpoint con `TestClient`/`AsyncClient`, mocks de S3/SQS/SageMaker.                                                   |
-| Linting / Types      | **Ruff + mypy --strict**                                                          | Cero warnings tolerados en CI. Equivalente backend de `tsc --noEmit`.                                                          |
-| Formateo             | Ruff format (o Black)                                                             | Integrado, sin duplicar reglas en linter.                                                                                      |
-
-### 2.3 Disciplina de Contratos Frontend↔Backend (crítico)
-
-La frontera móvil↔backend es contrato HTTP/JSON estricto. Pydantic (backend) es fuente de verdad, Zod (móvil) la espeja:
-
-- Todo schema Zod en `app/schemas/api/` debe **espejar exactamente** los modelos Pydantic de `backend/app/schemas/` y `docs/base-plan.MD` §11 (nombres de campo, tipos, enums, nullability). Divergencia = bug.
-- Todo `BaseModel` Pydantic usa `model_config = ConfigDict(extra="forbid", strict=True)` — rechaza campos desconocidos.
+- Todo schema Zod que representa una respuesta del backend debe vivir en `src/schemas/api/` y **espejar exactamente** los modelos Pydantic descritos en la Sección 11 de `docs/context/plan-base.md` (nombres de campo, tipos, enums, nullability).
 - Cuando el backend exponga su OpenAPI schema, evaluar generación automática de tipos/Zod (ej. `openapi-zod-client`) en vez de mantenerlos a mano — dejar esta tarea explícitamente pendiente en un spec futuro, no improvisarla ad-hoc.
-- Ningún componente o hook del móvil debe asumir la forma de una respuesta sin pasarla por su schema Zod correspondiente. Un `parse` fallido se traduce siempre en un `ValidationError` tipado (ver §5), nunca en un fallo silencioso.
-- Los `job_id`, `status` enums (`pending|processing|completed|failed`) y demás valores literales deben tiparse como Zod `enum`/`literal` y como `Literal`/`Enum` en Pydantic, nunca como `string` genérico.
+- Ningún componente o hook debe asumir la forma de una respuesta sin pasarla por su schema Zod correspondiente. Un `parse` fallido se traduce siempre en un `ValidationError` tipado (ver §5), nunca en un fallo silencioso.
+- Los `job_id`, `status` enums (`pending|processing|completed|failed`) y demás valores literales deben tipar-se como Zod `enum`/`literal`, nunca como `string` genérico.
 
 ---
 
 ## 3. Regla de Oro SDD (Spec-Driven Development)
 
-**Flujo obligatorio, sin excepciones — aplica a móvil Y backend:**
+**Flujo obligatorio, sin excepciones:**
 
 ```
-SPEC (openspec/specs/*.md o openspec/changes/<name>/specs/*.md)  →  TEST (falla en rojo)  →  CODE (app/ o backend/)  →  REFACTOR
+SPEC (openspec/specs/*.md)  →  TEST (falla en rojo)  →  CODE (src/)  →  REFACTOR
 ```
 
-1. **SPEC primero:** ninguna función, componente, hook, endpoint o service se implementa sin que exista antes una spec que defina su propósito, contrato (props/inputs/outputs tipados), casos de prueba y criterios de aceptación.
-2. **TEST en rojo:** se escribe la prueba (Vitest/RTL o pytest) derivada de la spec, y se confirma que falla antes de escribir la implementación.
+1. **SPEC primero:** ninguna función, componente, hook o store se implementa sin que exista antes un archivo en `openspec/specs/` que defina su propósito, contrato (props/inputs/outputs tipados), casos de prueba y criterios de aceptación. Un cambio a una spec existente sigue el flujo del CLI de OpenSpec (`openspec/changes/<nombre>/proposal.md` + `design.md` + `tasks.md`, ver ejemplo real en `openspec/changes/harden-specs-from-qa-audit/`) antes de fusionarse en `openspec/specs/`.
+2. **TEST en rojo:** se escribe la prueba (Vitest/RTL o Playwright) derivada de la spec, y se confirma que falla antes de escribir la implementación.
 3. **CODE mínimo:** se implementa solo lo necesario para pasar la prueba, respetando tipado estricto y la arquitectura de carpetas (§4).
 4. **REFACTOR:** se limpia manteniendo la suite en verde. No se introduce alcance no cubierto por la spec.
 
-Está prohibido escribir código funcional en `app/` o `backend/` que no tenga spec y test asociados. Si el usuario pide una feature sin spec previa, la sesión debe primero proponer/generar la spec correspondiente en `openspec/` antes de tocar código.
+Está prohibido escribir código funcional en `src/` que no tenga spec y test asociados. Si el usuario pide una feature sin spec previa, la sesión debe primero proponer/generar la spec correspondiente en `openspec/specs/` antes de tocar `src/`.
 
 ---
 
@@ -114,68 +76,58 @@ Está prohibido escribir código funcional en `app/` o `backend/` que no tenga s
 ```
 MACHINE-BULLS/
 ├── CLAUDE.md
+├── .speckit/
+│   └── constitution.md           # Gobernanza del equipo (PR, DoD, riesgos) — ver §9 abajo
 ├── docs/
-│   └── base-plan.MD              # Documento fuente del proyecto completo (full-stack)
-├── openspec/                     # Specs y constitution (fuente de verdad SDD)
-│   ├── specs/                    # 00..07 — specs ejecutables
-│   └── .speckit/                 # constitution + feature 001 plan
-├── web/                          # Plataforma web Next.js (ver §2.0)
-│   ├── app/                      # App Router: rutas, layouts, pages
+│   ├── context/
+│   │   ├── plan-base.md          # Documento fuente del proyecto completo (full-stack)
+│   │   └── frontend-plan.md      # Planteamiento UX/flujos/design system del frontend
+│   └── clickup/                  # Team charter, priorización de casos, estructura de tablero
+├── openspec/
+│   ├── config.yaml
+│   ├── specs/                    # Especificaciones SDD (frontend) — fuente de verdad de contratos
+│   └── changes/                  # Propuestas de cambio de spec (proposal/design/tasks, CLI OpenSpec)
+├── src/                          # No existe aún — se crea solo tras spec (openspec/specs/) + test en rojo
+│   ├── app/                      # Next.js App Router: rutas, layouts, pages, route handlers
 │   ├── components/
-│   │   ├── ui/                   # shadcn/ui primitivos
-│   │   └── shared/
-│   ├── features/
-│   │   ├── garments/             # hooks useUploadGarment, api/, schemas/
+│   │   ├── ui/                   # shadcn/ui — primitivos generados
+│   │   └── shared/                # Componentes compuestos reutilizables entre features
+│   ├── features/                 # Arquitectura por dominio (feature-sliced)
+│   │   ├── garments/
+│   │   │   ├── components/
+│   │   │   ├── hooks/            # useUploadGarment, etc. (TanStack Query)
+│   │   │   ├── api/               # funciones de fetch tipadas para este dominio
+│   │   │   └── schemas/           # Zod schemas específicos del dominio
 │   │   ├── outfits/
 │   │   └── vton/
 │   ├── lib/
-│   │   ├── api/                  # cliente HTTP base (TanStack Query + Zod)
+│   │   ├── api/                   # cliente HTTP base, manejo de errores, interceptores
 │   │   └── utils/
-│   ├── stores/                   # Zustand
-│   ├── schemas/api/              # Zod que espeja backend (§2.3)
-│   ├── tests/
-│   ├── public/
-│   └── package.json
-├── mobile/                       # App móvil React Native Expo (ver §2.1)
-│   ├── app/                      # Expo Router: rutas, layouts, screens
-│   ├── components/
-│   │   ├── ui/
-│   │   └── shared/
-│   ├── features/
-│   │   ├── garments/
-│   │   ├── outfits/
-│   │   └── vton/
-│   ├── lib/api/                  # cliente HTTP base (mismo contrato que web)
-│   ├── stores/
-│   ├── schemas/api/              # Zod que espeja backend (§2.3) — compartir con web si se puede
-│   └── package.json
-├── backend/                      # Backend Python FastAPI (ver §2.2)
-│   ├── app/
-│   │   ├── main.py
-│   │   ├── api/v1/
-│   │   │   ├── garments.py
-│   │   │   ├── outfits.py
-│   │   │   └── vton.py
-│   │   ├── models/               # SQLAlchemy
-│   │   ├── schemas/              # Pydantic v2 (fuente de verdad)
-│   │   ├── services/             # dominio: clasificación, motor compatibilidad
-│   │   ├── workers/              # SQS consumer + SageMaker
-│   │   └── core/                 # config, errors, deps
-│   ├── alembic/
-│   ├── tests/
-│   │   ├── unit/
-│   │   ├── integration/          # httpx AsyncClient + mocks AWS
-│   │   └── fixtures/
-│   ├── pyproject.toml
-│   └── .env.example
-├── package.json                  # workspaces (opcional) o separado web/mobile
-├── tsconfig.json
-└── pyproject.toml
+│   ├── hooks/                     # hooks genéricos no atados a un dominio
+│   ├── stores/                    # Zustand stores
+│   ├── schemas/
+│   │   └── api/                   # Zod schemas que espejan contratos backend (§2.1)
+│   ├── types/                     # tipos compartidos no derivados de Zod
+│   └── config/                    # constantes, configuración de entorno tipada
+├── tests/
+│   ├── unit/                      # Vitest — funciones puras, schemas, utils
+│   ├── integration/                # Vitest + RTL — componentes/hooks con mocks de red (MSW)
+│   ├── e2e/                        # Playwright — flujos completos
+│   └── fixtures/                   # datos de prueba, mocks de respuestas backend
+├── public/
+├── .env.example
+├── .eslintrc / eslint.config.mjs
+├── .prettierrc
+├── tailwind.config.ts
+├── tsconfig.json                   # strict: true, noUncheckedIndexedAccess: true
+├── vitest.config.ts
+├── playwright.config.ts
+└── package.json
 ```
 
 ---
 
-## 5. Arquitectura de Manejo de Errores
+## 5. Arquitectura de Manejo de Errores (Frontend)
 
 Jerarquía base en `src/lib/errors.ts`, análoga a la jerarquía de excepciones de dominio del backend:
 
@@ -186,78 +138,67 @@ Jerarquía base en `src/lib/errors.ts`, análoga a la jerarquía de excepciones 
   - **`NetworkError`** — fallo de red (sin respuesta del servidor), distinto de un `ApiError`.
 
 Reglas:
-
 - Los hooks de TanStack Query nunca devuelven errores no tipados: el `queryFn`/`mutationFn` captura y relanza como una subclase de `StyleMeError`.
 - Cada `app/**/error.tsx` (Error Boundary de Next.js) debe distinguir entre estas subclases para mostrar mensajes accionables (ej. `VTONJobTimeoutError` → "el proceso está tardando más de lo esperado, puedes seguir esperando o reintentar").
 - Prohibido el patrón `catch (e) { console.log(e) }` sin re-lanzar o manejar tipadamente.
-- Backend espeja la misma jerarquía con excepciones Python (`StyleMeException` → `ApiException`, `ValidationException`); todo `HTTPException` de FastAPI mapea a un `code` del contrato.
-
----
-
-## 5.1 DOME — Fases del Proyecto (del Team Charter)
-
-| Fase                             | Meta                                                                   | Scope técnico                                                                           |
-| :------------------------------- | :--------------------------------------------------------------------- | :-------------------------------------------------------------------------------------- |
-| **1 — Análisis y Clasificación** | Backend recibe foto de prenda, quita fondo y clasifica tipo/estética   | `backend/app/api/v1/garments.py` + `services/classifier` + S3                           |
-| **2 — Motor de Compatibilidad**  | Analiza color/estilo de prendas guardadas y sugiere outfits armónicos  | `backend/app/services/compatibility` (motor propio, ver §6) + `POST /outfits/recommend` |
-| **3 — Probador Virtual VTON**    | Proyecta outfit sobre foto del usuario respetando postura/proporciones | `backend/app/workers/` + SageMaker (IDM-VTON/OOTDiffusion) + polling VTON               |
-| **4 — Lanzamiento y UI**         | Plataforma web + móvil pulida, todo conectado, usable end-to-end       | `web/` + `mobile/` + integración completa                                               |
-
-Ninguna fase puede saltearse el flujo SDD §3. La lógica central de Fase 1 y 2 es de creación propia — no wrapper de API externa.
 
 ---
 
 ## 6. Guía de Estilo y Calidad
 
-### Frontend (Web + React Native / TypeScript)
-
 - **TypeScript estricto:** `strict: true` en `tsconfig.json`. Cero `any` explícito. `any` implícito es error de build. Preferir `unknown` + narrowing/Zod sobre `any`.
-- **Cero hardcode de contratos:** cualquier forma de dato externo (API, `AsyncStorage`, query params) se valida con Zod antes de tiparse como confiable.
+- **Cero hardcode de contratos:** cualquier forma de dato externo (API, `localStorage`, query params) se valida con Zod antes de tiparse como confiable.
 - **Componentes:** un componente = una responsabilidad. Lógica de fetching vive en hooks (`useX`), no en el JSX del componente.
 - **Documentación:** TSDoc solo en funciones/hooks exportados cuyo comportamiento no sea obvio por la firma (ej. reglas de reintento de polling). No documentar lo autoevidente.
 - **Nombres:** archivos de componentes en `PascalCase.tsx`, hooks en `useCamelCase.ts`, schemas Zod exportados como `XSchema` con su tipo inferido `type X = z.infer<typeof XSchema>`.
-
-### Backend (Python / FastAPI)
-
-- **Type hints estrictos:** `mypy --strict` obligatorio. Cero `Any` sin justificación. Todo `def` tipado, `BaseModel` con `strict=True`.
-- **Pydantic v2:** todo request/response validado con `BaseModel` estricto; `model_config = ConfigDict(extra="forbid")` para rechazar campos desconocidos.
-- **Ruff:** lint + format único. Cero warnings en CI (`ruff check` + `ruff format --check`).
-- **Arquitectura hexagonal ligera:** `api/` (routers) → `services/` (dominio) → `models/` (persistencia). Ningún router toca S3/SQS/SageMaker directo — pasa por `services/`.
-- **Tests:** `pytest` + `httpx.AsyncClient` + `pytest-asyncio`. Todo endpoint con test de contrato (Pydantic) y mock de AWS (moto/boto3 stub).
+- **Server vs Client Components:** por defecto Server Component; se marca `"use client"` solo cuando hay estado, efectos, o hooks de navegador/TanStack Query/Zustand.
 
 ---
 
 ## 7. Comandos CLI Estándar
 
 ```bash
-# ── Frontend Web (Next.js) ──
-npm run dev --workspace=web         # next dev
-npm run lint --workspace=web        # eslint . (cero warnings)
-npm run typecheck --workspace=web   # tsc --noEmit
-npm run test --workspace=web        # vitest run
-npm run test:e2e --workspace=web    # playwright test
+# Desarrollo
+npm run dev                # Next.js dev server
 
-# ── Frontend Móvil (React Native / Expo) ──
-npm run dev --workspace=mobile      # expo start
-npm run android --workspace=mobile
-npm run ios --workspace=mobile
-npm run lint --workspace=mobile
-npm run typecheck --workspace=mobile
-npm run test --workspace=mobile
-npm run test:e2e --workspace=mobile # maestro / detox
+# Build / producción
+npm run build
+npm run start
 
-# ── Backend (Python FastAPI) ──
-uv run fastapi dev backend/app/main.py   # dev server
-uv run ruff check backend/               # lint
-uv run ruff format --check backend/      # format check
-uv run mypy backend/                     # typecheck --strict
-uv run pytest                            # tests (httpx + moto)
+# Calidad de código
+npm run lint                # eslint . (cero warnings permitidos)
+npm run lint:fix
+npm run format               # prettier --write .
+npm run format:check
+npm run typecheck            # tsc --noEmit
+
+# Testing
+npm run test                 # vitest run (unit + integration)
+npm run test:watch           # vitest (modo watch, TDD loop)
+npm run test:coverage        # vitest run --coverage
+npm run test:e2e             # playwright test
+npm run test:e2e:ui          # playwright test --ui
 ```
 
-Antes de considerar cualquier feature "hecha": web/mobile `npm run typecheck && npm run lint && npm run test` y backend `uv run mypy backend && uv run ruff check backend && uv run pytest` deben pasar en verde.
+Antes de considerar cualquier feature "hecha": `npm run typecheck && npm run lint && npm run test && npm run test:e2e` deben pasar en verde.
 
 ---
 
 ## 8. Fuente de Verdad del Producto
 
-`docs/base-plan.MD` es el documento de planteamiento completo (full-stack) del proyecto. Este `CLAUDE.md` es su traducción operativa **solo para la porción frontend**. Ante cualquier ambigüedad sobre reglas de negocio (categorías de prenda, estéticas soportadas, reglas de armonía cromática, estados de un `VTONJob`), la fuente de verdad es `docs/base-plan.MD` §10-11 — no inventar campos ni estados no listados ahí.
+`docs/context/plan-base.md` es el documento de planteamiento completo (full-stack) del proyecto. Este `CLAUDE.md` es su traducción operativa **solo para la porción frontend**. Ante cualquier ambigüedad sobre reglas de negocio (categorías de prenda, estéticas soportadas, reglas de armonía cromática, estados de un `VTONJob`), la fuente de verdad es `docs/context/plan-base.md` §10-11 — no inventar campos ni estados no listados ahí.
+
+---
+
+## 9. Gobernanza del Equipo (vinculante, `.speckit/constitution.md`)
+
+Este repositorio pertenece a un equipo de 4 personas (Manuel Jiménez — Scrum Master, Leonardo Ibarra — Product Owner, Huascar Durán y Jaicel Velasco — Development Team) para un proyecto académico de 18 semanas. Reglas no negociables que rigen cómo se integra cualquier trabajo de esta sesión:
+
+- **Rama `main` protegida:** cero commits directos. Todo cambio entra vía Pull Request.
+- **1 revisor mínimo** antes de merge.
+- **Declaración de uso de IA obligatoria en cada PR:** qué % o sección fue asistida por IA (incluye Claude Code) y qué pruebas validaron ese trabajo. La responsabilidad técnica es siempre del equipo, nunca de la IA — ver commit `64be0d2` en `openspec/` para el formato de declaración ya usado en este repo.
+- **Rechazo automático de PR** si contiene: credenciales/API keys/tokens/datos personales sensibles, pruebas fallidas, o criterios de aceptación incompletos.
+- **Trazabilidad:** toda decisión de alcance, datos, arquitectura o evaluación debe quedar registrada en ClickUp o GitHub — si no está registrada, no cuenta como avance del equipo (`.speckit/constitution.md` §5).
+- **Prohibido** ingresar secretos o datos personales en prompts de herramientas de IA (`.speckit/constitution.md` §3, §6).
+
+Cualquier sesión de Claude Code que trabaje en este repo debe operar dentro de estas reglas — nunca asumir autorización implícita para saltárselas por conveniencia (ej. commitear directo a `main`, u omitir la declaración de IA en un PR).

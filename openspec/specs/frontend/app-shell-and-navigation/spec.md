@@ -1,8 +1,29 @@
+## Purpose
+Provee el layout raíz, la navegación adaptativa y el manejo global de errores que envuelve toda ruta autenticada del producto, de forma consistente y accesible.
+
+## Requirements
+
+### Requirement: Navegación adaptativa sin JavaScript de detección de viewport
+El sistema SHALL alternar entre navegación superior (desktop) e inferior (mobile) usando solo CSS responsivo.
+
+#### Scenario: Cambio de tamaño de viewport
+- **WHEN** el viewport cambia de un ancho mobile a uno desktop dentro de la misma sesión
+- **THEN** la navegación cambia de bottom-tab a top-nav sin parpadeo ni desajuste de hidratación
+
+### Requirement: Manejo de errores no controlados por tipo
+El sistema SHALL mostrar un mensaje distinto según la subclase de `StyleMeError` capturada por el error boundary global.
+
+#### Scenario: Error de red no controlado
+- **WHEN** un componente hijo lanza una instancia de `NetworkError` durante el render
+- **THEN** el error boundary global muestra el copy específico de conectividad, no un mensaje genérico
+
+---
+
 # Spec 05 — App Shell & Navegación Global
 
 **Estado:** Draft para implementación · **Depende de:** spec 00 (design system) · **Consumido por:** specs 02, 03, 04, 06, 07 (todas renderizan dentro de este shell)
 
-Deriva de `docs/frontend-plan.md` §2.1 (navegación global), §8 (accesibilidad), `CLAUDE.md` §5 (jerarquía de errores — consumida aquí por el error boundary global). Cubre `app/layout.tsx`, la navegación adaptativa (top nav / bottom tab bar), el error boundary raíz y `not-found`.
+Deriva de `docs/context/frontend-plan.md` §2.1 (navegación global), §8 (accesibilidad), `CLAUDE.md` §5 (jerarquía de errores — consumida aquí por el error boundary global). Cubre `app/layout.tsx`, la navegación adaptativa (top nav / bottom tab bar), el error boundary raíz y `not-found`.
 
 ---
 
