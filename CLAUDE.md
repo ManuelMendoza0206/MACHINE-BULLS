@@ -202,3 +202,72 @@ Este repositorio pertenece a un equipo de 4 personas (Manuel Jiménez — Scrum 
 - **Prohibido** ingresar secretos o datos personales en prompts de herramientas de IA (`.speckit/constitution.md` §3, §6).
 
 Cualquier sesión de Claude Code que trabaje en este repo debe operar dentro de estas reglas — nunca asumir autorización implícita para saltárselas por conveniencia (ej. commitear directo a `main`, u omitir la declaración de IA en un PR).
+
+---
+
+## 10. Decisiones de Sprint 1 (30 ago - 8 sep 2026)
+
+### P0: Bloqueadores Resueltos
+
+**P0#1: Tarea 0 (Project Scaffold) es bloqueador crítico**
+- Spec: `openspec/specs/frontend/project-scaffold/spec.md`
+- Antes de que Leonardo inicie Tarea 1 (tokens), debe ejecutar Tarea 0: inicializar repo Next.js 15, TypeScript strict, Tailwind, Vitest, Playwright, CI pipeline
+- Aceptación: `npm run typecheck && npm run test && npm run build` todas verdes
+- Cronograma: 1-2 sep (antes de 2 sep 19:00 cuando comienza Tarea 1)
+
+**P0#2: 5 componentes en Sprint 1, 4 diferidos a Sprint 2**
+- Sprint 1 = Button, Card, Badge, Skeleton, Progress (5 comps)
+- Sprint 2 = Dialog, Sheet, Tabs, Toast (4 comps)
+- Storybook removido de Sprint 1 (no spec'd, no MVP-critical)
+- Rationale: Scope defensible. Spec design-system §2.4 lista 9, pero Sprint 1 se reduce a 5 para cerrar en 10 días calendario
+
+**P0#3: ML tasks → backend repo, CERO en frontend Sprint 1**
+- EDA, ResNet training, Embedding training viven en backend repo o Sprints 2-9 backend
+- Leonardo Sprint 1 = SOLO frontend (tokens, shell, componentes, API client)
+- Rationale: CLAUDE.md §1 = "Alcance: SOLO frontend". No mezclar stacks
+
+### P1: Inconsistencias Congeladas
+
+**P1#4: 44 tareas Sprint 1, 185 total**
+- ClickUp es fuente de verdad única (SPRINT-1-MASTER.csv)
+- Congelado: sin cambios sin decisión registrada
+
+**P1#5: 9 sprints × 18 weeks INNEGOCIABLE**
+- 12 ago 2026 – 15 dic 2026 (locked)
+- Si algo no cabe, se recorta alcance o se mueve a siguiente sprint
+- No se negocia fecha
+
+**P1#6: Storybook out**
+- No en Sprint 1; evaluar Sprint 3 si PO lo prioriza
+
+**P1#7: Spec refs precisas**
+- Todas apuntan a `openspec/specs/frontend/…` (no `docs/specs/…`)
+- Secciones validadas
+
+**P1#8: E2E coverage deferred a Sprint 2**
+- Sprint 1: >50% unit coverage (Vitest)
+- Sprint 2: merge E2E + unit, push a >80% total
+
+### P2: Gobernanza
+
+**P2#1: DECISION-LOG en main**
+- Ver `docs/SPRINT-1-PRE-PROJECT-COMPLETION-SUMMARY.md` para audit trail
+
+**P2#2: OpenSpec migration**
+- design-system + app-shell fully migrated (### Requirement + #### Scenario + #### AC)
+
+**P2#3: No secrets**
+- Zero hardcode de tokens, credenciales, datos personales en prompts/commits
+- Credenciales → GitHub Actions secrets
+
+---
+
+## 11. Entrada a Sprint 1
+
+**Sprint 1 comienza:** 2 sep 2026, 19:00  
+**Tareas totales:** 44 (Leonardo 6, Jaicel 5, Huascar 3, Manuel 4)  
+**Sprint cierra:** 8 sep 2026, 23:59  
+**Review:** 9 sep 2026, 09:00  
+**Next sprint lead:** Jaicel (Asiento A para Sprint 2)  
+
+Detalles completos: `docs/sprint-plans/sprint-1-init-[name].md`
