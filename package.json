@@ -16,7 +16,18 @@
     "test:ui": "vitest --ui",
     "test:e2e": "playwright test --pass-with-no-tests",
     "test:e2e:ui": "playwright test --ui",
-    "coverage": "vitest run --coverage"
+    "coverage": "vitest run --coverage",
+    "verify": "npm run typecheck && npm run lint && npm run test && npm run build",
+    "prepare": "husky || true"
+  },
+  "lint-staged": {
+    "*.{ts,tsx}": [
+      "prettier --write",
+      "eslint --max-warnings 0 --fix"
+    ],
+    "*.{js,cjs,mjs,json,css,md,yml,yaml}": [
+      "prettier --write"
+    ]
   },
   "dependencies": {
     "next": "^14.2.15",
@@ -42,6 +53,8 @@
     "zod": "^3.23.8"
   },
   "devDependencies": {
+    "@commitlint/cli": "^19.5.0",
+    "@commitlint/config-conventional": "^19.5.0",
     "@playwright/test": "^1.48.0",
     "@testing-library/dom": "^10.4.0",
     "@testing-library/jest-dom": "^6.5.0",
@@ -57,7 +70,9 @@
     "eslint": "^8.57.1",
     "eslint-config-next": "^14.2.15",
     "eslint-config-prettier": "^9.1.0",
+    "husky": "^9.1.6",
     "jsdom": "^25.0.1",
+    "lint-staged": "^15.2.10",
     "msw": "^2.4.11",
     "postcss": "^8.4.47",
     "prettier": "^3.3.3",

@@ -13,18 +13,22 @@ Initialize a production-ready Next.js 14 project with TypeScript strict mode, Ta
 The scaffold SHALL establish a Next.js 14 App Router project with `strict: true` TypeScript configuration and zero ESLint warnings.
 
 #### Scenario: Project initializes without errors
+
 - **WHEN** `npm ci` is executed
 - **THEN** all dependencies install successfully, `node_modules/` contains 400+ packages
 
 #### Scenario: TypeScript compilation succeeds
+
 - **WHEN** `npm run typecheck` is executed
 - **THEN** exit code is 0, no errors or warnings reported
 
 #### Scenario: ESLint passes with zero warnings
+
 - **WHEN** `npm run lint` is executed
 - **THEN** exit code is 0, zero warnings in output
 
 #### Acceptance Criteria
+
 - [ ] `package.json` pins Next.js 14.2, React 18.3, TypeScript 5.6+; `package-lock.json` committed and in sync (`npm ci` exits 0)
 - [ ] `tsconfig.json` sets `strict: true`, `noUncheckedIndexedAccess: true`, `jsx: preserve` (Next convention)
 - [ ] `.eslintrc.json` extends `next/core-web-vitals` + `next/typescript` + `prettier`; enforces `@typescript-eslint/no-explicit-any`
@@ -38,14 +42,17 @@ The scaffold SHALL establish a Next.js 14 App Router project with `strict: true`
 The scaffold SHALL include Tailwind CSS configured to consume design tokens from `src/config/design-tokens.ts`, with CSS variable output in `src/app/globals.css`.
 
 #### Scenario: Tailwind imports design tokens
+
 - **WHEN** `tailwind.config.ts` is loaded
 - **THEN** it imports `src/config/design-tokens.ts` and derives theme colors from it (not hardcoded)
 
 #### Scenario: CSS variables generated from tokens
+
 - **WHEN** `src/app/globals.css` is parsed
 - **THEN** all color variables (background, foreground, accent, success, destructive, etc.) are defined as CSS vars referencing HSL values derived from hex tokens
 
 #### Acceptance Criteria
+
 - [ ] `tailwind.config.ts` exists and imports `design-tokens.ts`
 - [ ] No hardcoded color hex/rgb values in Tailwind config
 - [ ] `src/app/globals.css` defines `:root` and `.dark` blocks with CSS variables
@@ -59,14 +66,17 @@ The scaffold SHALL include Tailwind CSS configured to consume design tokens from
 The scaffold SHALL provide Vitest for unit/integration tests, React Testing Library for component testing, and Playwright for E2E tests, all configured and passing (even with zero tests).
 
 #### Scenario: Vitest runs the seed suite
+
 - **WHEN** `npm run test` is executed
 - **THEN** exit code is 0; the scaffold smoke test passes; no coverage threshold gates the run
 
 #### Scenario: Playwright tolerates an empty suite
+
 - **WHEN** `npm run test:e2e` is executed (no `.spec.ts` files yet)
 - **THEN** exit code is 0 (the script passes `--pass-with-no-tests`)
 
 #### Acceptance Criteria
+
 - [ ] `vitest.config.ts` uses `environment: 'jsdom'`, `@vitejs/plugin-react`, v8 coverage, no thresholds (Sprint 1)
 - [ ] `tests/setup.ts` wires `@testing-library/jest-dom` + RTL `cleanup`
 - [ ] `tests/{unit,integration,e2e}/` exist; one smoke test proves TSX + jsdom + RTL + `@/` alias
@@ -80,14 +90,17 @@ The scaffold SHALL provide Vitest for unit/integration tests, React Testing Libr
 The scaffold SHALL include a GitHub Actions workflow that runs the quality gates on every push and PR to `main`.
 
 #### Scenario: CI runs on PR to main
+
 - **WHEN** a PR targets `main`
 - **THEN** the workflow triggers and runs the `quality`, `build` and `e2e` jobs
 
 #### Scenario: All jobs pass on the scaffold
+
 - **WHEN** the workflow completes for the scaffold commit
 - **THEN** every job is green, none skipped
 
 #### Acceptance Criteria
+
 - [ ] `.github/workflows/ci.yml` has 3 jobs: `quality` (lint + typecheck + test --coverage + codecov), `build`, `e2e`
 - [ ] All jobs run on `ubuntu-latest`, Node 20; `concurrency` cancels superseded runs
 - [ ] `e2e` job runs `npx playwright install --with-deps chromium` before `npm run test:e2e`
@@ -100,14 +113,17 @@ The scaffold SHALL include a GitHub Actions workflow that runs the quality gates
 The scaffold SHALL configure Next.js with CSP headers, specific image hostnames (no wildcards), and environment variable safety.
 
 #### Scenario: Image policy is specific
+
 - **WHEN** `next.config.js` is evaluated
 - **THEN** `images.remotePatterns` includes only specific hostname(s), no `**` wildcard
 
 #### Scenario: CSP headers are present
+
 - **WHEN** dev server runs and browser makes request
 - **THEN** response includes `Content-Security-Policy` header with `default-src 'self'`
 
 #### Acceptance Criteria
+
 - [ ] `next.config.js` `images.remotePatterns` lists specific hostname(s) only (`res.cloudinary.com`), no `**` wildcard
 - [ ] `headers` sets an enforced (non report-only) CSP with `default-src 'self'`, `frame-ancestors 'none'`, `object-src 'none'`
 - [ ] `poweredByHeader: false`; no deprecated `X-XSS-Protection`
@@ -122,19 +138,57 @@ The scaffold SHALL configure Next.js with CSP headers, specific image hostnames 
 The scaffold SHALL provide a README with setup/dev/build/test commands and team member can start from zero to green in < 5 minutes.
 
 #### Scenario: Developer clones and initializes
+
 - **WHEN** new team member runs `git clone ... && npm ci`
 - **THEN** all commands complete, repo is ready for `npm run dev`
 
 #### Scenario: README explains stack
+
 - **WHEN** developer reads `README.md` or `CLAUDE.md` §2
 - **THEN** tech stack (Next.js 14, React 18.3, Tailwind, Vitest, Playwright, TypeScript strict) is documented with rationale
 
 #### Acceptance Criteria
-- [ ] `README.md` or `docs/onboarding.md` exists
-- [ ] Documents: `npm ci`, `npm run dev`, `npm run build`, `npm run test`, `npm run lint`, `npm run typecheck`
-- [ ] Section on "Tech Stack" explains why Next.js 14, React 18.3, not 19
-- [ ] Section on "TypeScript & ESLint" explains strict mode + no `any`
-- [ ] New developer can setup and run dev server in < 5 min with just the README
+
+- [ ] `README.md` **and** `docs/onboarding.md` exist; `CONTRIBUTING.md` summarizes the PR flow
+- [ ] Onboarding documents `nvm use`, `npm ci`, `npm run verify`, `npm run test:e2e`, `npm run dev`
+- [ ] `README` "Tech Stack" explains why Next.js 14, React 18.3, not 19
+- [ ] New developer goes from `git clone` to green in < 5 min with just `docs/onboarding.md`
+
+---
+
+### Requirement: Developer environment and local guard rails
+
+The scaffold SHALL ship the shared editor config, git hooks and repo automation a professional
+team expects, so that quality problems are caught before they reach CI.
+
+#### Scenario: Bad commit message is rejected locally
+
+- **WHEN** a developer commits with a message that is not Conventional Commits
+- **THEN** the `commit-msg` hook (commitlint) rejects it before the commit is created
+
+#### Scenario: Staged files are formatted and linted on commit
+
+- **WHEN** a developer commits `.ts`/`.tsx` files
+- **THEN** the `pre-commit` hook runs `lint-staged` (prettier + `eslint --fix`) on exactly those files
+
+#### Scenario: Type errors are caught before push
+
+- **WHEN** a developer pushes a branch with a TypeScript error
+- **THEN** the `pre-push` hook (`npm run typecheck`) fails and blocks the push
+
+#### Acceptance Criteria
+
+- [ ] `.editorconfig` (LF, 2-space, UTF-8, final newline)
+- [ ] `husky` v9 + `lint-staged`: `.husky/{pre-commit,commit-msg,pre-push}`; `prepare` script arms them on `npm ci`
+- [ ] `commitlint.config.cjs` extends `@commitlint/config-conventional`
+- [ ] `npm run verify` = `typecheck && lint && test && build` (single command)
+- [ ] `.github/dependabot.yml` (npm + github-actions, weekly, grouped)
+- [ ] `.github/ISSUE_TEMPLATE/` (task + bug) and `.github/pull_request_template.md`
+- [ ] `.github/CODEOWNERS` so every PR needs a review from someone other than the author
+- [ ] `.vscode/{extensions.json,settings.json}` committed (rest of `.vscode/` ignored)
+- [ ] **Branch protection on `main`** configured in GitHub: require PR, require the `CODEOWNERS`
+      review, require status checks (`quality`/`build`/`e2e`), block direct push and force-push
+      _(repo-admin action — owned by the infra track / Asiento D)_
 
 ---
 
@@ -150,8 +204,14 @@ MACHINE-BULLS/
 ├── tailwind.config.ts                # colour scale derived from design-tokens.ts keys; darkMode: 'class'
 ├── vitest.config.ts                  # jsdom + @vitejs/plugin-react, v8 coverage, no thresholds
 ├── playwright.config.ts              # baseURL + webServer (dev)
-├── .github/workflows/ci.yml          # 3 jobs: quality / build / e2e (Node 20)
-├── .nvmrc                            # 20
+├── .github/
+│   ├── workflows/ci.yml              # 3 jobs: quality / build / e2e (Node 20)
+│   ├── CODEOWNERS  dependabot.yml  pull_request_template.md
+│   └── ISSUE_TEMPLATE/{task,bug_report,config}.yml
+├── .husky/{pre-commit,commit-msg,pre-push}   # lint-staged / commitlint / typecheck
+├── .editorconfig  commitlint.config.cjs  .nvmrc (20)
+├── .vscode/{extensions.json,settings.json}
+├── CONTRIBUTING.md  docs/onboarding.md
 ├── src/
 │   ├── app/{layout,page,providers}.tsx, globals.css
 │   ├── config/design-tokens.ts       # hex tokens + hexToHslChannels()

@@ -12,8 +12,12 @@ AI-powered fashion recommendation platform.
 ### Installation
 
 ```bash
-npm ci  # Use ci instead of install for reproducible builds
+nvm use   # Node 20
+npm ci    # reproducible install; also arms the git hooks (husky)
 ```
+
+Zero-to-green walkthrough: [`docs/onboarding.md`](docs/onboarding.md).
+Contributing rules (PR flow, SDD, commit convention): [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
 ### Development
 

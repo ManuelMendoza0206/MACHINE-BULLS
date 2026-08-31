@@ -9,11 +9,32 @@
 
 ---
 
+## SPRINT 0 — Preparación del entorno (a crear en ClickUp, lista `Deploy` salvo indicado)
+
+Trazabilidad del trabajo de scaffold/entorno ya ejecutado (`constitution.md` §5: si no está
+registrado, no cuenta). Spec: `openspec/specs/frontend/project-scaffold/spec.md`. La mayoría
+ya está **Done** (rama `chore/sprint-1-prep` mergeada + `chore/dev-environment`), salvo S0-8.
+
+| #        | Tarea                                                                                                                                                                                           | Owner      | Estado   | Evidencia                                                  |
+| -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- | -------- | ---------------------------------------------------------- |
+| S0-1     | Scaffold Next.js 14.2 + React 18.3 + Node 20; `npm ci` reproducible; `verify` en verde                                                                                                          | Leonardo   | Done     | `docs/sprint-0/SCAFFOLD-VERIFICATION.md`, commit `5333dd8` |
+| S0-2     | Design tokens WCAG-AA + `tailwind.config` derivado + sync `globals.css`                                                                                                                         | Leonardo   | Done     | commit `f4f5a3a`, `CLAUDE.md` §10 D1                       |
+| S0-3     | Specs `design-system` y `app-shell` migradas a formato OpenSpec nativo                                                                                                                          | Leonardo   | Done     | `openspec/specs/frontend/…`                                |
+| S0-4     | CI `ci.yml` — 3 jobs (`quality`/`build`/`e2e`), Node 20, concurrency-cancel                                                                                                                     | Manuel     | Done     | `.github/workflows/ci.yml`                                 |
+| S0-5     | Seguridad base: CSP enforced, headers, `poweredByHeader off`, imágenes acotadas                                                                                                                 | Manuel     | Done     | `next.config.js`, `CLAUDE.md` §10 D2                       |
+| S0-6     | Gobernanza: `CODEOWNERS`, `pull_request_template.md`, `.gitattributes`                                                                                                                          | Manuel     | Done     | `.github/`                                                 |
+| S0-7     | Entorno dev: `.editorconfig`, husky (`pre-commit`/`commit-msg`/`pre-push`), `lint-staged`, `commitlint`, `dependabot.yml`, issue templates, `.vscode/`, `CONTRIBUTING.md`, `docs/onboarding.md` | Manuel     | Done     | rama `chore/dev-environment`                               |
+| **S0-8** | **Configurar branch protection en `main`** (require PR, review `CODEOWNERS`, status checks `quality`/`build`/`e2e`, sin push directo/force) + secreto `CODECOV_TOKEN`                           | **Manuel** | **TODO** | acción de admin en GitHub — **hoy OFF**                    |
+| S0-9     | Reconciliar tablero ClickUp con la documentación (checklist `sprint-1-manifest.md` §7) + exportar `SPRINT-1-MASTER.csv`                                                                         | Manuel     | TODO     | —                                                          |
+
+---
+
 ## ASIENTO A — Leonardo (14 tareas)
 
 **Épics principales:** `frontend/design-system`, `frontend/app-shell-and-navigation`
 
 ### [EPIC] frontend/design-system
+
 - **ID:** 86e301dd5 | **Due:** 07-09-2026
 
 Tareas del epic:
@@ -47,6 +68,7 @@ Tareas del epic:
    - List: Build | Owner: Leonardo
 
 ### [EPIC] frontend/app-shell-and-navigation
+
 - Epic contenido (sin ID separado en este dump)
 
 Tareas del epic:
@@ -86,6 +108,7 @@ Tareas del epic:
 **Épics principales:** `frontend/landing-and-auth-flow`, `backend/domain-and-database` (parte 1)
 
 ### [EPIC] frontend/api-client-and-schemas (soporte)
+
 - **ID:** 86e301de4 | **Due:** 07-09-2026
 - Nota: Jaicel lidera este epic en Sprint 1 por la importancia de tener schemas alineados desde el inicio
 
@@ -132,6 +155,7 @@ Tareas del epic:
     - List: Build | Owner: Jaicel
 
 ### [EPIC] frontend/landing-and-auth-flow
+
 - Tareas de auth (mayor riesgo de seguridad - ver abajo con Huascar)
 
 11. **`npm run typecheck && npm run lint && npm run test && npm run test:e2e` pasan en verde**
@@ -139,6 +163,7 @@ Tareas del epic:
     - List: Build | Owner: Jaicel
 
 ### [EPIC] backend/domain-and-database (parte 1)
+
 - **Nota:** Jaicel lidera las historias de Sprint 1 de este epic
 
 > **Nota (§1 alcance):** las 4 tareas siguientes ejecutan en el **repo backend**, no en `MACHINE-BULLS`. Etiquetar `repo:backend` en ClickUp.
@@ -186,6 +211,7 @@ Tareas del epic:
 **Función:** Infra/MLOps/Release/Documentación
 
 ### [EPIC] Deploy / CI-CD — Sprint 0-1
+
 - **ID:** 86e301e00 | **Due:** 07-09-2026
 
 Tareas del epic:
@@ -222,22 +248,21 @@ Tareas del epic:
 
 ## Verificación de Completitud
 
-| Rol | Count | Nota |
-| --- | --- | --- |
+| Rol                      | Count                                          | Nota                                                                              |
+| ------------------------ | ---------------------------------------------- | --------------------------------------------------------------------------------- |
 | **Asiento A (Leonardo)** | 14 tareas ClickUp / 6 work-tareas (Tareas 0–5) | Tarea 1 y 2 implementadas (PRs abiertos). "Tarea 6" era duplicado → es de Jaicel. |
-| **Asiento B (Jaicel)** | 16 (4 de ellas `repo:backend`) | — |
-| **Asiento C (Huascar)** | 2 + pair | Gate de cobertura: setup Sprint 1, enforcement Sprint 2 (P1#8) |
-| **Asiento D (Manuel)** | 6 | `86e301e09` incluye branch protection (hoy OFF) |
-| **Epics** | 3 | F1, F2 (Leonardo), F3 (Jaicel) |
-| **TOTAL proyecto** | **41** (38 + 3) | **34 en este repo** + 4 en repo backend |
+| **Asiento B (Jaicel)**   | 16 (4 de ellas `repo:backend`)                 | —                                                                                 |
+| **Asiento C (Huascar)**  | 2 + pair                                       | Gate de cobertura: setup Sprint 1, enforcement Sprint 2 (P1#8)                    |
+| **Asiento D (Manuel)**   | 6                                              | `86e301e09` incluye branch protection (hoy OFF)                                   |
+| **Epics**                | 3                                              | F1, F2 (Leonardo), F3 (Jaicel)                                                    |
+| **TOTAL proyecto**       | **41** (38 + 3)                                | **34 en este repo** + 4 en repo backend                                           |
 
 ---
 
 ## Notas de Implementación
 
 - Correcciones de título y de alcance: **`sprint-1-manifest.md` §3–§7** (checklist de reconciliación para Manuel).
-- Fechas: el tablero puede mantener `due 07-09-2026`; el arranque real de *features* es **2 sep** (Sprint 0 cerró el 1 sep).
+- Fechas: el tablero puede mantener `due 07-09-2026`; el arranque real de _features_ es **2 sep** (Sprint 0 cerró el 1 sep).
 - **Épics en bloques:** Leonardo lidera F1+F2; Jaicel lidera F3+F4 (+B1 en repo backend); Huascar refuerza seguridad + Q1; Manuel Q2/Q4/Q6.
 - Huascar **no** valida Sprint 0 en este ciclo (rezago no aplica en Sprint 1 — refuerza auth + monta gates).
 - La reconciliación del tablero ClickUp la ejecuta el **Asiento D (Manuel)** — ver `sprint-1-manifest.md` §7.
-

@@ -1,0 +1,39 @@
+name: Tarea de sprint
+description: Trabajo trazable a una spec y a una tarjeta de ClickUp.
+title: '[Tarea] '
+labels: [task]
+body:
+  - type: input
+    id: clickup
+    attributes:
+      label: Tarea ClickUp
+      description: ID o enlace (ej. 86e301dd8)
+    validations:
+      required: true
+  - type: input
+    id: spec
+    attributes:
+      label: Spec / Requirement
+      description: 'ej. openspec/specs/frontend/design-system/spec.md — Requirement "Utility function cn()"'
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Criterios de aceptación
+      description: Copiados de la spec / ClickUp. Deben ser verificables.
+    validations:
+      required: true
+  - type: input
+    id: branch
+    attributes:
+      label: Rama
+      description: 'feat/tareaN-<slug> o chore/<slug>'
+  - type: checkboxes
+    id: dod
+    attributes:
+      label: Definition of Done
+      options:
+        - label: 'typecheck / lint / test / test:e2e / build en verde'
+        - label: Cada requisito de spec cubierto por test (spec → rojo → código)
+        - label: PR con revisor ≠ autor y declaración de uso de IA

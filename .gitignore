@@ -29,8 +29,10 @@ yarn-debug.log*
 yarn-error.log*
 lerna-debug.log*
 
-# Editor / agent local settings (the shared skill/command files ARE tracked)
-.vscode/
+# Editor / agent local settings (shared team config below is force-tracked)
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
 .idea/
 *.swp
 *.swo

@@ -16,11 +16,11 @@ Memoria persistente del agente para el repositorio **`MACHINE-BULLS`** (frontend
 
 Este repositorio implementa la **interfaz web** que consume tres familias de endpoints del backend:
 
-| Dominio | Endpoint backend (contrato) | Naturaleza |
-| :--- | :--- | :--- |
-| Prendas | `POST /api/v1/garments/upload` | Síncrono (respuesta directa) |
-| Outfits | `POST /api/v1/outfits/recommend` | Síncrono (respuesta directa) |
-| VTON | `POST /api/v1/vton/try-on` + `GET /api/v1/vton/status/{job_id}` | Asíncrono (job + polling) |
+| Dominio | Endpoint backend (contrato)                                     | Naturaleza                   |
+| :------ | :-------------------------------------------------------------- | :--------------------------- |
+| Prendas | `POST /api/v1/garments/upload`                                  | Síncrono (respuesta directa) |
+| Outfits | `POST /api/v1/outfits/recommend`                                | Síncrono (respuesta directa) |
+| VTON    | `POST /api/v1/vton/try-on` + `GET /api/v1/vton/status/{job_id}` | Asíncrono (job + polling)    |
 
 El frontend NO reimplementa lógica de dominio (clasificación, scoring cromático, generación de imágenes). Su responsabilidad es: captura de datos del usuario, validación de forma en el borde, orquestación de llamadas, estado de UI/carga/error, y renderizado.
 
@@ -28,21 +28,21 @@ El frontend NO reimplementa lógica de dominio (clasificación, scoring cromáti
 
 ## 2. Stack Tecnológico (Decisión Cerrada)
 
-| Categoría | Tecnología | Notas |
-| :--- | :--- | :--- |
-| Framework | **Next.js 14.2 (App Router)** + **React 18.3** | Decisión cerrada P0#5 (§10): Next 15 apunta a React 19; se fija 14.2 + 18.3 por estabilidad para 18 semanas. Server Components por defecto; Client Components solo con interactividad/estado. |
-| Runtime | **Node.js 20 LTS** (`.nvmrc`) | `engines.node >=18.17.0`; CI en Node 20. |
-| Lenguaje | TypeScript, **modo `strict` obligatorio** (`noUncheckedIndexedAccess`) | Equivalente frontend al mandato de type hints estrictos del backend. |
-| Estilos | Tailwind CSS | Utility-first, sin CSS-in-JS. |
-| Componentes UI | shadcn/ui (Radix UI + Tailwind) | Componentes viven en el repo (`src/components/ui`), no en `node_modules` — se auditan y versionan como código propio. |
-| Iconos | Lucide Icons | Según documento base. |
-| Estado de servidor / caché | TanStack Query (React Query) | Toda comunicación con el backend pasa por hooks de TanStack Query, nunca `fetch` directo en componentes. |
-| Estado de UI global | Zustand | Solo para estado de cliente puro (ej. wizard de onboarding, selección de prendas en curso). Nunca para cachear datos del servidor. |
-| Validación de contratos | Zod | Equivalente frontend de Pydantic v2: todo payload que cruza la frontera red↔app se parsea con un schema Zod antes de usarse. Cero `as` / cero confianza ciega en `any` proveniente de `fetch`. |
-| Testing unitario/integración | Vitest + React Testing Library | Rápido, nativo ESM/TS, compatible con Next.js. |
-| Testing E2E | Playwright | Flujos críticos: upload de prenda, recomendación de outfit, ciclo completo de VTON (submit → polling → resultado). |
-| Linting | ESLint (`next/core-web-vitals` + `typescript-eslint` strict) | Cero warnings tolerados en CI. |
-| Formateo | Prettier | Integrado con ESLint, sin reglas de formato duplicadas en ESLint. |
+| Categoría                    | Tecnología                                                             | Notas                                                                                                                                                                                          |
+| :--------------------------- | :--------------------------------------------------------------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Framework                    | **Next.js 14.2 (App Router)** + **React 18.3**                         | Decisión cerrada P0#5 (§10): Next 15 apunta a React 19; se fija 14.2 + 18.3 por estabilidad para 18 semanas. Server Components por defecto; Client Components solo con interactividad/estado.  |
+| Runtime                      | **Node.js 20 LTS** (`.nvmrc`)                                          | `engines.node >=18.17.0`; CI en Node 20.                                                                                                                                                       |
+| Lenguaje                     | TypeScript, **modo `strict` obligatorio** (`noUncheckedIndexedAccess`) | Equivalente frontend al mandato de type hints estrictos del backend.                                                                                                                           |
+| Estilos                      | Tailwind CSS                                                           | Utility-first, sin CSS-in-JS.                                                                                                                                                                  |
+| Componentes UI               | shadcn/ui (Radix UI + Tailwind)                                        | Componentes viven en el repo (`src/components/ui`), no en `node_modules` — se auditan y versionan como código propio.                                                                          |
+| Iconos                       | Lucide Icons                                                           | Según documento base.                                                                                                                                                                          |
+| Estado de servidor / caché   | TanStack Query (React Query)                                           | Toda comunicación con el backend pasa por hooks de TanStack Query, nunca `fetch` directo en componentes.                                                                                       |
+| Estado de UI global          | Zustand                                                                | Solo para estado de cliente puro (ej. wizard de onboarding, selección de prendas en curso). Nunca para cachear datos del servidor.                                                             |
+| Validación de contratos      | Zod                                                                    | Equivalente frontend de Pydantic v2: todo payload que cruza la frontera red↔app se parsea con un schema Zod antes de usarse. Cero `as` / cero confianza ciega en `any` proveniente de `fetch`. |
+| Testing unitario/integración | Vitest + React Testing Library                                         | Rápido, nativo ESM/TS, compatible con Next.js.                                                                                                                                                 |
+| Testing E2E                  | Playwright                                                             | Flujos críticos: upload de prenda, recomendación de outfit, ciclo completo de VTON (submit → polling → resultado).                                                                             |
+| Linting                      | ESLint (`next/core-web-vitals` + `typescript-eslint` strict)           | Cero warnings tolerados en CI.                                                                                                                                                                 |
+| Formateo                     | Prettier                                                               | Integrado con ESLint, sin reglas de formato duplicadas en ESLint.                                                                                                                              |
 
 ### 2.1 Disciplina de Contratos Frontend↔Backend (crítico)
 
@@ -139,6 +139,7 @@ Jerarquía base en `src/lib/errors.ts`, análoga a la jerarquía de excepciones 
   - **`NetworkError`** — fallo de red (sin respuesta del servidor), distinto de un `ApiError`.
 
 Reglas:
+
 - Los hooks de TanStack Query nunca devuelven errores no tipados: el `queryFn`/`mutationFn` captura y relanza como una subclase de `StyleMeError`.
 - Cada `app/**/error.tsx` (Error Boundary de Next.js) debe distinguir entre estas subclases para mostrar mensajes accionables (ej. `VTONJobTimeoutError` → "el proceso está tardando más de lo esperado, puedes seguir esperando o reintentar").
 - Prohibido el patrón `catch (e) { console.log(e) }` sin re-lanzar o manejar tipadamente.
@@ -159,29 +160,21 @@ Reglas:
 ## 7. Comandos CLI Estándar
 
 ```bash
-# Desarrollo
-npm run dev                # Next.js dev server
+npm run dev                  # Next.js dev server (localhost:3000)
+npm run build / npm run start
 
-# Build / producción
-npm run build
-npm run start
-
-# Calidad de código
-npm run lint                # eslint . (cero warnings permitidos)
-npm run lint:fix
-npm run format               # prettier --write .
-npm run format:check
+npm run verify               # typecheck + lint + test + build  ← el gate local
+npm run lint / lint:fix
+npm run format / format:check
 npm run typecheck            # tsc --noEmit
-
-# Testing
-npm run test                 # vitest run (unit + integration)
-npm run test:watch           # vitest (modo watch, TDD loop)
-npm run test:coverage        # vitest run --coverage
-npm run test:e2e             # playwright test
-npm run test:e2e:ui          # playwright test --ui
+npm run test / test:watch / coverage
+npm run test:e2e             # playwright (--pass-with-no-tests)
 ```
 
-Antes de considerar cualquier feature "hecha": `npm run typecheck && npm run lint && npm run test && npm run test:e2e` deben pasar en verde.
+**Git hooks** (husky, armados por `npm ci`): `pre-commit` → `lint-staged`; `commit-msg` →
+`commitlint` (Conventional Commits); `pre-push` → `typecheck`. `--no-verify` solo en emergencia.
+
+Antes de considerar una feature "hecha": `npm run verify && npm run test:e2e` en verde **y** CI verde en el PR.
 
 ---
 
@@ -214,6 +207,7 @@ Cualquier sesión de Claude Code que trabaje en este repo debe operar dentro de 
 ### P0: Bloqueadores Resueltos
 
 **P0#1: Project Scaffold (Sprint 0 / Tarea 0) — RESUELTO**
+
 - Spec: `openspec/specs/frontend/project-scaffold/spec.md`
 - Stack real: **Next.js 14.2 + React 18.3 + Node 20**, TypeScript strict, Tailwind (paleta
   derivada de `src/config/design-tokens.ts`), Vitest + RTL (jsdom), Playwright, CI de 3 jobs.
@@ -222,16 +216,19 @@ Cualquier sesión de Claude Code que trabaje en este repo debe operar dentro de 
   Evidencia: `docs/sprint-0/SCAFFOLD-VERIFICATION.md`.
 
 **P0#2: 5 componentes en Sprint 1, 4 diferidos a Sprint 2**
+
 - Sprint 1 = Button, Card, Badge, Skeleton, Progress — coincide con `design-system/spec.md` §2.4.
 - Sprint 2 = Dialog, Sheet, Tabs, Toast (sonner). Storybook fuera de Sprint 1.
 
 **P0#3: ML/Data → repositorio backend, CERO en este repo**
+
 - CLIP/ResNet, embeddings, EDA, entrenamiento viven en el repo backend (§1).
 - Leonardo Sprint 1 = SOLO frontend (tokens, shell, 5 componentes, esqueleto de API client).
 
 ### Decisiones de diseño (Sprint 0)
 
 **D1: Ajuste de paleta a WCAG AA (31 ago 2026, ratificado por el PO)**
+
 - `frontend-plan.md` §5.1 fijaba `muted-foreground #71717A`, `success #16A34A`,
   `warning #D97706`, `destructive #DC2626`. Varios de esos pares de texto **no llegaban a 4.5:1**
   (p. ej. `muted-foreground` sobre `muted` ≈ 4.3:1; texto claro sobre `success` ≈ 3.4:1).
@@ -264,15 +261,16 @@ era un duplicado. `src/lib/errors.ts` ya existe (scaffold). Sprint 1 Leonardo = 
 `docs/sprint-plans/sprint-1-manifest.md` (derivada de specs + rotación); `sprint-1-task-list.md`
 (mirror del tablero) ya alineado con él. La reconciliación de ClickUp la ejecuta el **Asiento D
 (Manuel)** con su acceso legítimo — checklist en el manifiesto §7; una persona sola no puede
-saltarse ese control de equipo con una credencial en un prompt (§9). *Pendiente:* los prompts
+saltarse ese control de equipo con una credencial en un prompt (§9). _Pendiente:_ los prompts
 de Jaicel/Huascar/Manuel aún llevan fechas/conteos viejos — se corrigen al preparar cada asiento
 (el manifiesto §4–§6 ya lista qué cambiar).
 
 ### P1: Inconsistencias Congeladas
 
 **P1#4: Conteo de tareas — ClickUp es la fuente única**
+
 - El número y reparto de tareas viven en ClickUp (export `SPRINT-1-MASTER.csv`), no en los `.md`.
-- Los docs de sprint describen *qué* hace cada asiento, no totales a reconciliar a mano.
+- Los docs de sprint describen _qué_ hace cada asiento, no totales a reconciliar a mano.
 - Token de ClickUp compartido en chat el 30 ago fue **revocado** (no debe compartirse en prompts, §6). Integración futura vía MCP con el token en secreto local.
 
 **P1#5: 9 sprints × 18 semanas — fecha fija** (12 ago – 15 dic 2026). Si algo no cabe, se recorta o pasa al siguiente sprint.
@@ -297,12 +295,12 @@ de specs de flujo se migran spec-first al empezar su Tarea correspondiente.
 
 ## 11. Entrada a Sprint 1
 
-| Hito | Fecha |
-| :--- | :--- |
-| Sprint 0 (scaffold + prep) | hasta 1 sep 2026 — entregado vía PR `chore/sprint-1-prep` |
-| Sprint 1 (features) arranca | 2 sep 2026, 19:00 |
-| Sprint 1 cierra | 8 sep 2026, 23:59 |
-| Review + Sprint 2 kickoff | 9 sep 2026, 09:00 |
+| Hito                        | Fecha                                                     |
+| :-------------------------- | :-------------------------------------------------------- |
+| Sprint 0 (scaffold + prep)  | hasta 1 sep 2026 — entregado vía PR `chore/sprint-1-prep` |
+| Sprint 1 (features) arranca | 2 sep 2026, 19:00                                         |
+| Sprint 1 cierra             | 8 sep 2026, 23:59                                         |
+| Review + Sprint 2 kickoff   | 9 sep 2026, 09:00                                         |
 
 **Asiento A (Feature Lead) Sprint 1 = Leonardo** — epics `frontend/design-system` +
 `frontend/app-shell-and-navigation`, 6 tareas (Tarea 0–6), detalle en
