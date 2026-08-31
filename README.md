@@ -6,8 +6,8 @@ AI-powered fashion recommendation platform.
 
 ### Prerequisites
 
-- Node.js 18.17.0+ (check `.nvmrc`)
-- npm 9.0.0+
+- Node.js 20 LTS (`.nvmrc`; `engines.node >=18.17.0`)
+- npm 10+
 
 ### Installation
 
@@ -57,15 +57,15 @@ npm start  # Serves the built app
 
 ```
 src/
-├── app/           # Next.js App Router pages
+├── app/           # Next.js App Router (layout, providers, error, not-found, pages)
 ├── components/    # React components (ui/, shell/)
-├── config/        # Configuration (design tokens)
-├── lib/           # Utilities, API, errors
-└── utils/         # Helper functions
+├── config/        # design-tokens.ts, navigation.ts
+├── lib/           # errors.ts, api/, navigation/, utils/ (cn, getContrastRatio)
+└── features/      # feature-sliced domains (garments/, outfits/, vton/) — Sprint 2+
 
 tests/
-├── unit/          # Vitest unit tests
-├── integration/   # React + DOM tests
+├── unit/          # Vitest: pure functions, schemas, utils
+├── integration/   # Vitest + React Testing Library (jsdom)
 └── e2e/           # Playwright browser tests
 
 openspec/
@@ -82,14 +82,15 @@ docs/
 
 ## Tech Stack
 
-- **Framework:** Next.js 15 (App Router)
-- **Language:** TypeScript (strict mode)
-- **Styling:** Tailwind CSS + CSS variables
-- **UI Components:** shadcn/ui + Radix
-- **State:** Zustand, TanStack Query
+- **Framework:** Next.js 14.2 (App Router) + React 18.3 — see `CLAUDE.md` §2 / §10 P0#5 for why not 15/19
+- **Runtime:** Node.js 20 LTS
+- **Language:** TypeScript (strict, `noUncheckedIndexedAccess`)
+- **Styling:** Tailwind CSS — colours derived from `src/config/design-tokens.ts` (no literals)
+- **UI Components:** shadcn/ui + Radix (vendored in `src/components/ui`)
+- **State:** Zustand (client-only), TanStack Query (server cache)
 - **Validation:** Zod
-- **Testing:** Vitest, React Testing Library, Playwright
-- **Code Quality:** ESLint, Prettier
+- **Testing:** Vitest + React Testing Library (jsdom), Playwright (e2e)
+- **Code Quality:** ESLint (`next/core-web-vitals` + `next/typescript`), Prettier
 
 ## Specifications
 

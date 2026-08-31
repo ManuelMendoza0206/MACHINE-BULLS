@@ -31,14 +31,14 @@
 
 | File | Path | Status | Coverage |
 |---|---|---|---|
-| **Design System** | openspec/specs/frontend/design-system/spec.md | ✅ | 9 components, tokens, a11y, test plan |
+| **Design System** | openspec/specs/frontend/design-system/spec.md | ✅ | 5 componentes en Sprint 1 (Button/Card/Badge/Skeleton/Progress); Dialog/Sheet/Tabs/Toast en Sprint 2 |
 | **App Shell** | openspec/specs/frontend/app-shell-and-navigation/spec.md | ✅ | Providers, nav, error boundary, skip link |
 | **API Client** | openspec/specs/frontend/api-client-and-schemas/spec.md | ✅ | Error hierarchy, Zod schemas, timeouts |
 | **Landing/Auth** | openspec/specs/frontend/landing-and-auth-flow/spec.md | ✅ | Auth forms, validation, error states |
 | **Flow Specs (4)** | openspec/specs/frontend/{outfits,wardrobe,vton,profile}-flow/spec.md | ✅ | All 4 flows specified, ready for Sprint 2+ |
 | **API Contract Gaps** | openspec/specs/frontend/api-contract-gaps/spec.md | ✅ | MSW mocks, known issues, workarounds |
 | **Backend Specs (5)** | openspec/specs/backend/*.md | ✅ | Domain, API Gateway, CLIP, Recommender, VTON defined |
-| **Project Scaffold** | openspec/specs/frontend/project-scaffold/spec.md | ✅ | NEW: Next.js 15 init, TS strict, Tailwind, Vitest, Playwright, CI |
+| **Project Scaffold** | openspec/specs/frontend/project-scaffold/spec.md | ✅ | Next.js 14.2 + React 18.3 + Node 20, TS strict, Tailwind (tokens), Vitest+RTL, Playwright, CI 3 jobs |
 | **TOTAL** | 14 specs | ✅ COMPLETE | 100% of backlog items have formal specs |
 
 ### Sprint Planning

@@ -7,11 +7,7 @@ import { TooltipProvider } from '@radix-ui/react-tooltip';
 import { Toaster } from 'sonner';
 import { QueryClient } from '@tanstack/react-query';
 
-export function AppProviders({
-  children,
-}: {
-  children: React.ReactNode;
-}): JSX.Element {
+export function AppProviders({ children }: { children: React.ReactNode }): JSX.Element {
   const [queryClient] = useState(
     () =>
       new QueryClient({

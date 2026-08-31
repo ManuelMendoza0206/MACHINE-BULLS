@@ -25,11 +25,11 @@ The scaffold SHALL establish a Next.js 14 App Router project with `strict: true`
 - **THEN** exit code is 0, zero warnings in output
 
 #### Acceptance Criteria
-- [ ] `package.json` defines Next.js 14, React 18.3, TypeScript 5.3+
-- [ ] `tsconfig.json` sets `strict: true`, `noUncheckedIndexedAccess: true`, `jsx: react-jsx`
-- [ ] `.eslintrc.json` extends `next/core-web-vitals`, enforces `no-explicit-any`, no hardcoded ports
+- [ ] `package.json` pins Next.js 14.2, React 18.3, TypeScript 5.6+; `package-lock.json` committed and in sync (`npm ci` exits 0)
+- [ ] `tsconfig.json` sets `strict: true`, `noUncheckedIndexedAccess: true`, `jsx: preserve` (Next convention)
+- [ ] `.eslintrc.json` extends `next/core-web-vitals` + `next/typescript` + `prettier`; enforces `@typescript-eslint/no-explicit-any`
 - [ ] `npm ci && npm run typecheck && npm run lint` all exit 0
-- [ ] No `node_modules` or `.next` in `.gitignore` (committed)
+- [ ] `.gitignore` excludes `node_modules`, `.next`, `coverage`, `.env*` (and is committed)
 
 ---
 
@@ -58,42 +58,40 @@ The scaffold SHALL include Tailwind CSS configured to consume design tokens from
 
 The scaffold SHALL provide Vitest for unit/integration tests, React Testing Library for component testing, and Playwright for E2E tests, all configured and passing (even with zero tests).
 
-#### Scenario: Vitest runs empty suite
-- **WHEN** `npm run test` is executed (no .test.ts files yet)
-- **THEN** exit code is 0, coverage report shows 0 files (no threshold breach)
+#### Scenario: Vitest runs the seed suite
+- **WHEN** `npm run test` is executed
+- **THEN** exit code is 0; the scaffold smoke test passes; no coverage threshold gates the run
 
-#### Scenario: Playwright runs empty suite
-- **WHEN** `npm run test:e2e` is executed (no .spec.ts files yet)
-- **THEN** exit code is 0, html report generated, `passWithNoTests: true`
+#### Scenario: Playwright tolerates an empty suite
+- **WHEN** `npm run test:e2e` is executed (no `.spec.ts` files yet)
+- **THEN** exit code is 0 (the script passes `--pass-with-no-tests`)
 
 #### Acceptance Criteria
-- [ ] `vitest.config.ts` configured with jsdom, React plugin, coverage providers, 0% thresholds
-- [ ] `tests/setup.ts` exists (can be empty or minimal)
-- [ ] `tests/` directory exists (empty for Sprint 1)
-- [ ] `playwright.config.ts` configured with baseURL, webServer, `passWithNoTests: true`
-- [ ] `tests/e2e/` directory exists (empty for Sprint 1)
+- [ ] `vitest.config.ts` uses `environment: 'jsdom'`, `@vitejs/plugin-react`, v8 coverage, no thresholds (Sprint 1)
+- [ ] `tests/setup.ts` wires `@testing-library/jest-dom` + RTL `cleanup`
+- [ ] `tests/{unit,integration,e2e}/` exist; one smoke test proves TSX + jsdom + RTL + `@/` alias
+- [ ] `test:e2e` script is `playwright test --pass-with-no-tests`; `playwright.config.ts` sets `baseURL` + `webServer`
 - [ ] `npm run test && npm run test:e2e` both exit 0
 
 ---
 
 ### Requirement: GitHub Actions CI/CD pipeline
 
-The scaffold SHALL include a GitHub Actions workflow that runs lint → typecheck → test --coverage → build → e2e in parallel jobs.
+The scaffold SHALL include a GitHub Actions workflow that runs the quality gates on every push and PR to `main`.
 
-#### Scenario: CI runs on push to main
-- **WHEN** a commit is pushed to main branch
-- **THEN** GitHub Actions workflow is triggered, all jobs run (lint, typecheck, test, build, e2e)
+#### Scenario: CI runs on PR to main
+- **WHEN** a PR targets `main`
+- **THEN** the workflow triggers and runs the `quality`, `build` and `e2e` jobs
 
-#### Scenario: All jobs pass
-- **WHEN** workflow completes
-- **THEN** all 5 jobs show green (✓) in Actions tab, no skipped jobs
+#### Scenario: All jobs pass on the scaffold
+- **WHEN** the workflow completes for the scaffold commit
+- **THEN** every job is green, none skipped
 
 #### Acceptance Criteria
-- [ ] `.github/workflows/ci.yml` exists with 5 jobs: lint, typecheck, test, build, e2e
-- [ ] All jobs run on Ubuntu latest, Node 18.17.0
-- [ ] Test job includes `--coverage` flag and codecov upload
-- [ ] E2E job includes `npx playwright install --with-deps`
-- [ ] Workflow file valid YAML (GitHub Actions lint passes)
+- [ ] `.github/workflows/ci.yml` has 3 jobs: `quality` (lint + typecheck + test --coverage + codecov), `build`, `e2e`
+- [ ] All jobs run on `ubuntu-latest`, Node 20; `concurrency` cancels superseded runs
+- [ ] `e2e` job runs `npx playwright install --with-deps chromium` before `npm run test:e2e`
+- [ ] `codecov` upload uses `CODECOV_TOKEN` secret and does not fail the job on upload error
 
 ---
 
@@ -110,11 +108,12 @@ The scaffold SHALL configure Next.js with CSP headers, specific image hostnames 
 - **THEN** response includes `Content-Security-Policy` header with `default-src 'self'`
 
 #### Acceptance Criteria
-- [ ] `next.config.js` includes `remotePatterns` with specific hostnames (e.g., `images.example.com`)
-- [ ] `headers` async function includes CSP policy (no report-only, enforced mode)
-- [ ] No `wildcard`, `**`, or overly permissive patterns in CSP
+- [ ] `next.config.js` `images.remotePatterns` lists specific hostname(s) only (`res.cloudinary.com`), no `**` wildcard
+- [ ] `headers` sets an enforced (non report-only) CSP with `default-src 'self'`, `frame-ancestors 'none'`, `object-src 'none'`
+- [ ] `poweredByHeader: false`; no deprecated `X-XSS-Protection`
 - [ ] `.env.example` provided, `.env*` in `.gitignore`
 - [ ] No secrets/tokens in `next.config.js`, `package.json`, or code
+- [ ] Follow-up noted: nonce-based CSP (drop `unsafe-inline`/`unsafe-eval`) — infra track
 
 ---
 
@@ -143,47 +142,35 @@ The scaffold SHALL provide a README with setup/dev/build/test commands and team 
 
 ```
 MACHINE-BULLS/
-├── package.json                      # Next 14, React 18.3, dependencies locked
-├── package-lock.json                 # Committed, reproducible installs
-├── tsconfig.json                     # strict: true, noUncheckedIndexedAccess
-├── .eslintrc.json                    # no-explicit-any, explicit-function-return-type
-├── .prettierrc                        # Formatter config
-├── next.config.js                    # CSP headers, specific image hostnames
-├── tailwind.config.ts                # Imports design-tokens.ts
-├── vitest.config.ts                  # 0% thresholds, React + jsdom
-├── playwright.config.ts              # passWithNoTests: true
+├── package.json / package-lock.json  # Next 14.2 + React 18.3, lockfile committed & in sync
+├── tsconfig.json                     # strict, noUncheckedIndexedAccess, jsx: preserve
+├── .eslintrc.json                    # next/core-web-vitals + next/typescript + prettier
+├── .prettierrc.json / .gitattributes # formatter + LF normalization
+├── next.config.js                    # CSP baseline, Cloudinary-scoped images, poweredByHeader off
+├── tailwind.config.ts                # colour scale derived from design-tokens.ts keys; darkMode: 'class'
+├── vitest.config.ts                  # jsdom + @vitejs/plugin-react, v8 coverage, no thresholds
+├── playwright.config.ts              # baseURL + webServer (dev)
+├── .github/workflows/ci.yml          # 3 jobs: quality / build / e2e (Node 20)
+├── .nvmrc                            # 20
 ├── src/
-│   ├── app/
-│   │   ├── layout.tsx                # Root layout, providers
-│   │   ├── page.tsx                  # Home page (minimal)
-│   │   └── globals.css               # CSS variables from design-tokens
-│   ├── config/
-│   │   └── design-tokens.ts          # Color, typography, spacing tokens
-│   └── components/
-│       └── shell/
-│           └── SkipToContentLink.tsx # A11y skip link
-├── tests/
-│   ├── setup.ts                      # Vitest setup (can be empty)
-│   └── e2e/                          # Empty directory (Playwright)
-├── .github/
-│   └── workflows/
-│       └── ci.yml                    # GitHub Actions pipeline
-├── .gitignore                        # node_modules, .next, .env*, secrets
-├── .env.example                      # Template for env vars (no secrets)
-├── README.md                         # Setup, dev, build, test, tech stack
-└── CLAUDE.md                         # Operational decisions (already exists)
+│   ├── app/{layout,page,providers}.tsx, globals.css
+│   ├── config/design-tokens.ts       # hex tokens + hexToHslChannels()
+│   ├── components/shell/SkipToContentLink.tsx
+│   └── lib/errors.ts                 # StyleMeError hierarchy
+├── tests/{setup.ts, unit/, integration/smoke.test.tsx, e2e/}
+├── .gitignore  .env.example  README.md  CLAUDE.md
 ```
 
 ---
 
 ## References
 
-- `CLAUDE.md` §2 (tech stack justification)
-- `CLAUDE.md` §4 (directory structure)
-- `docs/context/frontend-plan.md` (full product vision)
+- `CLAUDE.md` §2 (stack) · §4 (directory structure) · §10 P0#1 (this scaffold's decision record)
+- `docs/sprint-0/SCAFFOLD-VERIFICATION.md` (real gate output)
+- `docs/context/frontend-plan.md` (product vision)
 
 ---
 
-**Status:** Ready for Tarea 0 execution (Sprint 1 blocker).
+**Status:** Delivered and verified (see SCAFFOLD-VERIFICATION.md). Tarea 0 = confirm it builds in your environment.
 **Owner:** Leonardo Ibarra López (Feature Lead).
 **Last updated:** 31 ago 2026.
