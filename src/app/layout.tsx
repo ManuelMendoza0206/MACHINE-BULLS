@@ -2,7 +2,8 @@ import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import { AppProviders } from './providers';
 import { SkipToContentLink } from '@/components/shell/SkipToContentLink';
-import { ThemeToggle } from '@/components/shell/ThemeToggle';
+import { TopNav } from '@/components/shell/TopNav';
+import { BottomTabBar } from '@/components/shell/BottomTabBar';
 
 export const metadata: Metadata = {
   title: 'StyleMe',
@@ -20,16 +21,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }):
   return (
     <html lang="es" suppressHydrationWarning>
       <body>
+        {/* First focusable element of the document. */}
+        <SkipToContentLink />
         <AppProviders>
-          <SkipToContentLink />
-          {/* Nav slot — Tarea 5 replaces this <header> with <TopNav /> (hidden lg-) and
-              adds <BottomTabBar /> (hidden lg+) after <main>. The toggle moves into TopNav. */}
-          <header className="flex justify-end p-4">
-            <ThemeToggle />
-          </header>
-          <main id="main-content" tabIndex={-1}>
+          <TopNav />
+          <main id="main-content" tabIndex={-1} className="pb-16 lg:pb-0">
             {children}
           </main>
+          <BottomTabBar />
         </AppProviders>
       </body>
     </html>
