@@ -1,185 +1,209 @@
+# Frontend Design System
+
 ## Purpose
-Provee los tokens de diseño (color, tipografía, espaciado) y los componentes shadcn/ui base sobre los que se construye toda pantalla del producto, consistentes en modo claro y oscuro, y accesibles por defecto.
+
+Provide design tokens (colors, typography, spacing) and base UI components (Button, Card, Badge, Skeleton, Progress) that are consistent across light/dark themes and accessible by default. No other component or spec may redefine tokens — only consume them.
+
+---
 
 ## Requirements
 
-### Requirement: Contraste de color verificable
-El sistema SHALL garantizar que todo par texto/fondo de los tokens de diseño cumple WCAG AA en ambos temas.
+### Requirement: Design tokens with WCAG AA contrast
 
-#### Scenario: Verificación de contraste
-- **WHEN** se evalúa cualquier par `(foreground, background)` o `(mutedForeground, muted)` definido en los tokens
-- **THEN** el ratio de contraste es igual o mayor a 4.5:1 en modo claro y en modo oscuro
+The system SHALL guarantee that all color pairs (foreground/background, accent/foreground) defined in tokens meet WCAG AA contrast ratio (4.5:1 min for normal text, 3:1 for large text) in both light and dark themes.
 
-### Requirement: Componentes accesibles por teclado
-El sistema SHALL asegurar que `Dialog` y `Sheet` gestionan el foco correctamente al abrir y cerrar.
+#### Scenario: Contrast validation in light theme
+- **GIVEN** design tokens for light theme: background=#FAFAF9, foreground=#18181B
+- **WHEN** contrast ratio is calculated
+- **THEN** ratio ≥ 4.5:1
 
-#### Scenario: Restauración de foco
-- **WHEN** el usuario cierra un `Dialog` o `Sheet`
-- **THEN** el foco vuelve al elemento que lo abrió, sin quedar perdido en el documento
+#### Scenario: Contrast validation in dark theme
+- **GIVEN** design tokens for dark theme: background=#0C0C0D, foreground=#F4F4F5
+- **WHEN** contrast ratio is calculated
+- **THEN** ratio ≥ 4.5:1
 
----
+#### Scenario: All color pairs meet AA
+- **GIVEN** 11 color token pairs (background/foreground, muted/mutedForeground, accent/accentForeground, success/successForeground, destructive/destructiveForeground, border, input)
+- **WHEN** contrast ratio is calculated for each pair in both themes
+- **THEN** ALL ratios ≥ 4.5:1
 
-# Spec 00 — Design System
-
-**Estado:** Draft para implementación · **Depende de:** ninguna · **Consumido por:** todas las specs de UI (02, 03, 04)
-
-Deriva de `docs/context/frontend-plan.md` §5 y `CLAUDE.md` §2, §6. Establece los tokens, utilidades y componentes base de shadcn/ui sobre los que se construye toda pantalla del producto. Ninguna spec posterior debe redefinir un token de color/espaciado/tipografía — solo consumirlos.
-
----
-
-## 1. Propósito y SLA
-
-**Propósito:** proveer una capa de primitivos visuales (tokens Tailwind + componentes shadcn/ui customizados) consistente con la personalidad "quiet confidence / image-forward" definida en `frontend-plan.md` §1, disponible en modo claro y oscuro desde el primer render.
-
-**SLA de rendimiento:**
-- Cero *layout shift* atribuible a tokens de tipografía/espaciado (CLS = 0 en Lighthouse para páginas que solo usan estos primitivos).
-- `cn()` (merge de clases) debe ejecutar en O(1) percibido — sin cómputo pesado en cada render (memoización no necesaria dado que `clsx`+`tailwind-merge` son suficientemente rápidos, pero se prohíbe recalcular classNames dentro de loops de render sin memo si la lista supera 100 items).
-- Cambio de tema (claro/oscuro) sin parpadeo (*FOUC*): la clase de tema se resuelve antes del primer paint (script inline en `app/layout.tsx` o `next-themes` con `suppressHydrationWarning`).
+#### Acceptance Criteria
+- [ ] `src/config/design-tokens.ts` defines 11 color token pairs (light/dark)
+- [ ] All pairs validated by automated test `tests/unit/config/design-tokens.contrast.test.ts`
+- [ ] Test runs in CI and fails if any ratio < 4.5:1
+- [ ] Test file exists and passes: `npm run test -- design-tokens.contrast`
 
 ---
 
-## 2. Contratos
+### Requirement: Theme switching without FOUC
 
-### 2.1 Tokens de color (`tailwind.config.ts`)
+The system SHALL switch between light and dark themes without Flash of Unstyled Content (FOUC) or hydration mismatch.
 
-Los valores exactos están fijados en `CLAUDE.md` §5.1 (no se repiten aquí para evitar desincronización — este archivo es la fuente de verdad de valores; `tailwind.config.ts` debe importarlos, no hardcodearlos duplicados).
+#### Scenario: Theme toggle on load
+- **WHEN** page loads with system prefers-color-scheme = dark
+- **THEN** content renders in dark theme from first paint (no light flash)
 
-```ts
-// src/config/design-tokens.ts
-export const colorTokens = {
-  background: { light: '#FAFAF9', dark: '#0C0C0D' },
-  foreground: { light: '#18181B', dark: '#F4F4F5' },
-  muted: { light: '#F1F0EE', dark: '#1A1A1C' },
-  mutedForeground: { light: '#71717A', dark: '#A1A1AA' },
-  border: { light: '#E4E4E7', dark: '#27272A' },
-  accent: { light: '#1C1C1E', dark: '#F4F4F5' },
-  success: { light: '#16A34A', dark: '#22C55E' },
-  warning: { light: '#D97706', dark: '#F59E0B' },
-  destructive: { light: '#DC2626', dark: '#EF4444' },
-} as const satisfies Record<string, { light: `#${string}`; dark: `#${string}` }>;
+#### Scenario: Theme toggle after user action
+- **WHEN** user clicks theme toggle button
+- **THEN** document.documentElement classList changes, all elements re-render with new colors in same frame (no flicker)
 
-export type ColorToken = keyof typeof colorTokens;
-```
+#### Scenario: Preference persists
+- **WHEN** user toggles theme and closes browser
+- **AND** reopens same page
+- **THEN** theme matches previous selection from localStorage
 
-`tailwind.config.ts` consume `colorTokens` vía CSS variables (`hsl(var(--background))` pattern estándar de shadcn) — no se listan aquí los valores HSL derivados; se generan por script/manualmente al implementar, validados por el test de contraste (§4).
-
-### 2.2 Utilidad `cn`
-
-```ts
-// src/lib/utils/cn.ts
-import { type ClassValue, clsx } from 'clsx';
-import { twMerge } from 'tailwind-merge';
-
-export function cn(...inputs: ClassValue[]): string {
-  return twMerge(clsx(inputs));
-}
-```
-
-### 2.3 Escala tipográfica
-
-```ts
-// src/config/design-tokens.ts (cont.)
-export const typeScale = {
-  xs: 'text-xs',       // 12px — metadata, badges
-  sm: 'text-sm',       // 14px — cuerpo secundario
-  base: 'text-base',   // 16px — cuerpo
-  lg: 'text-lg',       // 18px — subtítulos de card
-  xl: 'text-xl',       // 20px — títulos de sección
-  '2xl': 'text-2xl',   // 24px — títulos de página
-  '3xl': 'text-3xl',   // 30px — hero (solo Landing)
-  '4xl': 'text-4xl',   // 36px — hero (solo Landing, desktop)
-} as const;
-```
-
-### 2.4 Componentes base a implementar (contrato de props mínimo)
-
-Todos siguen convención shadcn/ui (`cva` para variantes, `forwardRef`, `asChild` vía Radix `Slot` donde aplique).
-
-| Componente | Variantes requeridas | Usado por (adelanto) |
-| :--- | :--- | :--- |
-| `Button` | `variant: 'default'\|'secondary'\|'ghost'\|'destructive'`, `size: 'sm'\|'default'\|'lg'\|'icon'` | Todas las specs |
-| `Card` + `CardHeader/Content/Footer` | — | `GarmentCard`, `OutfitCard` (spec 02, 03) |
-| `Badge` | `variant: 'default'\|'success'\|'warning'\|'outline'` | Categoría, estética, confianza (spec 02) |
-| `Skeleton` | `className` (dimensiones vía Tailwind) | Todos los estados de carga |
-| `Progress` | `value?: number` (undefined = indeterminado) | VTON processing (spec 04) |
-| `Dialog`, `Sheet` | estándar Radix | Confirmaciones, detalle rápido |
-| `Tabs` | estándar Radix | `/wardrobe` (Mis prendas / Básicos) |
-| `Toast` (sonner) | `success\|error\|info` | Confirmaciones no bloqueantes |
-
-```ts
-// Ejemplo de contrato — src/components/ui/badge.tsx
-type BadgeVariant = 'default' | 'success' | 'warning' | 'outline';
-interface BadgeProps extends React.HTMLAttributes<HTMLDivElement> {
-  variant?: BadgeVariant;
-}
-```
-
-### 2.5 Contrato de Accesibilidad por Componente
-
-Extiende las garantías que Radix ya provee por defecto (focus trap, `aria-*` de estado) con los requisitos específicos de StyleMe que sí deben verificarse por test:
-
-| Componente | Requisito verificable | Test asociado (§4) |
-| :--- | :--- | :--- |
-| `Button` | Estado `disabled` expone `aria-disabled="true"` además de `disabled` nativo (necesario para lectores que no anuncian el atributo HTML puro en todos los contextos) | Integración |
-| `Badge` | Cuando comunica un estado semántico (`success`/`warning`), el texto visible debe ser autosuficiente — el color nunca es el único portador de significado (ej. `"92% confianza"`, no solo un punto verde) | Revisión manual + snapshot de texto |
-| `Skeleton` | `aria-busy="true"` en el contenedor padre mientras el skeleton está presente, removido al resolver | Integración |
-| `Progress` | `role="progressbar"` con `aria-valuenow` (si el valor es determinado) o `aria-valuetext` descriptivo (si es indeterminado, ej. "Procesando") | Integración |
-| `Dialog`/`Sheet` | Foco vuelve al elemento que abrió el diálogo al cerrarlo (no solo se atrapa dentro — también se restaura) | Integración (`userEvent`) |
-| `Tabs` | Navegación por flechas (←/→) entre tabs, no solo `Tab` (comportamiento estándar Radix, se verifica que no fue roto por la customización) | Integración |
+#### Acceptance Criteria
+- [ ] `suppressHydrationWarning` set on `<html>` tag
+- [ ] Theme script injected in `<head>` BEFORE stylesheets (inline or preload)
+- [ ] `next-themes` configured with `attribute="class"` and `enableSystem`
+- [ ] E2E test verifies no FOUC on page reload
+- [ ] localStorage persists theme preference
 
 ---
 
-## 3. Flujo de Datos Interno
+### Requirement: Utility function cn() for class merging
 
-No hay flujo de datos en tiempo de ejecución (es una capa estática de presentación). El flujo relevante es de **build-time / mount-time**:
+The system SHALL provide a `cn()` utility that merges Tailwind CSS classes without conflicts, using clsx + tailwind-merge.
 
-```
-tailwind.config.ts (lee colorTokens)
-        │
-        v
-  CSS variables globales (globals.css, :root y .dark)
-        │
-        v
-  Componentes shadcn/ui (usan clases semánticas: bg-background, text-foreground...)
-        │
-        v
-  next-themes (resuelve .dark en <html> antes del primer paint)
-        │
-        v
-  Render sin FOUC, tema correcto desde el primer frame
-```
+#### Scenario: Merge conflicting Tailwind classes
+- **WHEN** `cn('px-4', 'px-6')` is called
+- **THEN** result is `'px-6'` (last value wins, no duplication)
 
----
+#### Scenario: Merge conditional classes
+- **WHEN** `cn('text-sm', { 'text-lg': true, 'font-bold': false })` is called
+- **THEN** result is `'text-sm text-lg'` (truthy included, falsy excluded)
 
-## 4. Estrategia de Pruebas
+#### Scenario: Handle undefined and arrays
+- **WHEN** `cn(['text-base', undefined], 'p-4', null)` is called
+- **THEN** result is `'text-base p-4'` (undefined/null ignored, arrays flattened)
 
-**Unitarias (Vitest):**
-- `colorTokens` — test de regresión: cada par `(foreground, background)` y `(mutedForeground, muted)` definido en §2.1 debe cumplir contraste WCAG AA (ratio ≥ 4.5:1 para texto normal) en ambos temas. Se usa una función `getContrastRatio(hex1, hex2): number` propia (sin dependencia externa) testeada primero con casos conocidos (blanco/negro = 21:1).
-- `cn()` — casos: merge de clases conflictivas de Tailwind (`cn('p-2', 'p-4')` → `'p-4'`), clases condicionales `false`/`undefined` ignoradas.
-
-**Integración (Vitest + RTL):**
-- Cada componente base (`Button`, `Badge`, `Skeleton`, `Progress`) renderiza sin errores con cada variante declarada en su tipo, y aplica la clase esperada (snapshot de `className` no de pixel, para no ser frágil).
-- `Dialog`/`Sheet`: foco se atrapa dentro del panel al abrir (test con `userEvent.tab()` verificando que el foco no escapa) — regla de accesibilidad de `frontend-plan.md` §8.
-
-**Casos borde:**
-- Tema oscuro forzado vía `data-theme="dark"` sin `prefers-color-scheme` del sistema → variables correctas igual.
-- `Badge` sin `variant` → usa `default` sin lanzar error de tipos.
+#### Acceptance Criteria
+- [ ] `src/lib/utils/cn.ts` exports `cn` function using clsx + tailwind-merge
+- [ ] 4 test cases: conflict, conditional, undefined, array (all pass)
+- [ ] Test runs in < 50ms
+- [ ] Test file: `tests/unit/lib/utils/cn.test.ts`
 
 ---
 
-## 5. Criterios de Aceptación
+### Requirement: Contrast ratio calculator utility
 
-- [ ] `tailwind.config.ts` deriva sus colores de `src/config/design-tokens.ts`, sin valores hex duplicados hardcodeados en el config.
-- [ ] Todos los pares texto/fondo de §2.1 pasan el test de contraste AA en ambos temas (claro y oscuro).
-- [ ] `cn()` implementado y cubierto por tests unitarios (mínimo 4 casos: merge simple, conflicto Tailwind, condicional falsy, array anidado).
-- [ ] Los 8 componentes de §2.4 existen en `src/components/ui/`, tipados sin `any`, con las variantes exactas especificadas.
-- [ ] Cambio de tema claro/oscuro no produce parpadeo visible (`suppressHydrationWarning` configurado, verificado manualmente en `npm run dev`).
-- [ ] `npm run typecheck && npm run lint && npm run test` pasan en verde para todo el contenido de esta spec.
-- [ ] Los 6 requisitos de accesibilidad de §2.5 están cubiertos por un test cada uno (no solo heredados implícitamente de Radix sin verificación propia).
+The system SHALL provide a `getContrastRatio(hex1, hex2)` function that calculates WCAG contrast ratio between two colors.
+
+#### Scenario: Calculate contrast for valid hex colors
+- **WHEN** `getContrastRatio('#FAFAF9', '#18181B')` is called
+- **THEN** result is a number >= 4.5 (light/dark pair)
+
+#### Scenario: Known contrast pairs
+- **WHEN** `getContrastRatio('#FFFFFF', '#000000')` is called (white/black)
+- **THEN** result is 21 (maximum contrast)
+
+#### Acceptance Criteria
+- [ ] `src/lib/utils/getContrastRatio.ts` exported function
+- [ ] Handles hex colors (no validation errors)
+- [ ] Returns numeric ratio (ISO/IEC 40500 formula)
+- [ ] Tests verify known pairs (white/black = 21, etc)
+- [ ] Test file: `tests/unit/lib/utils/getContrastRatio.test.ts`
 
 ---
 
-## 6. Manifiesto de Archivos
+### Requirement: 5 core UI components
+
+The system SHALL provide 5 base UI components (Button, Card, Badge, Skeleton, Progress) styled with design tokens, typed without `any`, and tested for basic rendering + accessibility.
+
+#### Scenario: Button component renders with variants
+- **WHEN** `<Button variant="default">Click me</Button>` is rendered
+- **THEN** button appears with default styling and responds to click
+
+#### Scenario: Card component as container
+- **WHEN** `<Card><CardContent>Text</CardContent></Card>` is rendered
+- **THEN** card wraps content with proper spacing and borders
+
+#### Scenario: Badge component with semantic color
+- **WHEN** `<Badge variant="success">Active</Badge>` is rendered
+- **THEN** badge displays green background + white text (success colors from tokens)
+
+#### Scenario: Skeleton component for loading
+- **WHEN** `<Skeleton className="h-12 w-full" />` is rendered
+- **THEN** skeleton shows animated bone loading pattern, `aria-busy="true"`
+
+#### Scenario: Progress component with value
+- **WHEN** `<Progress value={65} />` is rendered
+- **THEN** progress bar shows 65% filled, `role="progressbar"`, `aria-valuenow="65"`
+
+#### Acceptance Criteria
+- [ ] All 5 components exist in `src/components/ui/[component].tsx`
+- [ ] Each component is typed (Props interface, no `any`)
+- [ ] Each component uses `cn()` for class merging
+- [ ] Each component has test file in `tests/integration/ui/[component].test.tsx`
+- [ ] Tests verify: render without error, correct classes applied, basic a11y (aria attributes)
+- [ ] Coverage > 50% for all 5 components
+- [ ] `npm run test -- src/components/ui` passes
+
+---
+
+### Requirement: App layout with shell components
+
+The system SHALL provide root layout with providers (theme, query client), skip link, main content area, and error boundary.
+
+#### Scenario: Layout renders without hydration error
+- **WHEN** page loads (SSR + hydration)
+- **THEN** no hydration mismatch, no console errors
+
+#### Scenario: Skip link appears on Tab
+- **WHEN** user presses Tab key on page load
+- **THEN** SkipToContentLink becomes visible (sr-only → focus:not-sr-only)
+- **AND** pressing Enter jumps to `<main id="main-content">`
+
+#### Scenario: Providers initialized once per session
+- **WHEN** page renders and re-renders
+- **THEN** QueryClient instance is created exactly once (via useState hook, not module singleton)
+- **AND** theme context and TanStack Query context are available to all children
+
+#### Acceptance Criteria
+- [ ] `src/app/layout.tsx` has `suppressHydrationWarning` on `<html>`
+- [ ] `src/app/providers.tsx` exports `AppProviders` (Client Component)
+- [ ] QueryClient instantiated via `useState(() => new QueryClient(...))`
+- [ ] TooltipProvider + Toaster + ThemeProvider all composed
+- [ ] SkipToContentLink rendered before main
+- [ ] E2E test: Tab key activates skip link
+- [ ] `npm run typecheck` passes (no TS errors)
+
+---
+
+### Requirement: Accessibility compliance (WCAG 2.1 AA)
+
+The system SHALL meet WCAG 2.1 AA accessibility standards for all components and layout.
+
+#### Scenario: Keyboard navigation
+- **WHEN** user navigates page with Tab, Shift+Tab, Enter, Escape
+- **THEN** all interactive elements receive focus, focus indicators are visible, focus order is logical
+
+#### Scenario: Semantic HTML
+- **WHEN** screen reader scans page
+- **THEN** landmarks are present (skip link, main, nav), heading hierarchy is correct, buttons have accessible text
+
+#### Scenario: Color is not sole indicator
+- **WHEN** Badge shows status (success = green)
+- **THEN** text label also indicates status (e.g., "Active", not color alone)
+
+#### Scenario: Focus is restored after modal close
+- **WHEN** Dialog closes
+- **THEN** focus returns to element that opened it (not lost in document)
+
+#### Scenario: Loading states communicate to screen readers
+- **WHEN** Skeleton or Progress is displayed
+- **THEN** `aria-busy="true"` or `role="progressbar"` signals state to AT
+
+#### Acceptance Criteria
+- [ ] 6 a11y test cases covering keyboard, semantic HTML, color usage, focus, loading states
+- [ ] `tests/integration/ui/[component].test.tsx` includes a11y assertions (aria attributes, roles)
+- [ ] axe-core or similar linter runs in CI and reports 0 violations
+- [ ] E2E test suite includes keyboard navigation test
+- [ ] Lighthouse a11y score >= 90 on sample pages
+
+---
+
+## File Manifest
 
 ```
 src/config/design-tokens.ts
@@ -190,17 +214,33 @@ src/components/ui/card.tsx
 src/components/ui/badge.tsx
 src/components/ui/skeleton.tsx
 src/components/ui/progress.tsx
-src/components/ui/dialog.tsx
-src/components/ui/sheet.tsx
-src/components/ui/tabs.tsx
-src/components/ui/sonner.tsx
+src/components/shell/SkipToContentLink.tsx
+src/app/layout.tsx
+src/app/providers.tsx
+src/app/globals.css
+
+tests/unit/config/design-tokens.contrast.test.ts
 tests/unit/lib/utils/cn.test.ts
 tests/unit/lib/utils/getContrastRatio.test.ts
-tests/unit/config/design-tokens.contrast.test.ts
 tests/integration/ui/button.test.tsx
+tests/integration/ui/card.test.tsx
 tests/integration/ui/badge.test.tsx
 tests/integration/ui/skeleton.test.tsx
 tests/integration/ui/progress.test.tsx
-tests/integration/ui/dialog.test.tsx
-tests/integration/ui/tabs.test.tsx
+tests/integration/shell/skiplink.test.tsx
+tests/integration/layout.test.tsx
 ```
+
+---
+
+## References
+
+- `docs/context/frontend-plan.md` §1, §5 (design system vision, token spec)
+- `docs/sprint-plans/sprint-1-init-leonardo.md` (Tareas 1-5: tokens, theme, layout, components, shell)
+- `CLAUDE.md` §2 (tech stack: TypeScript strict, Tailwind, shadcn/ui)
+
+---
+
+**Status:** Ready for Sprint 1 implementation (Tarea 1 start 26 ago 2026).
+**Owner:** Leonardo Ibarra López (Feature Lead).
+**Last updated:** 31 ago 2026.
