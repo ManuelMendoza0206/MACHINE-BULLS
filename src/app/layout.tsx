@@ -22,7 +22,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }):
       <body>
         <AppProviders>
           <SkipToContentLink />
-          {/* Temporary shell furniture — Tarea 5 folds the toggle into <TopNav />. */}
+          {/* Nav slot — Tarea 5 replaces this <header> with <TopNav /> (hidden lg-) and
+              adds <BottomTabBar /> (hidden lg+) after <main>. The toggle moves into TopNav. */}
           <header className="flex justify-end p-4">
             <ThemeToggle />
           </header>
