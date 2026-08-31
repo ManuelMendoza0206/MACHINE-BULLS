@@ -3,7 +3,7 @@
 **Rol:** Feature Lead — Frontend Foundation
 **Ventana:** Sprint 0 (scaffold, ya entregado) + Sprint 1 features **2–8 sep 2026** (~28 h @ 4h/día)
 **Epics:** [EPIC] frontend/design-system, [EPIC] frontend/app-shell-and-navigation
-**Tareas ejecutables:** 6 (Tarea 0–6)
+**Tareas ejecutables:** 6 (Tarea 0–5). *Tarea 6 (API skeleton) diferida a Sprint 2 — epic F3, Asiento A = Jaicel.*
 **Stack fijo:** Next.js 14.2 · React 18.3 · Node 20 · TypeScript strict
 
 > **Gobernanza (no negociable):** cada Tarea entra por su rama `feat/tareaN-<slug>` → PR →
@@ -164,37 +164,30 @@ El scaffold ya trae `AppProviders` (con `useState(() => new QueryClient(...))`, 
 
 ---
 
-### Tarea 6: Esqueleto de API Client + jerarquía de errores — 1.5 días
-**Spec:** `api-client-and-schemas/spec.md` §2.1-2.2.
+### Tarea 6 — DIFERIDA a Sprint 2
 
-El scaffold ya trae `src/lib/errors.ts` (`StyleMeError` + `ApiError`, `ValidationError`,
-`NetworkError`, `VtonJobTimeoutError`).
-
-1. `tests/unit/lib/errors.test.ts` — cada subclase instancia con su `code`; `instanceof` de base y subclase; `ValidationError` conserva `issues`.
-2. `src/lib/api/queryClient.ts` — `defaultQueryClientConfig` (compartido con Tarea 3).
-3. `src/lib/api/client.ts` (esqueleto) — firma tipada del `fetch` wrapper y del mapeo de error, **sin** red todavía (Sprint 2, spec 01).
-
-**AC:**
-- [ ] `tests/unit/lib/errors.test.ts` en verde
-- [ ] Sin dependencias circulares (`errors.ts` no importa de `client.ts`)
-- [ ] PR `feat/tarea6-api-skeleton` revisado y mergeado
+El esqueleto de API client + los tests de `errors.ts` pertenecen al epic
+`api-client-and-schemas` (F3), que **arranca en Sprint 2 con Jaicel como Asiento A**
+(rotación §7.1). No es trabajo del Asiento A en Sprint 1 y sacarlo cierra la brecha de
+cronograma. `src/lib/errors.ts` ya existe (scaffold); Jaicel lo consume desde su epic.
+Decisión registrada en `CLAUDE.md` §10 D4.
 
 ---
 
-## ⏱️ Cronograma (2–8 sep 2026, ~4h/día)
+## ⏱️ Cronograma (2–8 sep 2026, ~4h/día) — Tareas 0–5
 
 | Día | Fecha | Tarea | Est. |
 |---|---|---|---|
-| — | 31 ago–1 sep | Tarea 0 (verificar scaffold en tu entorno) | 0.5d |
+| — | 31 ago–1 sep | Tarea 0 (verificar scaffold) | 0.5d |
 | 1 | mar 2 sep | Tarea 1 (utilidades + tests de tokens) | 1.5d |
-| 2 | mié 3 sep | Tarea 1 (cierre) + Tarea 2 (theme toggle) | — |
-| 3 | jue 4 sep | Tarea 3 (providers/layout) + arranque Tarea 4 | — |
+| 2 | mié 3 sep | Tarea 1 (cierre) + Tarea 2 (theme toggle) | 1.0d |
+| 3 | jue 4 sep | Tarea 3 (providers/layout) — **mid-sprint check 15:30** | 1.0d |
 | 4–5 | vie 5 – sáb 6 sep | Tarea 4 (5 componentes + tests) | 2.5d |
-| 6 | dom 7 sep | Tarea 5 (shell + error boundary) | 1d |
-| 7 | lun 8 sep | Tarea 6 (errores + esqueleto API) + buffer de review | 1.5d |
+| 6–7 | dom 7 – lun 8 sep | Tarea 5 (shell + error boundary) + buffer de review | 1.5d |
 
-**Realidad:** ~7 tareas-día en ~6 días de 4h. Ajustado, sin holgura. Si algo se sale, Tarea 6
-(bajo riesgo) o el `BottomTabBar` de Tarea 5 pasan a Sprint 2 — decisión del PO en el mid-sprint.
+**Total: ~8 tarea-días en 7 días de 4h.** Con holgura ajustada. Válvula de escape pactada en
+el mid-sprint (4 sep): si va apretado, `BottomTabBar` de Tarea 5 → Sprint 2 (queda `TopNav` +
+`error.tsx` + `not-found.tsx`, que es lo que consumen las specs 02–04).
 
 ---
 
@@ -204,8 +197,7 @@ El scaffold ya trae `src/lib/errors.ts` (`StyleMeError` + `ApiError`, `Validatio
 Tarea 0 (scaffold, hecho)
    ├─ Tarea 1 (utils + token tests) ──┬─ Tarea 4 (componentes)
    ├─ Tarea 2 (theme toggle) ─────────┤
-   ├─ Tarea 3 (providers/layout) ─────┴─ Tarea 5 (shell)
-   └─ Tarea 6 (errores + API skeleton)   [independiente]
+   └─ Tarea 3 (providers/layout) ─────┴─ Tarea 5 (shell)
 ```
 
 ---
@@ -215,9 +207,10 @@ Tarea 0 (scaffold, hecho)
 - **design-system/spec.md** — Requirements: "Design tokens with WCAG AA contrast", "cn()",
   "Contrast ratio calculator", "Theme switching without FOUC", "5 base UI components" (§2.4),
   "Accessibility compliance" (§2.5)
-- **app-shell/spec.md** — §2.1 providers · §2.2 navegación · §2.3 render adaptativo ·
-  §2.4 error boundary (4 ramas) · §2.5 not-found · §2.6 skip link · §3.2 nav activa
-- **api-client-and-schemas/spec.md** — §2.1 jerarquía de errores · §2.2 config de QueryClient
+- **app-shell/spec.md** — Requirements: providers (QueryClient vía `useState`) · navegación
+  adaptativa (solo CSS) · ruta activa · error boundary (4 ramas) · skip link + landmark
+- **api-client-and-schemas/spec.md** — solo §2.2 (`defaultQueryClientConfig` para Tarea 3). La
+  jerarquía de errores y el client son Sprint 2.
 
 ---
 
@@ -246,7 +239,7 @@ Tarea 0 (scaffold, hecho)
 
 ## 🤝 Pair Sessions
 
-- **Tarea 3/6 (API):** Jaicel alinea `defaultQueryClientConfig` y la firma del client con el contrato backend.
+- **Tarea 3 (providers):** Jaicel confirma `defaultQueryClientConfig` (retry/staleTime) — 15 min.
 - **Tarea 5 (shell):** Huascar revisa a11y de teclado antes del PR.
 - **Daily:** 09:30 standup (15 min).
 
@@ -269,4 +262,4 @@ Tarea 0 (scaffold, hecho)
 
 ---
 
-*Este prompt es fuente de verdad para Tarea 0–6. Verificá cada línea contra la spec antes de implementar.*
+*Este prompt es fuente de verdad para Tarea 0–5. Verificá cada línea contra la spec antes de implementar.*

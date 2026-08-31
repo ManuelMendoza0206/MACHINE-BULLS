@@ -20,14 +20,14 @@ prompts de inicialización — con **ejecución real** del toolchain, no revisi�
 | **Design system** | 🟢 | Tokens WCAG-AA (6 pares de texto ≥ 4.5:1, ambos temas). `tailwind.config` deriva de `design-tokens.ts`. Falta el test guardián (Tarea 1). |
 | **Gobernanza** | 🟢 | `main` protegida, PR + CODEOWNERS + template con declaración de IA. El prep se entregó por PR, no commit directo. |
 | **Alcance** | 🟢 | Frontend-only confirmado; ML/Data fuera de este repo. Storybook fuera de Sprint 1. 5 componentes, no 9. |
-| **Cronograma** | 🟡 | ~7 tareas-día de trabajo en ~6 días de 4 h para el Asiento A. Ajustado, sin holgura. Mitigación: Tarea 6 y `BottomTabBar` son la válvula de escape del mid-sprint. |
-| **Contexto ClickUp** | 🟡 | Fuente única del reparto/conteo de tareas, pero no verificada en esta sesión (token compartido fue revocado; export pendiente). No bloquea el arranque del Asiento A. |
+| **Cronograma** | 🟢 | Tarea 6 (API skeleton) movida a Sprint 2 — es del epic F3 de Jaicel, no del Asiento A (`CLAUDE.md` §10 D4). Sprint 1 Leonardo = Tareas 0–5 ≈ 8 tarea-días en 7 días de 4h, con `BottomTabBar` como válvula de escape pactada. |
+| **Contexto ClickUp** | 🟢 | Alcance del Asiento A es autocontenido en el repo (`sprint-1-init-leonardo.md` + specs + rotación). Reconciliación completa del tablero = tarea de Manuel/PO pre-kickoff, no bloqueante (`CLAUDE.md` §10 D5). Token revocado. |
 
 ## 3. Riesgos abiertos y su dueño
 
 | Riesgo | Prob. | Impacto | Mitigación / dueño |
 |---|---|---|---|
-| Cronograma del Asiento A se desborda | Media | Medio | Recorte pactado en el mid-sprint (Tarea 6 / BottomTabBar → Sprint 2). PO decide. |
+| Cronograma del Asiento A se desborda | Baja | Medio | Tarea 6 ya fuera; `BottomTabBar` es el recorte de reserva (mid-sprint, PO decide). |
 | `CODECOV_TOKEN` sin configurar → coverage no sube | Alta | Bajo | Manuel, Sprint 1 semana 1. `fail_ci_if_error: false` ya evita que rompa CI. |
 | Divergencia tokens (Leonardo) ↔ consumo en specs 02–04 | Baja | Medio | El test de sync `globals.css` ↔ `design-tokens.ts` (Tarea 1) + revisión cruzada. |
 | CSP baseline con `'unsafe-inline'` en scripts | Baja | Medio | Follow-up de endurecimiento a nonce+strict-dynamic en rutas dinámicas (Manuel). Documentado, no urgente para MVP académico. |
@@ -45,8 +45,10 @@ Eso es la Tarea 0 (verificación, 0.5 días). Hasta entonces: NO-GO para feature
 - [x] Specs de las Tareas 1–6 en formato verificable (Requirement + Scenario + AC)
 - [x] Tokens de diseño AA; decisión de paleta registrada (`CLAUDE.md` §10 D1)
 - [x] Gobernanza operativa (branch protection, PR template, CODEOWNERS)
+- [x] Cronograma del Asiento A cerrado (Tareas 0–5; Tarea 6 → Sprint 2)
+- [x] Alcance del Asiento A autocontenido en el repo (no depende de verificar ClickUp)
 - [ ] PR `chore/sprint-1-prep` mergeado (← Tarea 0)
-- [ ] Export de ClickUp confirmando el reparto (← Manuel/PO, no bloqueante)
+- [ ] Export de ClickUp confirmando el reparto de los 4 asientos (← Manuel/PO, no bloqueante)
 
 ## 6. Primer movimiento (post-merge)
 

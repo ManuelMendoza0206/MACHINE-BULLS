@@ -253,11 +253,26 @@ scaffold por incompatibilidad con el prerender estático.
 **D3: Contrato de env** — `NEXT_PUBLIC_API_BASE_URL` (nombre de `api-client-and-schemas/spec.md`
 §111), no `NEXT_PUBLIC_API_URL`. `.env.example` es la plantilla; falla en build si falta en runtime real.
 
+**D4: Tarea 6 (API client skeleton) → Sprint 2** — pertenece al epic `api-client-and-schemas`
+(F3), que arranca en Sprint 2 con Jaicel como Asiento A (rotación §7.1). Nunca fue trabajo del
+Asiento A de Sprint 1 (cross-epic). Sacarla cierra la brecha de cronograma del Asiento A
+(Sprint 1 Leonardo = Tareas 0–5, sus dos epics: design-system + app-shell). `src/lib/errors.ts`
+ya existe (scaffold) y Jaicel lo consume desde su epic.
+
+**D5: Fuente de verdad del alcance por asiento** — para *arrancar*, cada asiento se guía por su
+`docs/sprint-plans/sprint-1-init-<name>.md` + las specs + `team-rotation-plan.md`. Estos son
+internamente consistentes y suficientes. La reconciliación completa del tablero (44 tareas, 4
+asientos, fechas, tags) contra ClickUp es tarea de coordinación de **Manuel/PO antes del
+kickoff** — no bloquea el arranque del Asiento A. *Nota:* los prompts de Jaicel/Huascar/Manuel
+aún llevan fechas y conteos viejos ("26 ago – 8 sep / 14 días / N tareas"); cada uno se corrige
+con el mismo tratamiento que recibió el de Leonardo, al preparar ese asiento.
+
 ### P1: Inconsistencias Congeladas
 
 **P1#4: Conteo de tareas — ClickUp es la fuente única**
 - El número y reparto de tareas viven en ClickUp (export `SPRINT-1-MASTER.csv`), no en los `.md`.
 - Los docs de sprint describen *qué* hace cada asiento, no totales a reconciliar a mano.
+- Token de ClickUp compartido en chat el 30 ago fue **revocado** (no debe compartirse en prompts, §6). Integración futura vía MCP con el token en secreto local.
 
 **P1#5: 9 sprints × 18 semanas — fecha fija** (12 ago – 15 dic 2026). Si algo no cabe, se recorta o pasa al siguiente sprint.
 
