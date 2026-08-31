@@ -4,43 +4,65 @@
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 0 0% 3.6%;
-
-    --muted: 0 0% 96.1%;
-    --muted-foreground: 0 0% 45.1%;
-
-    --border: 0 0% 89.8%;
-    --input: 0 0% 89.8%;
-
-    --accent: 0 0% 11.2%;
-    --accent-foreground: 0 0% 100%;
-
-    --success: 142.3 76.2% 36.3%;
-    --success-foreground: 0 0% 100%;
-
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 0 0% 100%;
+    /* Light theme - StyleMe tokens (design-system/spec.md §2.1) */
+    --background: 250 8% 98%;
+    --foreground: 240 10% 11%;
+    --muted: 240 5% 94%;
+    --muted-foreground: 240 5% 45%;
+    --border: 240 5% 90%;
+    --input: 240 5% 90%;
+    --accent: 240 10% 11%;
+    --accent-foreground: 240 0% 100%;
+    --success: 142 71% 45%;
+    --success-foreground: 240 0% 100%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 240 0% 100%;
   }
 
   .dark {
-    --background: 0 0% 3.6%;
-    --foreground: 0 0% 98.2%;
+    /* Dark theme - StyleMe tokens (design-system/spec.md §2.1) */
+    --background: 240 10% 5%;
+    --foreground: 240 5% 96%;
+    --muted: 240 5% 10%;
+    --muted-foreground: 240 5% 63%;
+    --border: 240 5% 15%;
+    --input: 240 5% 15%;
+    --accent: 240 5% 96%;
+    --accent-foreground: 240 10% 11%;
+    --success: 142 71% 45%;
+    --success-foreground: 240 10% 5%;
+    --destructive: 0 86% 61%;
+    --destructive-foreground: 240 10% 5%;
+  }
 
-    --muted: 0 0% 14.9%;
-    --muted-foreground: 0 0% 63.9%;
+  [data-theme="light"] {
+    --background: 250 8% 98%;
+    --foreground: 240 10% 11%;
+    --muted: 240 5% 94%;
+    --muted-foreground: 240 5% 45%;
+    --border: 240 5% 90%;
+    --input: 240 5% 90%;
+    --accent: 240 10% 11%;
+    --accent-foreground: 240 0% 100%;
+    --success: 142 71% 45%;
+    --success-foreground: 240 0% 100%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 240 0% 100%;
+  }
 
-    --border: 0 0% 19.4%;
-    --input: 0 0% 19.4%;
-
-    --accent: 0 0% 98.2%;
-    --accent-foreground: 0 0% 3.6%;
-
-    --success: 142.3 71.8% 45.3%;
-    --success-foreground: 0 0% 3.6%;
-
-    --destructive: 0 86.1% 61%;
-    --destructive-foreground: 0 0% 3.6%;
+  [data-theme="dark"] {
+    --background: 240 10% 5%;
+    --foreground: 240 5% 96%;
+    --muted: 240 5% 10%;
+    --muted-foreground: 240 5% 63%;
+    --border: 240 5% 15%;
+    --input: 240 5% 15%;
+    --accent: 240 5% 96%;
+    --accent-foreground: 240 10% 11%;
+    --success: 142 71% 45%;
+    --success-foreground: 240 10% 5%;
+    --destructive: 0 86% 61%;
+    --destructive-foreground: 240 10% 5%;
   }
 }
 
@@ -49,7 +71,15 @@
     @apply border-border;
   }
 
+  html {
+    @apply scroll-smooth;
+  }
+
   body {
     @apply bg-background text-foreground;
+  }
+
+  main {
+    @apply min-h-screen;
   }
 }

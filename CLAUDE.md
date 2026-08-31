@@ -265,9 +265,16 @@ Cualquier sesión de Claude Code que trabaje en este repo debe operar dentro de 
 ## 11. Entrada a Sprint 1
 
 **Sprint 1 comienza:** 2 sep 2026, 19:00  
-**Tareas totales:** 44 (Leonardo 6, Jaicel 5, Huascar 3, Manuel 4)  
+**Período:** 26 ago - 8 sep 2026 (10 días calendario)  
+**Tareas totales:** 44 (distributed: Build 25, QA 5, Deploy 5, Data 6, Reportes 3)  
+**Asignaciones:**
+- Leonardo Ibarra: 6 tareas (Tarea 0-6: scaffold blocker, tokens, theme, layout, 5 components, shell, API skeleton)
+- Jaicel Velasco: 5+ tareas (backend schemas, models, migrations, API gateway base, CLIP eval)
+- Huascar Camilo: 3 tareas (test infrastructure, coverage gates, data validation)
+- Manuel Jimenez: 4+ tareas (CI pipeline, logging, SLOs, dashboards)
+
 **Sprint cierra:** 8 sep 2026, 23:59  
-**Review:** 9 sep 2026, 09:00  
+**Review & Sprint 2 Kickoff:** 9 sep 2026, 09:00  
 **Next sprint lead:** Jaicel (Asiento A para Sprint 2)  
 
 Detalles completos: `docs/sprint-plans/sprint-1-init-[name].md`
