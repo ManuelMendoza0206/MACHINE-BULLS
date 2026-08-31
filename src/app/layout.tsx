@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import { AppProviders } from './providers';
 import { SkipToContentLink } from '@/components/shell/SkipToContentLink';
+import { ThemeToggle } from '@/components/shell/ThemeToggle';
 
 export const metadata: Metadata = {
   title: 'StyleMe',
@@ -21,6 +22,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }):
       <body>
         <AppProviders>
           <SkipToContentLink />
+          {/* Temporary shell furniture — Tarea 5 folds the toggle into <TopNav />. */}
+          <header className="flex justify-end p-4">
+            <ThemeToggle />
+          </header>
           <main id="main-content" tabIndex={-1}>
             {children}
           </main>
