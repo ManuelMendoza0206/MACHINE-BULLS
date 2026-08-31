@@ -5,6 +5,8 @@
  */
 module.exports = {
   extends: ['@commitlint/config-conventional'],
+  // Merge commits (local `git merge`, GitHub "Merge pull request", "Revert ...") are exempt.
+  ignores: [message => /^(merge|revert)\b/i.test(message.trim())],
   rules: {
     'body-max-line-length': [0], // long explanatory bodies are fine
     'footer-max-line-length': [0], // Co-Authored-By / AI-usage lines
