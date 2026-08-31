@@ -265,16 +265,20 @@ Cualquier sesión de Claude Code que trabaje en este repo debe operar dentro de 
 ## 11. Entrada a Sprint 1
 
 **Sprint 1 comienza:** 2 sep 2026, 19:00  
-**Período:** 26 ago - 8 sep 2026 (10 días calendario)  
-**Tareas totales:** 44 (distributed: Build 25, QA 5, Deploy 5, Data 6, Reportes 3)  
-**Asignaciones:**
-- Leonardo Ibarra: 6 tareas (Tarea 0-6: scaffold blocker, tokens, theme, layout, 5 components, shell, API skeleton)
-- Jaicel Velasco: 5+ tareas (backend schemas, models, migrations, API gateway base, CLIP eval)
-- Huascar Camilo: 3 tareas (test infrastructure, coverage gates, data validation)
-- Manuel Jimenez: 4+ tareas (CI pipeline, logging, SLOs, dashboards)
+**Período:** 2 sep - 8 sep 2026 (7 días calendario)  
+**Tareas totales:** 44 (distributed: Build 19, QA 5, Deploy 5, Backend 15)  
+**Asignaciones (Frontend ONLY this repo):**
+- Leonardo Ibarra: 6 tareas (Tarea 0-6: scaffold blocker, tokens, theme, layout, 5 components, shell)
+- Jaicel Velasco: 5+ tareas (backend/API schemas, models, migrations, gateway, adapters — NOT in this frontend repo)
+- Huascar Camilo: 3 tareas (frontend test infrastructure, coverage gates, E2E setup)
+- Manuel Jimenez: 4+ tareas (CI pipeline, monitoring, SLOs, dashboards)
+
+**NOTE:** ML/Data/CLIP work (classification, training, embeddings) lives in **backend repository**, not here. This repo = frontend only (§1 Alcance).
 
 **Sprint cierra:** 8 sep 2026, 23:59  
 **Review & Sprint 2 Kickoff:** 9 sep 2026, 09:00  
 **Next sprint lead:** Jaicel (Asiento A para Sprint 2)  
 
-Detalles completos: `docs/sprint-plans/sprint-1-init-[name].md`
+**Detalles completos:** `docs/sprint-plans/sprint-1-init-[name].md`
+
+**Gobernanza recordatorio:** All work enters via PR (no commits directly to main), minimum 1 reviewer, IA usage declared in PR body.

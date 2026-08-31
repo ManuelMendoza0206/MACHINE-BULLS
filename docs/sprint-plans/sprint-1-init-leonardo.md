@@ -26,12 +26,14 @@ Construir **cimiento del frontend** — tokens, UI base, shell accesible, sin lo
 
 **Qué hacer:**
 1. Clone repo `https://github.com/ManuelMendoza0206/MACHINE-BULLS.git`
-2. Run `npm ci` (use ci, not install, para reproducibilidad)
-3. Verify: `npm run typecheck && npm run lint && npm run test && npm run build` — todas verdes
-4. Verify CI pipeline green (GitHub Actions)
-5. Commit: "feat: Tarea 0 complete — Next.js 15 scaffold ready"
+2. Create feature branch: `git checkout -b feat/scaffold-verify-leonardo`
+3. Run `npm ci` (use ci, not install, para reproducibilidad)
+4. Verify: `npm run typecheck && npm run lint && npm run test && npm run build` — todas verdes
+5. Verify CI pipeline green (GitHub Actions)
+6. Push branch + create PR: request @huascar or @jaicel as reviewer
+7. Merge once approved (1 reviewer minimum)
 
-**No adelantes Tareas 1-6 hasta que Tarea 0 DONE.**
+**No adelantes Tareas 1-6 hasta que Tarea 0 MERGED (main).**
 
 **Aceptación:**
 - [ ] `npm ci` without errors
@@ -39,7 +41,7 @@ Construir **cimiento del frontend** — tokens, UI base, shell accesible, sin lo
 - [ ] `npm run test` exits 0 (empty suite OK)
 - [ ] `npm run build` produces .next/ without warnings
 - [ ] GitHub Actions workflow runs successfully
-- [ ] Commit pushed to main
+- [ ] PR created with 1+ approvals, merged to main
 
 ---
 
@@ -79,7 +81,7 @@ Construir **cimiento del frontend** — tokens, UI base, shell accesible, sin lo
 - [ ] `tailwind.config.ts` imports and uses colorTokens (zero hex literals)
 - [ ] `src/app/globals.css` defines CSS variables from tokens (no hardcoded colors)
 - [ ] `npm run test` passes all contrast tests
-- [ ] Commit: "feat(Tarea 1): design tokens, cn(), contrast validator"
+- [ ] PR merged: "feat(Tarea 1): design tokens, cn(), contrast validator"
 
 ---
 
