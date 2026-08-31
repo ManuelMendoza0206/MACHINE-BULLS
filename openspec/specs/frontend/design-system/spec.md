@@ -10,28 +10,32 @@ Provide design tokens (colors, typography, spacing) and base UI components (Butt
 
 ### Requirement: Design tokens with WCAG AA contrast
 
-The system SHALL guarantee that all color pairs (foreground/background, accent/foreground) defined in tokens meet WCAG AA contrast ratio (4.5:1 min for normal text, 3:1 for large text) in both light and dark themes.
+`src/config/design-tokens.ts` is the authoritative token source (mirrored by `docs/context/frontend-plan.md` §5.1).
+The system SHALL guarantee that every **text pair** meets WCAG AA (≥ 4.5:1 for normal text) in
+both light and dark themes. Text pairs are: `foreground/background`, `mutedForeground/muted`,
+`accentForeground/accent`, `successForeground/success`, `warningForeground/warning`,
+`destructiveForeground/destructive`. Non-text tokens (`border`, `input`) are not held to 4.5:1;
+focus rings and other non-text UI affordances SHALL meet ≥ 3:1 (WCAG 1.4.11) and are checked
+separately when introduced.
 
-#### Scenario: Contrast validation in light theme
-- **GIVEN** design tokens for light theme: background=#FAFAF9, foreground=#18181B
-- **WHEN** contrast ratio is calculated
-- **THEN** ratio ≥ 4.5:1
+> The light-theme `mutedForeground`, `success` and `destructive` values were tuned one step
+> darker to satisfy this (see `CLAUDE.md` §10). Dark-theme values are unchanged.
 
-#### Scenario: Contrast validation in dark theme
-- **GIVEN** design tokens for dark theme: background=#0C0C0D, foreground=#F4F4F5
-- **WHEN** contrast ratio is calculated
-- **THEN** ratio ≥ 4.5:1
+#### Scenario: Every text pair meets AA in both themes
+- **GIVEN** the six text pairs above, in light and dark
+- **WHEN** the WCAG contrast ratio is computed for each
+- **THEN** every ratio is ≥ 4.5:1
 
-#### Scenario: All color pairs meet AA
-- **GIVEN** 11 color token pairs (background/foreground, muted/mutedForeground, accent/accentForeground, success/successForeground, destructive/destructiveForeground, border, input)
-- **WHEN** contrast ratio is calculated for each pair in both themes
-- **THEN** ALL ratios ≥ 4.5:1
+#### Scenario: globals.css stays in sync with the tokens
+- **GIVEN** each `--token` line in `src/app/globals.css`
+- **WHEN** compared to `hexToHslChannels(colorTokens[name][theme])`
+- **THEN** they are equal (the CSS is a faithful projection of the token source)
 
 #### Acceptance Criteria
-- [ ] `src/config/design-tokens.ts` defines 11 color token pairs (light/dark)
-- [ ] All pairs validated by automated test `tests/unit/config/design-tokens.contrast.test.ts`
-- [ ] Test runs in CI and fails if any ratio < 4.5:1
-- [ ] Test file exists and passes: `npm run test -- design-tokens.contrast`
+- [ ] `src/config/design-tokens.ts` defines the 7 base + 5 `*Foreground` token pairs (light/dark)
+- [ ] `tests/unit/config/design-tokens.contrast.test.ts` checks the six text pairs (both themes) and the globals.css sync
+- [ ] The test runs in CI and fails if any text pair < 4.5:1 or globals.css drifts
+- [ ] `getContrastRatio` is validated against known values (black/white = 21:1) first
 
 ---
 

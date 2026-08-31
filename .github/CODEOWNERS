@@ -1,0 +1,8 @@
+# Every PR needs a review from someone other than the author (constitution §3).
+# Until every teammate's GitHub handle is confirmed, the Scrum Master / repo owner is the
+# guaranteed fallback reviewer. Expand with per-path owners once handles are filled in:
+#   /src/components/  @<frontend-lead>
+#   /src/lib/api/     @<api-owner>
+#   /.github/         @<infra-owner>
+
+*                       @ManuelMendoza0206

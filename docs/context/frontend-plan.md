@@ -308,17 +308,25 @@ Para cada pantalla: propósito, estados (loading/empty/error/success), component
 
 La paleta de **producto** debe ser deliberadamente neutra: las prendas y sus colores (analizados en HSV/CIELAB por el motor de recomendación) son el contenido — la UI no debe competir visualmente con ellos.
 
+**Fuente de verdad de los valores:** `src/config/design-tokens.ts`. La tabla aquí y la de
+`openspec/specs/frontend/design-system/spec.md` la reflejan. Los valores light de
+`muted-foreground`, `success` y `destructive` se ajustaron un paso más oscuros (y se añadió
+`warning` con su `*-foreground`) para que **todo par de texto** —incluido texto claro sobre un
+relleno `success`/`warning`/`destructive`— cumpla WCAG AA ≥ 4.5:1 en ambos temas
+(decisión registrada en `CLAUDE.md` §10). Los valores dark no cambiaron.
+
 | Token | Uso | Light | Dark |
 | :--- | :--- | :--- | :--- |
 | `background` | Fondo base | `#FAFAF9` (warm off-white) | `#0C0C0D` |
 | `foreground` | Texto principal | `#18181B` | `#F4F4F5` |
 | `muted` | Fondos secundarios, cards | `#F1F0EE` | `#1A1A1C` |
-| `muted-foreground` | Texto secundario | `#71717A` | `#A1A1AA` |
-| `border` | Bordes, separadores | `#E4E4E7` | `#27272A` |
+| `muted-foreground` | Texto secundario | `#52525B` | `#A1A1AA` |
+| `border` / `input` | Bordes, separadores | `#E4E4E7` | `#27272A` |
 | `accent` (marca) | CTAs primarios, foco | `#1C1C1E` (casi negro, no color saturado) | `#F4F4F5` |
-| `success` | Confianza alta, completado | `#16A34A` | `#22C55E` |
-| `warning` | Confianza media, blur detectado | `#D97706` | `#F59E0B` |
-| `destructive` | Error, fallo de job | `#DC2626` | `#EF4444` |
+| `accent-foreground` | Texto sobre `accent` | `#F4F4F5` | `#1C1C1E` |
+| `success` / `success-foreground` | Confianza alta, completado | `#15803D` / `#FAFAF9` | `#22C55E` / `#0C0C0D` |
+| `warning` / `warning-foreground` | Confianza media, blur detectado | `#B45309` / `#FAFAF9` | `#F59E0B` / `#0C0C0D` |
+| `destructive` / `destructive-foreground` | Error, fallo de job | `#B91C1C` / `#FAFAF9` | `#EF4444` / `#0C0C0D` |
 
 Justificación: un `accent` casi-monocromático (en vez de un color de marca saturado) refuerza "quiet confidence" (§1.1) y evita chocar con la paleta de las prendas fotografiadas. Modo oscuro no es cosmético: la fotografía de producto/moda se percibe mejor sobre fondos oscuros neutros — se implementa desde el día uno, no como fase futura.
 

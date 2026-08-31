@@ -30,8 +30,9 @@ El frontend NO reimplementa lógica de dominio (clasificación, scoring cromáti
 
 | Categoría | Tecnología | Notas |
 | :--- | :--- | :--- |
-| Framework | Next.js 14/15, **App Router** | Server Components por defecto; Client Components solo donde haya interactividad/estado. |
-| Lenguaje | TypeScript, **modo `strict` obligatorio** | Equivalente frontend al mandato de type hints estrictos del backend. |
+| Framework | **Next.js 14.2 (App Router)** + **React 18.3** | Decisión cerrada P0#5 (§10): Next 15 apunta a React 19; se fija 14.2 + 18.3 por estabilidad para 18 semanas. Server Components por defecto; Client Components solo con interactividad/estado. |
+| Runtime | **Node.js 20 LTS** (`.nvmrc`) | `engines.node >=18.17.0`; CI en Node 20. |
+| Lenguaje | TypeScript, **modo `strict` obligatorio** (`noUncheckedIndexedAccess`) | Equivalente frontend al mandato de type hints estrictos del backend. |
 | Estilos | Tailwind CSS | Utility-first, sin CSS-in-JS. |
 | Componentes UI | shadcn/ui (Radix UI + Tailwind) | Componentes viven en el repo (`src/components/ui`), no en `node_modules` — se auditan y versionan como código propio. |
 | Iconos | Lucide Icons | Según documento base. |
@@ -205,80 +206,110 @@ Cualquier sesión de Claude Code que trabaje en este repo debe operar dentro de 
 
 ---
 
-## 10. Decisiones de Sprint 1 (30 ago - 8 sep 2026)
+## 10. Decisiones de Sprint 1
+
+> Ventana: 26 ago – 8 sep 2026. Sprint 0 (scaffold + prep) cierra antes del arranque de
+> features; Sprint 1 de features corre 2–8 sep (ver §11).
 
 ### P0: Bloqueadores Resueltos
 
-**P0#1: Tarea 0 (Project Scaffold) es bloqueador crítico**
+**P0#1: Project Scaffold (Sprint 0 / Tarea 0) — RESUELTO**
 - Spec: `openspec/specs/frontend/project-scaffold/spec.md`
-- Antes de que Leonardo inicie Tarea 1 (tokens), debe ejecutar Tarea 0: inicializar repo Next.js 15, TypeScript strict, Tailwind, Vitest, Playwright, CI pipeline
-- Aceptación: `npm run typecheck && npm run test && npm run build` todas verdes
-- Cronograma: 1-2 sep (antes de 2 sep 19:00 cuando comienza Tarea 1)
+- Stack real: **Next.js 14.2 + React 18.3 + Node 20**, TypeScript strict, Tailwind (paleta
+  derivada de `src/config/design-tokens.ts`), Vitest + RTL (jsdom), Playwright, CI de 3 jobs.
+- Entregado vía PR `chore/sprint-1-prep`. Puertas verdes verificadas por ejecución real:
+  `npm ci`, `typecheck`, `lint`, `test`, `test:e2e`, `build` → todas exit 0.
+  Evidencia: `docs/sprint-0/SCAFFOLD-VERIFICATION.md`.
 
 **P0#2: 5 componentes en Sprint 1, 4 diferidos a Sprint 2**
-- Sprint 1 = Button, Card, Badge, Skeleton, Progress (5 comps)
-- Sprint 2 = Dialog, Sheet, Tabs, Toast (4 comps)
-- Storybook removido de Sprint 1 (no spec'd, no MVP-critical)
-- Rationale: Scope defensible. Spec design-system §2.4 lista 9, pero Sprint 1 se reduce a 5 para cerrar en 10 días calendario
+- Sprint 1 = Button, Card, Badge, Skeleton, Progress — coincide con `design-system/spec.md` §2.4.
+- Sprint 2 = Dialog, Sheet, Tabs, Toast (sonner). Storybook fuera de Sprint 1.
 
-**P0#3: ML tasks → backend repo, CERO en frontend Sprint 1**
-- EDA, ResNet training, Embedding training viven en backend repo o Sprints 2-9 backend
-- Leonardo Sprint 1 = SOLO frontend (tokens, shell, componentes, API client)
-- Rationale: CLAUDE.md §1 = "Alcance: SOLO frontend". No mezclar stacks
+**P0#3: ML/Data → repositorio backend, CERO en este repo**
+- CLIP/ResNet, embeddings, EDA, entrenamiento viven en el repo backend (§1).
+- Leonardo Sprint 1 = SOLO frontend (tokens, shell, 5 componentes, esqueleto de API client).
+
+### Decisiones de diseño (Sprint 0)
+
+**D1: Ajuste de paleta a WCAG AA (31 ago 2026, ratificado por el PO)**
+- `frontend-plan.md` §5.1 fijaba `muted-foreground #71717A`, `success #16A34A`,
+  `warning #D97706`, `destructive #DC2626`. Varios de esos pares de texto **no llegaban a 4.5:1**
+  (p. ej. `muted-foreground` sobre `muted` ≈ 4.3:1; texto claro sobre `success` ≈ 3.4:1).
+- Valores **light** movidos un paso más oscuros: `muted-foreground #52525B` (zinc-600),
+  `success #15803D` (green-700), `destructive #B91C1C` (red-700). Añadidos `warning #B45309`
+  (amber-700) y los cuatro `*-foreground`. Valores **dark** sin cambio (ya cumplían).
+- Resultado verificado: los 6 pares de texto ≥ 4.5:1 en ambos temas (mín. 4.80:1).
+- SoT de valores: `src/config/design-tokens.ts`. La prueba
+  `tests/unit/config/design-tokens.contrast.test.ts` (Tarea 1) lo blinda en CI.
+
+**D2: CSP baseline en `next.config.js`** — política enforced con `default-src 'self'`,
+`frame-ancestors 'none'`, `object-src 'none'`, `img-src` acotado a Cloudinary, `connect-src` a la
+API + Supabase. `script-src` conserva `'unsafe-inline'` (Next inyecta scripts inline y hay rutas
+estáticas — una política nonce + `strict-dynamic` rompería la hidratación de esas rutas sin
+forzarlas a dinámicas). **Follow-up (track infra):** endurecer a nonce + `strict-dynamic` en las
+rutas autenticadas (dinámicas) vía `middleware.ts`. Se probó en Sprint 0 y se descartó para el
+scaffold por incompatibilidad con el prerender estático.
+
+**D3: Contrato de env** — `NEXT_PUBLIC_API_BASE_URL` (nombre de `api-client-and-schemas/spec.md`
+§111), no `NEXT_PUBLIC_API_URL`. `.env.example` es la plantilla; falla en build si falta en runtime real.
+
+**D4: Tarea 6 (API client skeleton) → Sprint 2** — pertenece al epic `api-client-and-schemas`
+(F3), que arranca en Sprint 2 con Jaicel como Asiento A (rotación §7.1). Nunca fue trabajo del
+Asiento A de Sprint 1 (cross-epic). Sacarla cierra la brecha de cronograma del Asiento A
+(Sprint 1 Leonardo = Tareas 0–5, sus dos epics: design-system + app-shell). `src/lib/errors.ts`
+ya existe (scaffold) y Jaicel lo consume desde su epic.
+
+**D5: Fuente de verdad del alcance por asiento** — para *arrancar*, cada asiento se guía por su
+`docs/sprint-plans/sprint-1-init-<name>.md` + las specs + `team-rotation-plan.md`. Estos son
+internamente consistentes y suficientes. La reconciliación completa del tablero (44 tareas, 4
+asientos, fechas, tags) contra ClickUp es tarea de coordinación de **Manuel/PO antes del
+kickoff** — no bloquea el arranque del Asiento A. *Nota:* los prompts de Jaicel/Huascar/Manuel
+aún llevan fechas y conteos viejos ("26 ago – 8 sep / 14 días / N tareas"); cada uno se corrige
+con el mismo tratamiento que recibió el de Leonardo, al preparar ese asiento.
 
 ### P1: Inconsistencias Congeladas
 
-**P1#4: 44 tareas Sprint 1, 185 total**
-- ClickUp es fuente de verdad única (SPRINT-1-MASTER.csv)
-- Congelado: sin cambios sin decisión registrada
+**P1#4: Conteo de tareas — ClickUp es la fuente única**
+- El número y reparto de tareas viven en ClickUp (export `SPRINT-1-MASTER.csv`), no en los `.md`.
+- Los docs de sprint describen *qué* hace cada asiento, no totales a reconciliar a mano.
+- Token de ClickUp compartido en chat el 30 ago fue **revocado** (no debe compartirse en prompts, §6). Integración futura vía MCP con el token en secreto local.
 
-**P1#5: 9 sprints × 18 weeks INNEGOCIABLE**
-- 12 ago 2026 – 15 dic 2026 (locked)
-- Si algo no cabe, se recorta alcance o se mueve a siguiente sprint
-- No se negocia fecha
+**P1#5: 9 sprints × 18 semanas — fecha fija** (12 ago – 15 dic 2026). Si algo no cabe, se recorta o pasa al siguiente sprint.
 
-**P1#6: Storybook out**
-- No en Sprint 1; evaluar Sprint 3 si PO lo prioriza
+**P1#6: Storybook fuera de Sprint 1** — reevaluar en Sprint 3 (con change de openspec).
 
-**P1#7: Spec refs precisas**
-- Todas apuntan a `openspec/specs/frontend/…` (no `docs/specs/…`)
-- Secciones validadas
+**P1#7: Spec refs** — todas apuntan a `openspec/specs/frontend/…`; secciones citadas verificadas en `sprint-1-init-leonardo.md`.
 
-**P1#8: E2E coverage deferred a Sprint 2**
-- Sprint 1: >50% unit coverage (Vitest)
-- Sprint 2: merge E2E + unit, push a >80% total
+**P1#8: Cobertura** — Sprint 1 la mide pero **no la usa como gate** (suites nacen en Tarea 1). El gate (≥80%, unit+E2E) entra en Sprint 2 (track de Huascar).
 
 ### P2: Gobernanza
 
-**P2#1: DECISION-LOG en main**
-- Ver `docs/SPRINT-1-PRE-PROJECT-COMPLETION-SUMMARY.md` para audit trail
+**P2#1: Trazabilidad** — este §10 es el registro. El prep se entregó por PR (no commit directo a `main`), con declaración de IA. Trail histórico en `docs/sprint-0/`.
 
-**P2#2: OpenSpec migration**
-- design-system + app-shell fully migrated (### Requirement + #### Scenario + #### AC)
+**P2#2: Migración a formato OpenSpec nativo** — `design-system/spec.md` y
+`app-shell-and-navigation/spec.md`: **ambas migradas** (Requirement + Scenario + AC). El resto
+de specs de flujo se migran spec-first al empezar su Tarea correspondiente.
 
-**P2#3: No secrets**
-- Zero hardcode de tokens, credenciales, datos personales en prompts/commits
-- Credenciales → GitHub Actions secrets
+**P2#3: Sin secretos** — cero credenciales en prompts/commits/código. Tokens → GitHub Actions secrets (`CODECOV_TOKEN`, Supabase, etc.).
 
 ---
 
 ## 11. Entrada a Sprint 1
 
-**Sprint 1 comienza:** 2 sep 2026, 19:00  
-**Período:** 2 sep - 8 sep 2026 (7 días calendario)  
-**Tareas totales:** 44 (distributed: Build 19, QA 5, Deploy 5, Backend 15)  
-**Asignaciones (Frontend ONLY this repo):**
-- Leonardo Ibarra: 6 tareas (Tarea 0-6: scaffold blocker, tokens, theme, layout, 5 components, shell)
-- Jaicel Velasco: 5+ tareas (backend/API schemas, models, migrations, gateway, adapters — NOT in this frontend repo)
-- Huascar Camilo: 3 tareas (frontend test infrastructure, coverage gates, E2E setup)
-- Manuel Jimenez: 4+ tareas (CI pipeline, monitoring, SLOs, dashboards)
+| Hito | Fecha |
+| :--- | :--- |
+| Sprint 0 (scaffold + prep) | hasta 1 sep 2026 — entregado vía PR `chore/sprint-1-prep` |
+| Sprint 1 (features) arranca | 2 sep 2026, 19:00 |
+| Sprint 1 cierra | 8 sep 2026, 23:59 |
+| Review + Sprint 2 kickoff | 9 sep 2026, 09:00 |
 
-**NOTE:** ML/Data/CLIP work (classification, training, embeddings) lives in **backend repository**, not here. This repo = frontend only (§1 Alcance).
+**Asiento A (Feature Lead) Sprint 1 = Leonardo** — epics `frontend/design-system` +
+`frontend/app-shell-and-navigation`, 6 tareas (Tarea 0–6), detalle en
+`docs/sprint-plans/sprint-1-init-leonardo.md`. Asientos B/C/D (Jaicel / Huascar / Manuel):
+sus `sprint-1-init-*.md`. Reparto y conteo exacto: **ClickUp** (`SPRINT-1-MASTER.csv`), no estos docs.
 
-**Sprint cierra:** 8 sep 2026, 23:59  
-**Review & Sprint 2 Kickoff:** 9 sep 2026, 09:00  
-**Next sprint lead:** Jaicel (Asiento A para Sprint 2)  
+**Alcance:** este repo = frontend. Todo ML/Data/CLIP vive en el **repositorio backend** (§1).
 
-**Detalles completos:** `docs/sprint-plans/sprint-1-init-[name].md`
+**Next sprint lead:** Jaicel (Asiento A para Sprint 2).
 
-**Gobernanza recordatorio:** All work enters via PR (no commits directly to main), minimum 1 reviewer, IA usage declared in PR body.
+**Gobernanza:** todo cambio por PR (cero commits directos a `main`), ≥1 revisor, declaración de uso de IA en el cuerpo del PR.

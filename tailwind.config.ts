@@ -1,35 +1,37 @@
 import type { Config } from 'tailwindcss';
+import { colorTokens, toKebabCase } from './src/config/design-tokens';
+
+/**
+ * Colour scale is derived from the token source of truth — the names come from
+ * `colorTokens`, the values resolve at runtime from the CSS variables published in
+ * `src/app/globals.css` (so the light/dark switch works via the `.dark` class).
+ * No colour literal lives in this file.
+ */
+const colors = Object.fromEntries(
+  Object.keys(colorTokens).map((name) => {
+    const cssName = toKebabCase(name);
+    return [cssName, `hsl(var(--${cssName}) / <alpha-value>)`];
+  }),
+);
 
 const config: Config = {
+  darkMode: 'class',
   content: ['./src/**/*.{js,ts,jsx,tsx}'],
   theme: {
     extend: {
-      colors: {
-        background: 'hsl(var(--background) / <alpha-value>)',
-        foreground: 'hsl(var(--foreground) / <alpha-value>)',
-        muted: 'hsl(var(--muted) / <alpha-value>)',
-        'muted-foreground': 'hsl(var(--muted-foreground) / <alpha-value>)',
-        border: 'hsl(var(--border) / <alpha-value>)',
-        input: 'hsl(var(--input) / <alpha-value>)',
-        accent: 'hsl(var(--accent) / <alpha-value>)',
-        'accent-foreground': 'hsl(var(--accent-foreground) / <alpha-value>)',
-        success: 'hsl(var(--success) / <alpha-value>)',
-        'success-foreground': 'hsl(var(--success-foreground) / <alpha-value>)',
-        destructive: 'hsl(var(--destructive) / <alpha-value>)',
-        'destructive-foreground': 'hsl(var(--destructive-foreground) / <alpha-value>)',
-      },
+      colors,
       fontFamily: {
-        sans: ['system-ui', 'sans-serif'],
+        sans: ['var(--font-sans)', 'system-ui', 'sans-serif'],
       },
       fontSize: {
-        xs: ['12px', { lineHeight: '16px' }],
-        sm: ['14px', { lineHeight: '20px' }],
-        base: ['16px', { lineHeight: '24px' }],
-        lg: ['18px', { lineHeight: '28px' }],
-        xl: ['20px', { lineHeight: '28px' }],
-        '2xl': ['24px', { lineHeight: '32px' }],
-        '3xl': ['30px', { lineHeight: '36px' }],
-        '4xl': ['36px', { lineHeight: '40px' }],
+        xs: ['0.75rem', { lineHeight: '1rem' }],
+        sm: ['0.875rem', { lineHeight: '1.25rem' }],
+        base: ['1rem', { lineHeight: '1.5rem' }],
+        lg: ['1.125rem', { lineHeight: '1.75rem' }],
+        xl: ['1.25rem', { lineHeight: '1.75rem' }],
+        '2xl': ['1.5rem', { lineHeight: '2rem' }],
+        '3xl': ['1.875rem', { lineHeight: '2.25rem' }],
+        '4xl': ['2.25rem', { lineHeight: '2.5rem' }],
       },
     },
   },

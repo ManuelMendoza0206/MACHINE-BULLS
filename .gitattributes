@@ -1,0 +1,13 @@
+# Normalize line endings: LF in the repo, checked out as-is.
+* text=auto eol=lf
+
+# Binary / generated — never touch, keep out of diffs.
+package-lock.json -diff linguist-generated
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.webp binary
+*.avif binary
+*.ico binary
+*.woff binary
+*.woff2 binary
