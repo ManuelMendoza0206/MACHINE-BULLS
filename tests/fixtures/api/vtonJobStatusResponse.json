@@ -1,0 +1,20 @@
+{
+  "processing": {
+    "job_id": "5d8f1e2a-1234-4567-8901-abcdef123456",
+    "status": "processing",
+    "result_url": null,
+    "error_message": null
+  },
+  "completed": {
+    "job_id": "5d8f1e2a-1234-4567-8901-abcdef123456",
+    "status": "completed",
+    "result_url": "https://cdn.styleme.app/vton/5d8f1e2a-1234-4567-8901-abcdef123456/result.webp",
+    "error_message": null
+  },
+  "failed": {
+    "job_id": "5d8f1e2a-1234-4567-8901-abcdef123456",
+    "status": "failed",
+    "result_url": null,
+    "error_message": "No se detectó una pose corporal válida en la imagen."
+  }
+}
