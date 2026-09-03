@@ -130,4 +130,3 @@ Cuando todo lo anterior esté hecho: **ClickUp = verde y alineado con la documen
 Sincronización del tablero: `scripts/clickup/sync-sprint-1.mjs` — dry-run por defecto,
 `--apply` para escribir. La credencial de ClickUp se toma de una variable de entorno o de un
 archivo local gitignoreado (`scripts/clickup/.token`); **nunca** se versiona. Dueño: Asiento D.
-Opción de automatización a futuro: un servidor MCP de ClickUp con la credencial en el secret del runner.

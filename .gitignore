@@ -51,3 +51,5 @@ dist/
 
 # Keys
 *.pem
+
+graphify-out/
