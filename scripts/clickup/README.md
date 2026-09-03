@@ -22,14 +22,30 @@ export CLICKUP_API_TOKEN=<tu token>
 ### Correr
 
 ```bash
-node scripts/clickup/sync-sprint-1.mjs                       # DRY RUN — imprime cada cambio
-node scripts/clickup/sync-sprint-1.mjs --apply               # ejecuta
-node scripts/clickup/sync-sprint-1.mjs --apply --no-create   # sin crear las tareas S0
-node scripts/clickup/sync-sprint-1.mjs --list <id>           # forzar la lista para las S0
+node scripts/clickup/sync-sprint-1.mjs                          # DRY RUN — imprime cada cambio
+node scripts/clickup/sync-sprint-1.mjs --apply                  # ejecuta
+node scripts/clickup/sync-sprint-1.mjs --apply --no-create      # sin crear las tareas S0
+node scripts/clickup/sync-sprint-1.mjs --apply --list <id>      # forzar la lista para las S0
+node scripts/clickup/sync-sprint-1.mjs --apply --only=inreview,onhold   # re-correr un subconjunto
+#   secciones válidas para --only: retitle | tags | inreview | onhold | s0
 ```
 
 **Flujo:** dry-run → revisar la salida → `--apply`. Nunca uses el estado `"Ready for Staging"`
 (dispara deploy). Después: exportar `SPRINT-1-MASTER.csv` a `docs/clickup/`.
+
+### Nombres de estado y rate limit
+
+Los nombres de estado (`in review`, `on hold`) varían por Space. El script los **resuelve
+dinámicamente** contra los estados reales de cada lista. Si no encuentra uno equivalente,
+lo dice e imprime los disponibles — entonces fijá el exacto y re-corré:
+
+```bash
+export CU_REVIEW_STATUS="<nombre exacto>"   # p. ej. "review" o "en revisión"
+export CU_HOLD_STATUS="<nombre exacto>"     # p. ej. "blocked" o "en espera"
+```
+
+El plan gratuito de ClickUp limita a ~100 req/min. El script hace throttling
+(`CU_SLEEP_MS`, default 800 ms) y reintenta los `429` respetando `Retry-After`.
 
 Qué hace:
 

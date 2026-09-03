@@ -11,10 +11,17 @@
  *   - a file scripts/clickup/.token containing just the token (gitignored).
  *
  * Usage:
- *   node scripts/clickup/sync-sprint-1.mjs                       # dry run
- *   node scripts/clickup/sync-sprint-1.mjs --apply               # execute
- *   node scripts/clickup/sync-sprint-1.mjs --apply --no-create   # skip S0 task creation
- *   node scripts/clickup/sync-sprint-1.mjs --list <id>           # force the list for S0 tasks
+ *   node scripts/clickup/sync-sprint-1.mjs                          # dry run (all sections)
+ *   node scripts/clickup/sync-sprint-1.mjs --apply                  # execute
+ *   node scripts/clickup/sync-sprint-1.mjs --apply --no-create      # skip S0 task creation
+ *   node scripts/clickup/sync-sprint-1.mjs --apply --list <id>      # force the list for S0 tasks
+ *   node scripts/clickup/sync-sprint-1.mjs --apply --only=inreview,onhold   # re-run subset
+ *     sections: retitle | tags | inreview | onhold | s0
+ *
+ * Tuning (env):
+ *   CU_SLEEP_MS       delay between API calls (default 800; ClickUp free ~100 req/min)
+ *   CU_REVIEW_STATUS  exact "in review" status name if auto-detection fails
+ *   CU_HOLD_STATUS    exact "on hold" status name if auto-detection fails
  */
 
 import { readFileSync } from 'node:fs';
@@ -26,7 +33,17 @@ const API = 'https://api.clickup.com/api/v2';
 const argv = process.argv.slice(2);
 const APPLY = argv.includes('--apply');
 const CREATE = !argv.includes('--no-create');
-const FORCE_LIST = argv[argv.indexOf('--list') + 1] || null;
+
+// FIX: indexOf('--list') is -1 when absent → argv[0] ('--apply') was being used as the list id.
+const _li = argv.indexOf('--list');
+const FORCE_LIST = _li >= 0 ? (argv[_li + 1] ?? null) : null;
+
+const _only = (argv.find(a => a.startsWith('--only=')) ?? '').slice('--only='.length);
+const ONLY = _only ? new Set(_only.split(',').map(s => s.trim())) : null;
+const want = section => !ONLY || ONLY.has(section);
+
+const SLEEP_MS = Number(process.env.CU_SLEEP_MS ?? 800);
+const sleep = ms => new Promise(r => setTimeout(r, ms));
 
 // ── token ────────────────────────────────────────────────────────────────────
 function readToken() {
@@ -42,16 +59,32 @@ function readToken() {
 }
 const headers = { Authorization: readToken(), 'Content-Type': 'application/json' };
 
-async function cu(method, path, body) {
-  const res = await fetch(`${API}${path}`, {
-    method,
-    headers,
-    body: body ? JSON.stringify(body) : undefined,
-  });
-  const text = await res.text();
-  const json = text ? JSON.parse(text) : {};
-  if (!res.ok) throw new Error(`${method} ${path} -> ${res.status} ${text}`);
-  return json;
+// Throttled fetch with 429 backoff (honours Retry-After). Never silently drops a rate-limit.
+async function cu(method, path, body, { retries = 4 } = {}) {
+  for (let attempt = 0; ; attempt++) {
+    const res = await fetch(`${API}${path}`, {
+      method,
+      headers,
+      body: body ? JSON.stringify(body) : undefined,
+    });
+    if (res.status === 429 && attempt < retries) {
+      const retryAfter = Number(res.headers.get('retry-after'));
+      const waitMs = (Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter : 30) * 1000;
+      console.log(`         · 429 rate limit — esperando ${Math.round(waitMs / 1000)}s`);
+      await sleep(waitMs + 500);
+      continue;
+    }
+    const text = await res.text();
+    let json = {};
+    try {
+      json = text ? JSON.parse(text) : {};
+    } catch {
+      json = { raw: text };
+    }
+    if (!res.ok) throw new Error(`${method} ${path} -> ${res.status} ${text}`);
+    await sleep(SLEEP_MS);
+    return json;
+  }
 }
 
 // ── the reconciliation plan (manifest §7) ────────────────────────────────────
@@ -102,7 +135,11 @@ const LEONARDO_FRONTEND_IDS = [
   '86e301dpm',
   '86e301dpw',
 ];
-const IN_REVIEW_STATUS = 'in review';
+
+// Status names vary per Space. Resolve dynamically against each list's real statuses;
+// env overrides win. Regexes are the fallback matchers.
+const REVIEW_RE = /(in[\s-]?review|code[\s-]?review|pr[\s-]?review|reviewing|revisi[oó]n|en revisi)/i;
+const HOLD_RE = /(on[\s-]?hold|hold|en espera|pausad|paused|stand[\s-]?by|blocked|bloquead)/i;
 
 /** Sprint 0 tasks to create (traceability — constitution §5). */
 const S0_TASKS = [
@@ -140,7 +177,6 @@ const S0_TASKS = [
 /** Titles that are NOT frontend Asiento A work (belong to the backend/ML repo). */
 const OUT_OF_SCOPE_RE =
   /\b(EDA|ResNet|ResNet-?50|embedding|CLIP|dataset|entrenamiento|training|fine-?tun)/i;
-const ON_HOLD_STATUS = 'on hold';
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -169,15 +205,53 @@ async function allLists() {
   return out;
 }
 
-async function setStatus(id, status, currentStatus) {
-  if ((currentStatus ?? '').toLowerCase() === status.toLowerCase()) return 'ok';
-  console.log(`  ${id}  "${currentStatus}" -> "${status}"`);
+// list id -> [status names], cached
+const _statusCache = new Map();
+async function listStatuses(listId) {
+  if (!listId) return [];
+  if (_statusCache.has(listId)) return _statusCache.get(listId);
+  const list = await cu('GET', `/list/${listId}`).catch(() => null);
+  const names = (list?.statuses ?? []).map(s => s.status);
+  _statusCache.set(listId, names);
+  return names;
+}
+
+function resolveStatus(available, kind) {
+  const override = kind === 'review' ? process.env.CU_REVIEW_STATUS : process.env.CU_HOLD_STATUS;
+  const re = kind === 'review' ? REVIEW_RE : HOLD_RE;
+  if (override) {
+    const exact = available.find(s => s.toLowerCase() === override.toLowerCase());
+    return exact ?? override; // trust the operator even if not in the cached list
+  }
+  return available.find(s => re.test(s)) ?? null;
+}
+
+/**
+ * @param task full task object (needs .id, .status.status, .list.id)
+ * @param kind 'review' | 'hold'
+ */
+async function setStatus(task, kind) {
+  const available = await listStatuses(task.list?.id);
+  const target = resolveStatus(available, kind);
+  if (!target) {
+    console.log(
+      `  ${task.id}  ! sin estado tipo "${kind}" en la lista — disponibles: [${available.join(', ') || '?'}]`
+    );
+    console.log(`         → fijá CU_${kind === 'review' ? 'REVIEW' : 'HOLD'}_STATUS="<nombre exacto>" y re-corré`);
+    return 'nostatus';
+  }
+  const cur = task.status?.status ?? '';
+  if (cur.toLowerCase() === target.toLowerCase()) {
+    console.log(`  ${task.id}  = ${target}`);
+    return 'ok';
+  }
+  console.log(`  ${task.id}  "${cur}" -> "${target}"`);
   if (!APPLY) return 'dry';
   try {
-    await cu('PUT', `/task/${id}`, { status });
+    await cu('PUT', `/task/${task.id}`, { status: target });
     return 'done';
   } catch (e) {
-    console.log(`         ! ${e.message.split('\n')[0]} (¿nombre de estado distinto en tu Space?)`);
+    console.log(`         ! ${e.message.split('\n')[0]}`);
     return 'err';
   }
 }
@@ -197,27 +271,41 @@ async function retitle() {
       continue;
     }
     console.log(`  ${id}  "${cur.name}"\n         -> "${name}"`);
-    if (APPLY) await cu('PUT', `/task/${id}`, { name });
+    if (APPLY) {
+      try {
+        await cu('PUT', `/task/${id}`, { name });
+        console.log('         done');
+      } catch (e) {
+        console.log(`         ! ${e.message.split('\n')[0]}`);
+      }
+    }
   }
 }
 
 async function tags() {
   console.log('\n— Tags (repo:backend) —');
-  for (const [id, want] of Object.entries(ADD_TAGS)) {
+  for (const [id, wantTags] of Object.entries(ADD_TAGS)) {
     const cur = await cu('GET', `/task/${id}`).catch(() => null);
     if (!cur) {
       console.log(`  ${id}  ! not found`);
       continue;
     }
     const have = (cur.tags ?? []).map(t => t.name);
-    const missing = want.filter(t => !have.includes(t));
+    const missing = wantTags.filter(t => !have.includes(t));
     if (!missing.length) {
-      console.log(`  ${id}  = has ${want.join(', ')}`);
+      console.log(`  ${id}  = has ${wantTags.join(', ')}`);
       continue;
     }
     console.log(`  ${id}  + ${missing.join(', ')}`);
-    if (APPLY)
-      for (const t of missing) await cu('POST', `/task/${id}/tag/${encodeURIComponent(t)}`);
+    if (APPLY) {
+      for (const t of missing) {
+        try {
+          await cu('POST', `/task/${id}/tag/${encodeURIComponent(t)}`);
+        } catch (e) {
+          console.log(`         ! ${e.message.split('\n')[0]}`);
+        }
+      }
+    }
   }
 }
 
@@ -229,8 +317,7 @@ async function inReview() {
       console.log(`  ${id}  ! not found`);
       continue;
     }
-    if ((await setStatus(id, IN_REVIEW_STATUS, cur.status?.status)) === 'ok')
-      console.log(`  ${id}  = ${IN_REVIEW_STATUS}`);
+    await setStatus(cur, 'review');
   }
 }
 
@@ -256,15 +343,14 @@ async function onHold() {
       if (frontend) continue;
       if (OUT_OF_SCOPE_RE.test(t.name)) {
         console.log(`  ${t.id}  [${list.space}/${list.name}]  "${t.name}"`);
-        await setStatus(t.id, ON_HOLD_STATUS, t.status?.status);
+        await setStatus({ ...t, list: t.list ?? { id: list.id } }, 'hold');
       }
     }
   }
-  console.log('  (revisá la lista de arriba antes de --apply; son ML/Data del repo backend)');
+  console.log('  (revisá la lista de arriba; son ML/Data del repo backend)');
 }
 
 async function createS0() {
-  if (!CREATE) return;
   console.log('\n— Sprint 0 tasks —');
   const lists = await allLists();
   const target = FORCE_LIST
@@ -279,32 +365,43 @@ async function createS0() {
     tasks: [],
   }));
   for (const [code, title, status] of S0_TASKS) {
-    if (existing.some(t => t.name.startsWith(`[${code}]`))) {
+    if ((existing ?? []).some(t => t.name.startsWith(`[${code}]`))) {
       console.log(`  ${code}  = exists`);
       continue;
     }
     console.log(`  ${code}  create (${status})`);
     if (APPLY) {
-      const created = await cu('POST', `/list/${target.id}/task`, {
-        name: `[${code}] ${title.slice(0, 100)}`,
-        priority: 3,
-      });
-      if (status !== 'to do') await setStatus(created.id, status, 'to do');
+      try {
+        const created = await cu('POST', `/list/${target.id}/task`, {
+          name: `[${code}] ${title.slice(0, 100)}`,
+          priority: 3,
+        });
+        if (status !== 'to do') {
+          const avail = await listStatuses(target.id);
+          const exact = avail.find(s => s.toLowerCase() === status.toLowerCase());
+          if (exact) await cu('PUT', `/task/${created.id}`, { status: exact });
+          else console.log(`         · estado "${status}" no existe en la lista; queda en el default`);
+        }
+      } catch (e) {
+        console.log(`         ! ${e.message.split('\n')[0]}`);
+      }
     }
   }
 }
 
 // ── run ──────────────────────────────────────────────────────────────────────
 
-console.log(`\n=== ClickUp Sprint 1 reconciliation — ${APPLY ? 'APPLY' : 'DRY RUN'} ===\n`);
+console.log(`\n=== ClickUp Sprint 1 reconciliation — ${APPLY ? 'APPLY' : 'DRY RUN'} ===`);
+if (ONLY) console.log(`(solo: ${[...ONLY].join(', ')})`);
+console.log('');
 try {
   await bootstrap();
   console.log(`workspace: ${TEAM.name} (${TEAM.id})\n`);
-  await retitle();
-  await tags();
-  await inReview();
-  await onHold();
-  await createS0();
+  if (want('retitle')) await retitle();
+  if (want('tags')) await tags();
+  if (want('inreview')) await inReview();
+  if (want('onhold')) await onHold();
+  if (want('s0') && CREATE) await createS0();
   console.log(`\n${APPLY ? 'applied.' : 'dry run — re-run with --apply to write.'}\n`);
 } catch (e) {
   console.error(`\nx ${e.message}\n`);
