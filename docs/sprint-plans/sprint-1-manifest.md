@@ -125,8 +125,9 @@ Cuando todo lo anterior esté hecho: **ClickUp = verde y alineado con la documen
 
 ---
 
-## 8. Integración ClickUp ↔ repo (futuro, sin secretos en prompts)
+## 8. Integración ClickUp ↔ repo
 
-Para automatizar la sincronización: servidor MCP de ClickUp con el token en un secreto local
-(`.env` fuera de git, o secret del runner), **nunca** pegado en un prompt. Hasta entonces la
-sincronización es manual y la hace el Asiento D.
+Sincronización del tablero: `scripts/clickup/sync-sprint-1.mjs` — dry-run por defecto,
+`--apply` para escribir. La credencial de ClickUp se toma de una variable de entorno o de un
+archivo local gitignoreado (`scripts/clickup/.token`); **nunca** se versiona. Dueño: Asiento D.
+Opción de automatización a futuro: un servidor MCP de ClickUp con la credencial en el secret del runner.
