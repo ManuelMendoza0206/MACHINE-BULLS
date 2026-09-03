@@ -6,6 +6,7 @@ import { QueryClientProvider } from '@tanstack/react-query';
 import { TooltipProvider } from '@radix-ui/react-tooltip';
 import { Toaster } from 'sonner';
 import { QueryClient } from '@tanstack/react-query';
+import { AuthProvider } from '@/features/auth/components/AuthProvider';
 
 export function AppProviders({ children }: { children: React.ReactNode }): JSX.Element {
   const [queryClient] = useState(
@@ -21,10 +22,12 @@ export function AppProviders({ children }: { children: React.ReactNode }): JSX.E
   return (
     <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
       <QueryClientProvider client={queryClient}>
-        <TooltipProvider>
-          {children}
-          <Toaster position="bottom-center" />
-        </TooltipProvider>
+        <AuthProvider>
+          <TooltipProvider>
+            {children}
+            <Toaster position="bottom-center" />
+          </TooltipProvider>
+        </AuthProvider>
       </QueryClientProvider>
     </ThemeProvider>
   );
