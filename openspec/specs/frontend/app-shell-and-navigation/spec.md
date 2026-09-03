@@ -43,8 +43,9 @@ compone, en orden: `ThemeProvider` (`next-themes`, `attribute="class"`, `default
 
 El sistema SHALL alternar entre navegación superior (`TopNav`, desktop) e inferior
 (`BottomTabBar`, mobile) usando **solo** CSS responsivo. Ambas variantes se renderizan siempre en
-el DOM; la visibilidad la controlan clases Tailwind (`hidden lg:flex` / `flex lg:hidden`). Está
-prohibido `window.innerWidth`, `useMediaQuery` o cualquier render condicional por breakpoint en JS.
+el DOM; la visibilidad la controlan clases Tailwind (`TopNav`: oculto por defecto, visible en
+`lg`; `BottomTabBar`: visible por defecto, oculto en `lg`). Está prohibido `window.innerWidth`,
+`useMediaQuery` o cualquier render condicional por breakpoint en JS.
 
 #### Scenario: Cambio de tamaño de viewport en la misma sesión
 
