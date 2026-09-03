@@ -36,7 +36,7 @@
 2. **`axe`/`jest-axe`** — no está en deps (tarea de QA de Huascar). Mis asserts de a11y son manuales (`aria-*`, `role`).
 3. **Visual regression** (`86e302a2b`) — es de Huascar, no hecho.
 4. **Landing `/`** — todavía muestra el `TopNav` de la app; debería ser pre-auth limpio. Es alcance de `landing-and-auth-flow` (spec 06), no de este asiento.
-5. **Páginas stub** (`/wardrobe` etc.) — las crean formalmente las specs de flujo; acá son stubs marcados, necesarios para que `typedRoutes` y la nav funcionen.
+5. **Páginas stub** (`/wardrobe` etc.) — **alineado en `app-shell/spec.md`**: hay una Requirement + AC que las declara stubs ("Próximamente", con comentario de qué flow-spec las reemplaza). Las specs de flujo las sustituyen en Sprints 3–7. Alternativa si el equipo prefiere cero adelanto: quitar los stubs y desactivar `typedRoutes`.
 6. **e2e local** flaky en cold-start de `next dev` (mitigado con `retries:1`). **CI usa `next start`** (build de producción, sin compile-on-demand) → 4/4 sólido.
 7. **Skeleton `role=status`** en cada item de un grid = varias live-regions. El doc del componente indica envolver; no hay enforcement.
 

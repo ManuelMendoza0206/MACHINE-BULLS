@@ -57,11 +57,18 @@ el DOM; la visibilidad la controlan clases Tailwind (`TopNav`: oculto por defect
 - **WHEN** se lee `src/config/navigation.ts`
 - **THEN** `NAV_ITEMS` tiene exactamente 4 entradas (`/wardrobe`, `/outfits`, `/try-on`, `/profile`), fijadas por `frontend-plan.md` §2.1
 
+#### Scenario: Las 4 rutas de nav existen como stub
+
+- **WHEN** se navega a `/wardrobe`, `/outfits`, `/try-on` o `/profile` antes de que su flow-spec las implemente
+- **THEN** cada una renderiza una página stub mínima (`<h1>` + "Próximamente"), suficiente para que la nav no rompa y `typedRoutes` compile
+- **AND** cada `page.tsx` lleva un comentario `// Stub — <flow-spec> owns this route`
+
 #### Acceptance Criteria
 
 - [ ] `TopNav` y `BottomTabBar` reciben las mismas `NAV_ITEMS` y ninguna prop de estado activo
 - [ ] Cero JS de detección de viewport en el árbol de navegación
 - [ ] E2E cubre el resize mobile↔desktop en 3 anchos (375 / 768 / 1440)
+- [ ] `src/app/{wardrobe,outfits,try-on,profile}/page.tsx` existen como stub marcado; los reemplaza su flow-spec (Sprints 3–7)
 
 ---
 
@@ -179,6 +186,7 @@ src/app/layout.tsx
 src/app/providers.tsx
 src/app/error.tsx
 src/app/not-found.tsx
+src/app/{wardrobe,outfits,try-on,profile}/page.tsx   # stubs — reemplazados por sus flow-specs
 src/components/shell/TopNav.tsx
 src/components/shell/BottomTabBar.tsx
 src/components/shell/SkipToContentLink.tsx
