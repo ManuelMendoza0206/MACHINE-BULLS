@@ -1,133 +1,25 @@
-# StyleMe Frontend
+# MACHINE-BULLS — Monorepo StyleMe
 
-AI-powered fashion recommendation platform.
+```
+MACHINE-BULLS/
+├── frontend/          # Next.js 14.2 + React 18.3 (ver frontend/README.md)
+│   └── src/           # App Router, features/, lib/, schemas/
+├── backend/           # FastAPI + SQLAlchemy + pgvector (ver backend/README.md)
+│   └── src/           # domain/, schemas/, api/, services/, db/
+├── docs/              # plan-base, frontend-plan, clickup
+└── openspec/          # SDD specs (frontend/ + backend/)
+```
 
-## Quick Start
-
-### Prerequisites
-
-- Node.js 20 LTS (`.nvmrc`; `engines.node >=18.17.0`)
-- npm 10+
-
-### Installation
+## Quick start
 
 ```bash
-nvm use   # Node 20
-npm ci    # reproducible install; also arms the git hooks (husky)
+# Frontend
+cd frontend && npm ci && npm run dev   # http://localhost:3000
+npm run verify   # typecheck + lint + test + build
+
+# Backend
+cd backend && pip install -r requirements.txt  # o pyproject.toml
+uvicorn src.main:app --reload
 ```
 
-Zero-to-green walkthrough: [`docs/onboarding.md`](docs/onboarding.md).
-Contributing rules (PR flow, SDD, commit convention): [`CONTRIBUTING.md`](CONTRIBUTING.md).
-
-### Development
-
-```bash
-npm run dev
-# Open http://localhost:3000
-```
-
-### Testing
-
-```bash
-# Unit tests (Vitest)
-npm run test
-
-# Watch mode
-npm run test:watch
-
-# Coverage
-npm run coverage
-
-# E2E tests (Playwright)
-npm run test:e2e
-```
-
-### Linting & Formatting
-
-```bash
-npm run lint    # Check for issues
-npm run format  # Auto-fix formatting
-npm run typecheck  # TypeScript validation
-```
-
-### Build
-
-```bash
-npm run build
-npm start  # Serves the built app
-```
-
-## Project Structure
-
-```
-src/
-├── app/           # Next.js App Router (layout, providers, error, not-found, pages)
-├── components/    # React components (ui/, shell/)
-├── config/        # design-tokens.ts, navigation.ts
-├── lib/           # errors.ts, api/, navigation/, utils/ (cn, getContrastRatio)
-└── features/      # feature-sliced domains (garments/, outfits/, vton/) — Sprint 2+
-
-tests/
-├── unit/          # Vitest: pure functions, schemas, utils
-├── integration/   # Vitest + React Testing Library (jsdom)
-└── e2e/           # Playwright browser tests
-
-openspec/
-└── specs/         # Formal specification docs
-    ├── frontend/
-    └── backend/
-
-docs/
-├── context/       # Project context
-├── clickup/       # Team coordination
-├── sprint-plans/  # Sprint initialization docs
-└── *.md           # Decision logs, planning
-```
-
-## Tech Stack
-
-- **Framework:** Next.js 14.2 (App Router) + React 18.3 — see `CLAUDE.md` §2 / §10 P0#5 for why not 15/19
-- **Runtime:** Node.js 20 LTS
-- **Language:** TypeScript (strict, `noUncheckedIndexedAccess`)
-- **Styling:** Tailwind CSS — colours derived from `src/config/design-tokens.ts` (no literals)
-- **UI Components:** shadcn/ui + Radix (vendored in `src/components/ui`)
-- **State:** Zustand (client-only), TanStack Query (server cache)
-- **Validation:** Zod
-- **Testing:** Vitest + React Testing Library (jsdom), Playwright (e2e)
-- **Code Quality:** ESLint (`next/core-web-vitals` + `next/typescript`), Prettier
-
-## Specifications
-
-All features are derived from formal specifications in `openspec/specs/frontend/`:
-
-- `design-system/spec.md` — UI tokens, components, theme
-- `app-shell-and-navigation/spec.md` — Layout, navigation, error handling
-- `api-client-and-schemas/spec.md` — HTTP client, Zod schemas, error hierarchy
-- `landing-and-auth-flow/spec.md` — Authentication
-- `outfits-flow/spec.md` — Outfit composition
-- `wardrobe-flow/spec.md` — Wardrobe management
-- `vton-flow/spec.md` — Virtual try-on
-- `profile-flow/spec.md` — User profile
-
-## Development Standards
-
-- ✅ **Strict TypeScript:** No `any`, all types explicit
-- ✅ **Test-Driven:** Specs → tests → code
-- ✅ **Accessibility:** WCAG AA compliance
-- ✅ **Performance:** Lighthouse 90+
-- ✅ **Security:** No hardcoded secrets, XSS/CSRF mitigations
-
-## Contributing
-
-Governance: `.speckit/constitution.md` §3 — `main` is protected, all changes via PR,
-≥1 reviewer **who is not the author**, AI-usage declared in the PR body.
-
-1. Branch from `main`: `feat/<slug>` or `chore/<slug>` (one branch per Tarea).
-2. Spec first: the change must trace to a Requirement in `openspec/specs/frontend/`.
-3. TDD: failing test → minimal code → refactor. Unit + integration; e2e for critical flows.
-4. `npm run typecheck && npm run lint && npm run test && npm run test:e2e && npm run build` — all green.
-5. Open the PR (template auto-fills). Reviewer is assigned via `.github/CODEOWNERS` and must differ from the author.
-
-## License
-
-Internal use only. Not for commercial distribution.
+Constitution: `.speckit/constitution.md` — PR required, 1 reviewer, declarar IA.

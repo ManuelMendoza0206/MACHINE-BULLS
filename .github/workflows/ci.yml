@@ -18,43 +18,55 @@ jobs:
   quality:
     name: lint · typecheck · unit tests
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
       - run: npm ci
       - run: npm run lint
       - run: npm run typecheck
       - run: npm run test -- --coverage
       - uses: codecov/codecov-action@v4
         with:
-          files: ./coverage/coverage-final.json
+          files: ./frontend/coverage/coverage-final.json
           fail_ci_if_error: false
           token: ${{ secrets.CODECOV_TOKEN }}
 
   build:
     name: next build
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
       - run: npm ci
       - run: npm run build
 
   e2e:
     name: playwright e2e
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
       - run: npm ci
       - run: npx playwright install --with-deps chromium
       - run: npm run test:e2e
