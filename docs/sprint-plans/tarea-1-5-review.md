@@ -53,6 +53,17 @@ e2593c3 feat(tarea5): app shell — adaptive nav, error boundary, not-found
 a7d17f7 feat(tarea1): cn() + getContrastRatio() + contrast guard
 ```
 
-**Conclusión:** las 5 tareas cubren sus Requirements con test, las puertas están verdes en modo CI,
-y 3 desviaciones respecto a la spec son mejoras (contrast-sync, `error.name`, skip-link fuera de
-providers) — todas documentadas. Listo para PR review del equipo.
+## Desviaciones — alineadas en la spec (ya no son desviaciones)
+
+Decisión de equipo: forzar la alineación docs ↔ specs ↔ ClickUp. Las 3 mejoras que hice
+durante la implementación se **incorporaron a las specs** en esta misma rama:
+
+| Antes (spec)                                                                                | Ahora (spec + código, coherentes)                                                                |
+| ------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| `cn()` "Merge conditional classes" usaba `text-sm`+`text-lg` (que `tailwind-merge` colapsa) | escenario con `font-bold`/`italic` + nota de que el colapso de conflictos es intencional         |
+| `GlobalError` "distingue por `instanceof`"                                                  | "distingue por `error.name`" (sobrevive la serialización server→client de Next) + AC actualizado |
+| Diagrama de montaje: `<SkipToContentLink/>` dentro de `<AppProviders>`                      | antes de `<AppProviders>`, primer enfocable del `<body>` (ya lo decía el AC)                     |
+| Skeleton: `aria-busy="true"`                                                                | `role="status"` + `aria-busy` + nombre accesible; patrón de wrapper para grids documentado       |
+
+**Conclusión:** las 5 tareas cubren sus Requirements con test, las puertas están verdes en modo
+CI, y las specs quedan alineadas con lo construido. Listo para PR review del equipo.
