@@ -21,7 +21,7 @@ prompts de inicialización — con **ejecución real** del toolchain, no revisi�
 | **Gobernanza** | 🟢 | `main` protegida, PR + CODEOWNERS + template con declaración de IA. El prep se entregó por PR, no commit directo. |
 | **Alcance** | 🟢 | Frontend-only confirmado; ML/Data fuera de este repo. Storybook fuera de Sprint 1. 5 componentes, no 9. |
 | **Cronograma** | 🟢 | Tarea 6 (API skeleton) movida a Sprint 2 — es del epic F3 de Jaicel, no del Asiento A (`CLAUDE.md` §10 D4). Sprint 1 Leonardo = Tareas 0–5 ≈ 8 tarea-días en 7 días de 4h, con `BottomTabBar` como válvula de escape pactada. |
-| **Contexto ClickUp** | 🟢 | Alcance del Asiento A es autocontenido en el repo (`sprint-1-init-leonardo.md` + specs + rotación). Reconciliación completa del tablero = tarea de Manuel/PO pre-kickoff, no bloqueante (`CLAUDE.md` §10 D5). Token revocado. |
+| **Contexto ClickUp** | 🟢 | Alcance del Asiento A es autocontenido en el repo (`sprint-1-init-leonardo.md` + specs + rotación). Reconciliación completa del tablero = tarea de Manuel/PO pre-kickoff, no bloqueante (`CLAUDE.md` §10 D5). |
 
 ## 3. Riesgos abiertos y su dueño
 
