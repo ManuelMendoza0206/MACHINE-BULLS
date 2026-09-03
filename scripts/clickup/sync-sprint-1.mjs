@@ -138,7 +138,7 @@ const LEONARDO_FRONTEND_IDS = [
 
 // Status names vary per Space. Resolve dynamically against each list's real statuses;
 // env overrides win. Regexes are the fallback matchers.
-const REVIEW_RE = /(in[\s-]?review|code[\s-]?review|pr[\s-]?review|reviewing|revisi[oó]n|en revisi)/i;
+const REVIEW_RE = /(review|reviewing|revisi[oó]n|en revisi)/i;
 const HOLD_RE = /(on[\s-]?hold|hold|en espera|pausad|paused|stand[\s-]?by|blocked|bloquead)/i;
 
 /** Sprint 0 tasks to create (traceability — constitution §5). */
