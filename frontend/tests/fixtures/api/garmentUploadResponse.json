@@ -1,0 +1,11 @@
+{
+  "garment_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+  "category": "shirt",
+  "top_aesthetics": [
+    { "aesthetic": "old_money", "confidence": 0.81 },
+    { "aesthetic": "quiet_luxury", "confidence": 0.64 },
+    { "aesthetic": "starboy", "confidence": 0.22 }
+  ],
+  "dominant_colors": [{ "h": 210, "s": 15, "v": 92, "hex": "#E8ECF1" }],
+  "processed_image_url": "https://cdn.styleme.app/garments/3fa85f64-5717-4562-b3fc-2c963f66afa6/processed.webp"
+}

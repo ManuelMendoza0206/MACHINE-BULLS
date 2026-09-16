@@ -1,17 +1,25 @@
 # Dependencies (CRITICAL - never commit)
 node_modules/
-/.pnp
+frontend/node_modules/
+backend/.venv/
+backend/__pycache__/
+.pnp
 .pnp.js
 
 # Testing / coverage
 /coverage
+/frontend/coverage
+/frontend/test-results
+/frontend/playwright-report
 /test-results
 /playwright-report
 .nyc_output
 
 # Next.js
 /.next/
+/frontend/.next
 /out/
+/frontend/out
 /build/
 next-env.d.ts.timestamp-*
 

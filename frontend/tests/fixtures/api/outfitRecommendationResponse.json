@@ -1,0 +1,15 @@
+{
+  "outfits": [
+    {
+      "outfit_id": "8c7f8b1a-1234-4567-8901-abcdef123456",
+      "aesthetic": "old_money",
+      "chromatic_score": 0.92,
+      "embedding_score": 0.87,
+      "garments": [
+        { "garment_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6", "position": "top" },
+        { "garment_id": "9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d", "position": "bottom" },
+        { "garment_id": "1a2b3c4d-5e6f-4a7b-8c9d-0e1f2a3b4c5d", "position": "footwear" }
+      ]
+    }
+  ]
+}
