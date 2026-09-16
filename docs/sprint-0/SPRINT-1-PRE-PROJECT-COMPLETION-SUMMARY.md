@@ -85,7 +85,7 @@
 ### P2: Governance Established
 - ✅ **P2#1:** DECISION-LOG in main (not branches)
 - ✅ **P2#2:** OpenSpec migration completed
-- ✅ **P2#3:** No secrets in prompts (token revoked)
+- ✅ **P2#3:** No secrets in prompts / commits / code (policy enforced)
 
 ---
 

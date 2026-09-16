@@ -259,11 +259,17 @@ era un duplicado. `src/lib/errors.ts` ya existe (scaffold). Sprint 1 Leonardo = 
 
 **D5: Fuente de verdad del alcance** — estructura canónica del Sprint 1 en
 `docs/sprint-plans/sprint-1-manifest.md` (derivada de specs + rotación); `sprint-1-task-list.md`
-(mirror del tablero) ya alineado con él. La reconciliación de ClickUp la ejecuta el **Asiento D
-(Manuel)** con su acceso legítimo — checklist en el manifiesto §7; una persona sola no puede
-saltarse ese control de equipo con una credencial en un prompt (§9). _Pendiente:_ los prompts
-de Jaicel/Huascar/Manuel aún llevan fechas/conteos viejos — se corrigen al preparar cada asiento
+<<<<<<< HEAD
+(mirror del tablero) ya alineado con él. La reconciliación de ClickUp se ejecuta con
+`scripts/clickup/sync-sprint-1.mjs` (dry-run → `--apply`). _Pendiente:_ los prompts de
+Jaicel/Huascar/Manuel aún llevan fechas/conteos viejos — se corrigen al preparar cada asiento
 (el manifiesto §4–§6 ya lista qué cambiar).
+=======
+(mirror del tablero) ya alineado con él. La reconciliación de ClickUp la ejecuta el **Asiento D
+(Manuel)** con `scripts/clickup/sync-sprint-1.mjs` (checklist en el manifiesto §7). _Pendiente:_
+los prompts de Jaicel/Huascar/Manuel aún llevan fechas/conteos viejos — se corrigen al preparar
+cada asiento (el manifiesto §4–§6 ya lista qué cambiar).
+>>>>>>> main
 
 ### P1: Inconsistencias Congeladas
 
@@ -271,7 +277,12 @@ de Jaicel/Huascar/Manuel aún llevan fechas/conteos viejos — se corrigen al pr
 
 - El número y reparto de tareas viven en ClickUp (export `SPRINT-1-MASTER.csv`), no en los `.md`.
 - Los docs de sprint describen _qué_ hace cada asiento, no totales a reconciliar a mano.
-- Token de ClickUp compartido en chat el 30 ago fue **revocado** (no debe compartirse en prompts, §6). Integración futura vía MCP con el token en secreto local.
+<<<<<<< HEAD
+- Sincronización del tablero: `scripts/clickup/sync-sprint-1.mjs` (credencial vía env var o
+  archivo local gitignoreado; nunca en el repo).
+=======
+- Sincronización del tablero: `scripts/clickup/sync-sprint-1.mjs` (credencial vía env var o archivo local gitignoreado; nunca en el repo).
+>>>>>>> main
 
 **P1#5: 9 sprints × 18 semanas — fecha fija** (12 ago – 15 dic 2026). Si algo no cabe, se recorta o pasa al siguiente sprint.
 

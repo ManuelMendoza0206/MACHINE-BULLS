@@ -22,14 +22,17 @@ compone, en orden: `ThemeProvider` (`next-themes`, `attribute="class"`, `default
 — nunca como singleton de módulo, nunca recreado entre renders.
 
 #### Scenario: El QueryClient no se recrea entre renders
+
 - **WHEN** el componente padre de `AppProviders` re-renderiza varias veces
 - **THEN** la instancia de `QueryClient` es la misma referencia en todos los renders
 
 #### Scenario: SSR sin fuga de caché entre requests
+
 - **WHEN** dos requests distintos se renderizan en el servidor
 - **THEN** cada uno obtiene su propio `QueryClient` (no comparten caché)
 
 #### Acceptance Criteria
+
 - [ ] `src/lib/api/queryClient.ts` exporta `defaultQueryClientConfig` (objeto `QueryClientConfig`, no instancia) con `queries.retry: false`, `queries.staleTime: 30_000`, `mutations.retry: false`
 - [ ] `AppProviders` usa el patrón `useState(() => new QueryClient(defaultQueryClientConfig))`
 - [ ] Test de integración verifica referencia estable entre re-renders
@@ -40,21 +43,32 @@ compone, en orden: `ThemeProvider` (`next-themes`, `attribute="class"`, `default
 
 El sistema SHALL alternar entre navegación superior (`TopNav`, desktop) e inferior
 (`BottomTabBar`, mobile) usando **solo** CSS responsivo. Ambas variantes se renderizan siempre en
-el DOM; la visibilidad la controlan clases Tailwind (`hidden lg:flex` / `flex lg:hidden`). Está
-prohibido `window.innerWidth`, `useMediaQuery` o cualquier render condicional por breakpoint en JS.
+el DOM; la visibilidad la controlan clases Tailwind (`TopNav`: oculto por defecto, visible en
+`lg`; `BottomTabBar`: visible por defecto, oculto en `lg`). Está prohibido `window.innerWidth`,
+`useMediaQuery` o cualquier render condicional por breakpoint en JS.
 
 #### Scenario: Cambio de tamaño de viewport en la misma sesión
+
 - **WHEN** el viewport pasa de un ancho mobile a uno desktop sin recargar
 - **THEN** la navegación cambia de bottom-tab a top-nav sin parpadeo ni desajuste de hidratación, sin errores de consola
 
 #### Scenario: Los ítems de navegación son exactamente cuatro
+
 - **WHEN** se lee `src/config/navigation.ts`
 - **THEN** `NAV_ITEMS` tiene exactamente 4 entradas (`/wardrobe`, `/outfits`, `/try-on`, `/profile`), fijadas por `frontend-plan.md` §2.1
 
+#### Scenario: Las 4 rutas de nav existen como stub
+
+- **WHEN** se navega a `/wardrobe`, `/outfits`, `/try-on` o `/profile` antes de que su flow-spec las implemente
+- **THEN** cada una renderiza una página stub mínima (`<h1>` + "Próximamente"), suficiente para que la nav no rompa y `typedRoutes` compile
+- **AND** cada `page.tsx` lleva un comentario `// Stub — <flow-spec> owns this route`
+
 #### Acceptance Criteria
+
 - [ ] `TopNav` y `BottomTabBar` reciben las mismas `NAV_ITEMS` y ninguna prop de estado activo
 - [ ] Cero JS de detección de viewport en el árbol de navegación
 - [ ] E2E cubre el resize mobile↔desktop en 3 anchos (375 / 768 / 1440)
+- [ ] `src/app/{wardrobe,outfits,try-on,profile}/page.tsx` existen como stub marcado; los reemplaza su flow-spec (Sprints 3–7)
 
 ---
 
@@ -66,14 +80,17 @@ ruta, no un efecto con delay) mediante una función pura `isNavItemActive(pathna
 color** (p. ej. peso de fuente + ícono relleno vs. outline).
 
 #### Scenario: Sub-ruta activa el ítem padre
+
 - **WHEN** `pathname` es `/wardrobe/upload`
 - **THEN** `isNavItemActive('/wardrobe/upload', '/wardrobe')` es `true` y el ítem "Armario" tiene `aria-current="page"`
 
 #### Scenario: Solo un ítem activo a la vez
+
 - **WHEN** `pathname` coincide con un `href`
 - **THEN** ese ítem tiene `aria-current="page"` y los otros tres no
 
 #### Acceptance Criteria
+
 - [ ] `isNavItemActive` es pura y está en `src/lib/navigation/isNavItemActive.ts`, con tests de casos exactos y de sub-ruta
 - [ ] La señal visual del activo combina ≥ 2 propiedades (no solo color)
 
@@ -81,31 +98,37 @@ color** (p. ej. peso de fuente + ícono relleno vs. outline).
 
 ### Requirement: Manejo de errores no controlados por tipo
 
-`src/app/error.tsx` SHALL exportar `GlobalError({ error, reset })` que distingue por `instanceof`
-(jerarquía de `CLAUDE.md` §5 / `src/lib/errors.ts`) y muestra copy específico según esta tabla —
-**4 ramas**:
+`src/app/error.tsx` SHALL exportar `GlobalError({ error, reset })` que distingue por
+`error.name` (`StyleMeError` fija `name = constructor.name`; a diferencia de `instanceof`, el
+`name` sobrevive la serialización server→client de errores de Next en producción). Jerarquía en
+`CLAUDE.md` §5 / `src/lib/errors.ts`. Muestra copy específico según esta tabla — **4 ramas**:
 
-| Tipo | Copy | Acción |
-| :--- | :--- | :--- |
-| `ApiError` | "Hubo un problema con el servidor. Inténtalo de nuevo." | botón `reset()` |
-| `NetworkError` | "No pudimos conectarnos. Revisa tu conexión." | botón `reset()` |
-| `ValidationError` | "Recibimos una respuesta inesperada del servidor." | botón `reset()`, sin detalles técnicos |
-| cualquier otro `Error` | "Algo salió mal." (genérico) | botón `reset()` |
+| Tipo                   | Copy                                                    | Acción                                 |
+| :--------------------- | :------------------------------------------------------ | :------------------------------------- |
+| `ApiError`             | "Hubo un problema con el servidor. Inténtalo de nuevo." | botón `reset()`                        |
+| `NetworkError`         | "No pudimos conectarnos. Revisa tu conexión."           | botón `reset()`                        |
+| `ValidationError`      | "Recibimos una respuesta inesperada del servidor."      | botón `reset()`, sin detalles técnicos |
+| cualquier otro `Error` | "Algo salió mal." (genérico)                            | botón `reset()`                        |
 
 `VtonJobTimeoutError` se maneja localmente en `vton-flow` y no debería llegar aquí; si llega,
 cae en la rama genérica (sin tratamiento especial, para no duplicar lógica).
 
 #### Scenario: Error de red no controlado
+
 - **WHEN** un componente hijo lanza `NetworkError` durante el render
 - **THEN** `GlobalError` muestra el copy de conectividad, no el genérico
 
 #### Scenario: Reintentar invoca reset una vez
+
 - **WHEN** el usuario pulsa "Reintentar"
 - **THEN** `reset()` se invoca exactamente una vez
 
 #### Acceptance Criteria
-- [ ] Test de integración pasa una instancia de cada subclase + una `Error` genérica y verifica el copy exacto (4 casos)
-- [ ] `src/app/not-found.tsx` es estático (ilustración + link a `/wardrobe`), sin lógica
+
+- [ ] `GlobalError` selecciona el copy por `error.name` (no `instanceof`)
+- [ ] Test de integración pasa una instancia de cada subclase + una `Error` genérica + `VtonJobTimeoutError` (→ genérico) y verifica el copy exacto
+- [ ] `ValidationError` nunca expone su `message` técnico en la UI
+- [ ] `src/app/not-found.tsx` es estático (link a `/wardrobe`), sin lógica
 
 ---
 
@@ -117,10 +140,12 @@ focus:not-sr-only`), con `href="#main-content"`. `layout.tsx` SHALL envolver `ch
 `<main id="main-content" tabIndex={-1}>` (exactamente un `<main>` en el árbol).
 
 #### Scenario: Primer Tab enfoca el skip link
+
 - **WHEN** la página carga y el usuario pulsa `Tab` una vez
 - **THEN** el foco va al skip link; `Enter` mueve el foco a `#main-content`
 
 #### Acceptance Criteria
+
 - [ ] El skip link precede a `AppProviders`/nav en el orden del DOM
 - [ ] Hay exactamente un `<main id="main-content">` en el layout (las páginas no anidan otro)
 - [ ] Cambiar de tema no produce parpadeo a nivel de layout (regresión del criterio de `design-system`)
@@ -132,14 +157,14 @@ focus:not-sr-only`), con `href="#main-content"`. `layout.tsx` SHALL envolver `ch
 ```
 <html lang="es" suppressHydrationWarning>   (next-themes resuelve el tema pre-paint)
   <body>
+    <SkipToContentLink />        ← primer enfocable del <body>, antes de AppProviders
     <AppProviders>
-      <SkipToContentLink />
-      <TopNav />                 ← hidden lg:flex
+      <TopNav />                 ← hidden lg:block
       <main id="main-content" tabIndex={-1}>
         {children}
       </main>
       <BottomTabBar />           ← flex lg:hidden
-      <Toaster />
+      <Toaster />                ← dentro de AppProviders (sonner)
     </AppProviders>
   </body>
 </html>
@@ -161,6 +186,7 @@ src/app/layout.tsx
 src/app/providers.tsx
 src/app/error.tsx
 src/app/not-found.tsx
+src/app/{wardrobe,outfits,try-on,profile}/page.tsx   # stubs — reemplazados por sus flow-specs
 src/components/shell/TopNav.tsx
 src/components/shell/BottomTabBar.tsx
 src/components/shell/SkipToContentLink.tsx

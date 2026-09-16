@@ -1,10 +1,14 @@
+/**
+ * First focusable element of the document — visually hidden until focused, then jumps to
+ * `<main id="main-content">` (app-shell/spec.md, "Skip link y landmark").
+ */
 export function SkipToContentLink(): JSX.Element {
   return (
     <a
       href="#main-content"
-      className="sr-only focus:not-sr-only focus:absolute focus:top-0 focus:left-0 focus:z-50 focus:p-2 focus:bg-foreground focus:text-background"
+      className="sr-only rounded-md bg-foreground px-3 py-2 text-sm font-medium text-background focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50"
     >
-      Skip to content
+      Saltar al contenido
     </a>
   );
 }
