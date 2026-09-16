@@ -10,7 +10,7 @@ import { SkipToContentLink } from '@/components/shell/SkipToContentLink';
 describe('scaffold smoke', () => {
   it('renders a component and resolves the @/ alias', () => {
     render(<SkipToContentLink />);
-    const link = screen.getByRole('link', { name: /skip to content/i });
+    const link = screen.getByRole('link', { name: /saltar al contenido/i });
     expect(link).toHaveAttribute('href', '#main-content');
   });
 });
