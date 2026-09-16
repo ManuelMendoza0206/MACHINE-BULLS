@@ -2,6 +2,7 @@
 
 import { createContext, useCallback, useEffect, useMemo, useState } from 'react';
 import { createBrowserSupabaseClient } from '@/lib/supabase/client';
+import type { SupabaseClient } from '@supabase/supabase-js';
 import type { AuthUser } from '@/features/auth/api/auth';
 
 export interface AuthContextValue {
@@ -33,7 +34,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }): JSX.E
   const [status, setStatus] = useState<'loading' | 'authenticated' | 'unauthenticated'>('loading');
 
   useEffect(() => {
-    const supabase = createBrowserSupabaseClient();
+    let supabase: SupabaseClient;
+    try {
+      supabase = createBrowserSupabaseClient();
+    } catch {
+      // Supabase sin configurar (local/CI sin env vars): app arranca en modo público.
+      setStatus('unauthenticated');
+      return;
+    }
 
     // Initial session
     supabase.auth.getUser().then(({ data }) => {
@@ -63,7 +71,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }): JSX.E
   }, []);
 
   const signOut = useCallback(async () => {
-    const supabase = createBrowserSupabaseClient();
+    let supabase: SupabaseClient;
+    try {
+      supabase = createBrowserSupabaseClient();
+    } catch {
+      setUser(null);
+      setStatus('unauthenticated');
+      return;
+    }
     await supabase.auth.signOut();
     setUser(null);
     setStatus('unauthenticated');
