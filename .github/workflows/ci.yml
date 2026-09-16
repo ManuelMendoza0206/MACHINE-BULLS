@@ -11,7 +11,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  NODE_VERSION: '20'
+  NODE_VERSION: '22'
   HUSKY: '0' # git hooks are a local aid; CI is the real gate
 
 jobs:

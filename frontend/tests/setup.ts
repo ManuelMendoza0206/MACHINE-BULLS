@@ -23,6 +23,7 @@ if (typeof window.localStorage === 'undefined') {
 // AppProviders mounts AuthProvider (Supabase) since the monorepo merge. Give every
 // test a harmless default client; auth-focused suites override it with their own mocks.
 vi.mock('@/lib/supabase/client', () => ({
+  isSupabaseConfigured: () => true,
   createBrowserSupabaseClient: () => ({
     auth: {
       getUser: vi.fn().mockResolvedValue({ data: { user: null }, error: null }),

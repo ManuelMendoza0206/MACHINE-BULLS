@@ -5,7 +5,7 @@ export const config = {
   matcher: ['/wardrobe/:path*', '/outfits/:path*', '/try-on/:path*', '/profile/:path*'],
 };
 
-export async function middleware(request: NextRequest): Promise<NextResponse> {
+export async function proxy(request: NextRequest): Promise<NextResponse> {
   const response = NextResponse.next({ request: { headers: request.headers } });
 
   const supabaseUrl = process.env['NEXT_PUBLIC_SUPABASE_URL'];

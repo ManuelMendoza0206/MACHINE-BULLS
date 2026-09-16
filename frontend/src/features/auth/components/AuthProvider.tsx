@@ -1,7 +1,8 @@
 'use client';
 
 import { createContext, useCallback, useEffect, useMemo, useState } from 'react';
-import { createBrowserSupabaseClient } from '@/lib/supabase/client';
+import type { JSX } from 'react';
+import { createBrowserSupabaseClient, isSupabaseConfigured } from '@/lib/supabase/client';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { AuthUser } from '@/features/auth/api/auth';
 
@@ -31,17 +32,18 @@ function toAuthUser(supabaseUser: {
 
 export function AuthProvider({ children }: { children: React.ReactNode }): JSX.Element {
   const [user, setUser] = useState<AuthUser | null>(null);
-  const [status, setStatus] = useState<'loading' | 'authenticated' | 'unauthenticated'>('loading');
+  const [status, setStatus] = useState<'loading' | 'authenticated' | 'unauthenticated'>(
+    // Without Supabase env (local/dev, CI) the app runs in public mode from the start —
+    // deriving the initial state avoids a synchronous setState during the effect.
+    isSupabaseConfigured() ? 'loading' : 'unauthenticated'
+  );
 
   useEffect(() => {
-    let supabase: SupabaseClient;
-    try {
-      supabase = createBrowserSupabaseClient();
-    } catch {
-      // Supabase sin configurar (local/CI sin env vars): app arranca en modo público.
-      setStatus('unauthenticated');
+    if (!isSupabaseConfigured()) {
       return;
     }
+
+    const supabase = createBrowserSupabaseClient();
 
     // Initial session
     supabase.auth.getUser().then(({ data }) => {

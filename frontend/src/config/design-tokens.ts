@@ -2,8 +2,8 @@
  * Design tokens — single source of truth for color, typography and spacing.
  * Authoritative values: this file. `openspec/specs/frontend/design-system/spec.md` §2.1
  * and `docs/context/frontend-plan.md` §5.1 mirror it. Nothing else may hardcode a colour:
- *  - `tailwind.config.ts` derives its colour scale from `colorTokens` keys.
- *  - `src/app/globals.css` publishes the HSL channels as CSS variables; the test
+ *  - `src/app/globals.css` publishes the HSL channels as CSS variables and maps them
+ *    into Tailwind v4 utilities via its `@theme inline` block; the test
  *    `tests/unit/config/design-tokens.contrast.test.ts` (Tarea 1) keeps that file in
  *    sync with `hexToHslChannels(...)` and enforces the WCAG-AA contrast budget.
  *

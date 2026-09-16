@@ -1,3 +1,4 @@
+import type { JSX } from 'react';
 // Stub — the `frontend/profile-flow` spec owns this route.
 export default function PerfilPage(): JSX.Element {
   return (
