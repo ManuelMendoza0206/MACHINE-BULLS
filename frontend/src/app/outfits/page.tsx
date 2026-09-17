@@ -1,3 +1,4 @@
+import type { JSX } from 'react';
 // Stub — the `frontend/outfits-flow` spec owns this route.
 export default function OutfitsPage(): JSX.Element {
   return (

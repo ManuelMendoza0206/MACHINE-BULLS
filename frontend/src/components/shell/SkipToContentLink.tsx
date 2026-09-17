@@ -1,3 +1,4 @@
+import type { JSX } from 'react';
 /**
  * First focusable element of the document — visually hidden until focused, then jumps to
  * `<main id="main-content">` (app-shell/spec.md, "Skip link y landmark").

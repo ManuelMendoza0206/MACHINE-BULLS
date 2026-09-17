@@ -16,7 +16,6 @@ export default defineConfig({
       reportsDirectory: './coverage',
       // Sprint 1: coverage is measured and uploaded but does NOT gate CI —
       // real suites arrive with Tarea 1+. The merge gate (>=80%) lands in Sprint 2 (P1#8).
-      all: false,
       exclude: [
         'node_modules/',
         'tests/',
@@ -29,8 +28,8 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, './src'),
-      '@/tests': path.resolve(__dirname, './tests'),
+      '@': path.resolve(import.meta.dirname, './src'),
+      '@/tests': path.resolve(import.meta.dirname, './tests'),
     },
   },
 });

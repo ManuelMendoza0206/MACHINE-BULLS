@@ -39,9 +39,7 @@ const nextConfig = {
       { protocol: 'https', hostname: 'res.cloudinary.com' },
     ],
   },
-  experimental: {
-    typedRoutes: true,
-  },
+  typedRoutes: true,
   headers: async () => [{ source: '/:path*', headers: securityHeaders }],
 };
 

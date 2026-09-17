@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useSyncExternalStore } from 'react';
+import type { JSX } from 'react';
 import { useTheme } from 'next-themes';
 import { Monitor, Moon, Sun } from 'lucide-react';
 import { cn } from '@/lib/utils/cn';
@@ -14,14 +15,22 @@ const META: Record<ThemeChoice, { label: string; Icon: typeof Sun }> = {
   dark: { label: 'Tema: oscuro', Icon: Moon },
 };
 
+// Stable store that flips to `true` only after hydration: on the server and during the
+// first client render the snapshot is `false`, so the markup matches; afterwards it
+// re-renders with the real theme (next-themes can only know it on the client).
+const emptySubscribe = () => () => {};
+
 /**
  * Cycles system → light → dark. Renders a stable placeholder until mounted so the
  * server and first client render match (next-themes can only know the real theme on the client).
  */
 export function ThemeToggle({ className }: { className?: string }): JSX.Element {
   const { theme, setTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
+  const mounted = useSyncExternalStore(
+    emptySubscribe,
+    () => true,
+    () => false
+  );
 
   const current: ThemeChoice = mounted && isThemeChoice(theme) ? theme : 'system';
   const { label, Icon } = META[current];

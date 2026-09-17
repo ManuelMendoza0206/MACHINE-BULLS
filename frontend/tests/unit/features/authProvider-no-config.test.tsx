@@ -1,3 +1,4 @@
+import type { JSX } from 'react';
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -6,6 +7,7 @@ import { AuthProvider } from '@/features/auth/components/AuthProvider';
 
 // Supabase sin configurar (local/CI sin env vars): el cliente lanza al crearse.
 vi.mock('@/lib/supabase/client', () => ({
+  isSupabaseConfigured: () => false,
   createBrowserSupabaseClient: () => {
     throw new Error('NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY must be defined.');
   },

@@ -1,3 +1,4 @@
+import type { JSX } from 'react';
 // Stub — the `frontend/wardrobe-flow` spec owns this route (Sprint 3+).
 export default function WardrobePage(): JSX.Element {
   return (

@@ -1,3 +1,4 @@
+import type { JSX } from 'react';
 // Stub — the `frontend/vton-flow` spec owns this route.
 export default function ProbadorPage(): JSX.Element {
   return (

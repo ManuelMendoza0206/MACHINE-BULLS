@@ -1,6 +1,7 @@
 'use client';
 
 import { Suspense } from 'react';
+import type { JSX } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { AuthForm } from '@/features/auth/components/AuthForm';
 

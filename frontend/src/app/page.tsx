@@ -1,3 +1,4 @@
+import type { JSX } from 'react';
 import { LandingCta } from '@/features/auth/components/LandingCta';
 
 export default function Home(): JSX.Element {

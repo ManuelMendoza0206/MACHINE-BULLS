@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import { useQueryClient, type QueryClient } from '@tanstack/react-query';
 import { useTheme } from 'next-themes';
-import { useRef } from 'react';
+import type { JSX } from 'react';
 import { describe, it, expect } from 'vitest';
 import { AppProviders } from '@/app/providers';
 import { defaultQueryClientConfig } from '@/lib/api/queryClient';
@@ -11,11 +11,9 @@ import { defaultQueryClientConfig } from '@/lib/api/queryClient';
 function Probe({ onRender }: { onRender: (client: QueryClient) => void }): JSX.Element {
   const client = useQueryClient();
   const { theme } = useTheme();
-  const renders = useRef(0);
-  renders.current += 1;
   onRender(client);
   return (
-    <div data-testid="probe" data-renders={renders.current} data-theme={theme ?? 'unset'}>
+    <div data-testid="probe" data-theme={theme ?? 'unset'}>
       ok
     </div>
   );

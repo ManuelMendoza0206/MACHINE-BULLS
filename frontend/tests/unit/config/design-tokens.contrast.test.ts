@@ -52,8 +52,8 @@ describe('globals.css stays in sync with the token source', () => {
   };
 
   const cssByTheme: Record<Theme, Record<string, string>> = {
-    light: block(':root'),
-    dark: block('.dark'),
+    light: block(':root {'),
+    dark: block('.dark {'),
   };
 
   for (const theme of THEMES) {
