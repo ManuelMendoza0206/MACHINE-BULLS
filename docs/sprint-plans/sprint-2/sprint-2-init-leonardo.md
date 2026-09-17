@@ -50,8 +50,8 @@ tiene sentido *ahora*:
    redescubre a medio sprint (como pasó con P0#3 y los notebooks).
 
 **Aceptación:**
-- [ ] Decisión de alcance del "registro de modelos" para este sprint, documentada en el
-      comentario del epic Q3 antes de escribir código
+- [x] Decisión de alcance del "registro de modelos" para este sprint, documentada en el
+      comentario del epic Q3 antes de escribir código (ClickUp `86e302a40`, 17-sep)
 
 ---
 
@@ -71,9 +71,9 @@ tiene sentido *ahora*:
    trabajo exploratorio, no modelos versionados, para que no se confundan con un entregable.
 
 **AC:**
-- [ ] `docs/ml/MODEL_REGISTRY.md` existe, con al menos una fila (aunque sea "ninguno en
+- [x] `docs/ml/MODEL_REGISTRY.md` existe, con al menos una fila (aunque sea "ninguno en
       producción todavía, ver notebooks de baseline")
-- [ ] Convención de versionado de artefactos documentada
+- [x] Convención de versionado de artefactos documentada
 - [ ] PR revisado y mergeado
 
 ---
@@ -90,8 +90,9 @@ tiene sentido *ahora*:
    (Respuesta esperada: 0 de los 4 — navigation/theme no son flujos de negocio.)
 
 **AC:**
-- [ ] Resultado de investigar el "flaky" documentado
-- [ ] Inventario de cobertura E2E actual vs. los 4 flujos, en el comentario del epic Q1
+- [x] Resultado de investigar el "flaky" documentado (`e2e-audit-2026-09.md` — intermitente,
+      no un defecto determinístico)
+- [x] Inventario de cobertura E2E actual vs. los 4 flujos, en el comentario del epic Q1
 
 ---
 
@@ -129,11 +130,11 @@ llenar los pasos cuando construya la UI — no empezar de cero cada vez.
    el `skip`** del spec que dejaste, no escribir uno nuevo desde cero.
 
 **AC:**
-- [ ] Los 4 archivos de scaffold existen, cada uno con `test.skip` + comentario de spec +
+- [x] Los 4 archivos de scaffold existen, cada uno con `test.skip` + comentario de spec +
       TODO con sprint/owner
-- [ ] `npm run test:e2e` (en `frontend/`) exit 0 — Playwright reporta los 4 como `skipped`, no
-      `failed`
-- [ ] Nota de "quitar el skip" añadida en `sprint-3-init-huascar.md`
+- [x] `npm run test:e2e` (en `frontend/`) exit 0 — Playwright reporta los 11 tests nuevos como
+      `skipped`, no `failed`
+- [x] Nota de "quitar el skip" añadida en `sprint-3-init-huascar.md`
 - [ ] PR revisado y mergeado
 
 ---
@@ -151,14 +152,16 @@ llenar los pasos cuando construya la UI — no empezar de cero cada vez.
 
 ## ✅ Definition of Done
 
-- [ ] Duplicado de "registro de modelos" resuelto con Manuel antes de reportar avance
-- [ ] Dueño de la tarea de E2E confirmado con el equipo (tú o Manuel, no ambos por separado)
-- [ ] `docs/ml/MODEL_REGISTRY.md` existe y refleja el estado real (aunque sea "nada en
+- [x] Duplicado de "registro de modelos" resuelto — tarea de Manuel (`86e31bcdu`) marcada
+      `cancelled` en ClickUp, con comentario cruzado a la vigente (`86e302a42`)
+- [x] Dueño de la tarea de E2E confirmado — reasignada de Manuel a Leonardo en ClickUp
+      (`86e302a1c`), con comentario citando `team-rotation-plan.md` §7
+- [x] `docs/ml/MODEL_REGISTRY.md` existe y refleja el estado real (aunque sea "nada en
       producción, ver baseline")
-- [ ] Los 4 flujos críticos tienen scaffold E2E (`test.skip`) con referencia a spec + sprint/
+- [x] Los 4 flujos críticos tienen scaffold E2E (`test.skip`) con referencia a spec + sprint/
       owner que lo implementa — no una feature fingida contra UI que no existe
-- [ ] `npm run test:e2e` (dentro de `frontend/`) exit 0, incluyendo lo nuevo (skipped, no failed)
-- [ ] PRs mergeados con ≥1 aprobación y declaración de uso de IA
+- [x] `npm run test:e2e` (dentro de `frontend/`) exit 0, incluyendo lo nuevo (skipped, no failed)
+- [ ] PR revisado y aprobado por Manuel (Asiento C este sprint) — pendiente
 
 ---
 
