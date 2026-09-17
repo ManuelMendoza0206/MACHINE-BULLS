@@ -11,10 +11,10 @@ El sistema SHALL limitar la subida simultánea de prendas a un techo configurabl
 - **THEN** el excedente pasa a estado `queued` y se procesa en orden FIFO, sin bloquearse por el fallo de un archivo activo
 
 ### Requirement: Resultado de análisis editable antes de confirmar
-El sistema SHALL permitir corregir la categoría y estética detectadas antes de guardar una prenda.
+El sistema SHALL permitir corregir la categoría, posición y estética detectadas antes de guardar una prenda.
 
 #### Scenario: Corrección manual de categoría
-- **WHEN** el usuario edita la categoría detectada en el resultado de análisis
+- **WHEN** el usuario edita la categoría o posición detectada en el resultado de análisis
 - **THEN** el valor editado, no el original detectado, es el que se persiste al confirmar
 
 ### Requirement: Catálogo cápsula con cobertura mínima verificable

@@ -24,6 +24,13 @@ El sistema SHALL evitar generar un nuevo trabajo VTON si ya existe un resultado 
 - **WHEN** el usuario solicita el mismo par (outfit, foto) que ya generó un resultado completado en esta sesión
 - **THEN** se navega directo al resultado cacheado sin crear un nuevo trabajo
 
+### Requirement: Soporte multicapa con orden por posición
+El sistema SHALL permitir generar un VTON a partir de capas individuales por posición (top/bottom/footwear/outerwear) con orden definido, sin requerir un outfit pre-armado.
+
+#### Scenario: Try-on multicapa
+- **WHEN** el usuario selecciona prendas por posición y confirma el try-on
+- **THEN** el sistema envía `garment_layers` en orden por posición y procesa el job con el mismo flujo de polling/timeout
+
 ---
 
 # Spec 04 — Virtual Try-On (VTON) Flow

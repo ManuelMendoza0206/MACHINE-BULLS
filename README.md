@@ -2,7 +2,7 @@
 
 ```
 MACHINE-BULLS/
-├── frontend/          # Next.js 14.2 + React 18.3 (ver frontend/README.md)
+├── frontend/          # Next.js 16 + React 19 + Tailwind v4 (ver frontend/README.md)
 │   └── src/           # App Router, features/, lib/, schemas/
 ├── backend/           # FastAPI + SQLAlchemy + pgvector (ver backend/README.md)
 │   └── src/           # domain/, schemas/, api/, services/, db/

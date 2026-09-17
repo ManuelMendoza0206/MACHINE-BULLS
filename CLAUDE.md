@@ -30,10 +30,10 @@ El frontend NO reimplementa lógica de dominio (clasificación, scoring cromáti
 
 | Categoría                    | Tecnología                                                             | Notas                                                                                                                                                                                          |
 | :--------------------------- | :--------------------------------------------------------------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Framework                    | **Next.js 14.2 (App Router)** + **React 18.3**                         | Decisión cerrada P0#5 (§10): Next 15 apunta a React 19; se fija 14.2 + 18.3 por estabilidad para 18 semanas. Server Components por defecto; Client Components solo con interactividad/estado.  |
-| Runtime                      | **Node.js 20 LTS** (`.nvmrc`)                                          | `engines.node >=18.17.0`; CI en Node 20.                                                                                                                                                       |
+| Framework                    | **Next.js 16 (App Router)** + **React 19**                              | Actualizado desde 14.2/18.3 en PR #15; Server Components por defecto; Client Components solo con interactividad/estado.                                                                       |
+| Runtime                      | **Node.js 22** (`.nvmrc`)                                              | `engines.node ^20.19.0 \|\| >=22.12.0`; CI en Node 22.                                                                                                                                        |
 | Lenguaje                     | TypeScript, **modo `strict` obligatorio** (`noUncheckedIndexedAccess`) | Equivalente frontend al mandato de type hints estrictos del backend.                                                                                                                           |
-| Estilos                      | Tailwind CSS                                                           | Utility-first, sin CSS-in-JS.                                                                                                                                                                  |
+| Estilos                      | Tailwind CSS v4                                                        | Utility-first, CSS-first config (`@theme inline`), sin CSS-in-JS.                                                                                                                             |
 | Componentes UI               | shadcn/ui (Radix UI + Tailwind)                                        | Componentes viven en el repo (`src/components/ui`), no en `node_modules` — se auditan y versionan como código propio.                                                                          |
 | Iconos                       | Lucide Icons                                                           | Según documento base.                                                                                                                                                                          |
 | Estado de servidor / caché   | TanStack Query (React Query)                                           | Toda comunicación con el backend pasa por hooks de TanStack Query, nunca `fetch` directo en componentes.                                                                                       |
@@ -209,7 +209,7 @@ Cualquier sesión de Claude Code que trabaje en este repo debe operar dentro de 
 **P0#1: Project Scaffold (Sprint 0 / Tarea 0) — RESUELTO**
 
 - Spec: `openspec/specs/frontend/project-scaffold/spec.md`
-- Stack real: **Next.js 14.2 + React 18.3 + Node 20**, TypeScript strict, Tailwind (paleta
+- Stack real: **Next.js 16 + React 19 + Node 22**, TypeScript strict, Tailwind v4 (paleta
   derivada de `src/config/design-tokens.ts`), Vitest + RTL (jsdom), Playwright, CI de 3 jobs.
 - Entregado vía PR `chore/sprint-1-prep`. Puertas verdes verificadas por ejecución real:
   `npm ci`, `typecheck`, `lint`, `test`, `test:e2e`, `build` → todas exit 0.
@@ -259,17 +259,10 @@ era un duplicado. `src/lib/errors.ts` ya existe (scaffold). Sprint 1 Leonardo = 
 
 **D5: Fuente de verdad del alcance** — estructura canónica del Sprint 1 en
 `docs/sprint-plans/sprint-1-manifest.md` (derivada de specs + rotación); `sprint-1-task-list.md`
-<<<<<<< HEAD
-(mirror del tablero) ya alineado con él. La reconciliación de ClickUp se ejecuta con
-`scripts/clickup/sync-sprint-1.mjs` (dry-run → `--apply`). _Pendiente:_ los prompts de
-Jaicel/Huascar/Manuel aún llevan fechas/conteos viejos — se corrigen al preparar cada asiento
-(el manifiesto §4–§6 ya lista qué cambiar).
-=======
 (mirror del tablero) ya alineado con él. La reconciliación de ClickUp la ejecuta el **Asiento D
 (Manuel)** con `scripts/clickup/sync-sprint-1.mjs` (checklist en el manifiesto §7). _Pendiente:_
 los prompts de Jaicel/Huascar/Manuel aún llevan fechas/conteos viejos — se corrigen al preparar
 cada asiento (el manifiesto §4–§6 ya lista qué cambiar).
->>>>>>> main
 
 ### P1: Inconsistencias Congeladas
 
@@ -277,12 +270,7 @@ cada asiento (el manifiesto §4–§6 ya lista qué cambiar).
 
 - El número y reparto de tareas viven en ClickUp (export `SPRINT-1-MASTER.csv`), no en los `.md`.
 - Los docs de sprint describen _qué_ hace cada asiento, no totales a reconciliar a mano.
-<<<<<<< HEAD
-- Sincronización del tablero: `scripts/clickup/sync-sprint-1.mjs` (credencial vía env var o
-  archivo local gitignoreado; nunca en el repo).
-=======
 - Sincronización del tablero: `scripts/clickup/sync-sprint-1.mjs` (credencial vía env var o archivo local gitignoreado; nunca en el repo).
->>>>>>> main
 
 **P1#5: 9 sprints × 18 semanas — fecha fija** (12 ago – 15 dic 2026). Si algo no cabe, se recorta o pasa al siguiente sprint.
 

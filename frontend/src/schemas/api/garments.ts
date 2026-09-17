@@ -14,12 +14,17 @@ export const DominantColorSchema = z.object({
 });
 export type DominantColor = z.infer<typeof DominantColorSchema>;
 
+// Posición para armado multicapa — alinea con OutfitPosition y permite layering ordenado
+export const GarmentPositionSchema = z.enum(['top', 'bottom', 'footwear', 'outerwear']);
+export type GarmentPosition = z.infer<typeof GarmentPositionSchema>;
+
 // GAP: category is z.string() deliberately — plan-base.md gives examples but no closed enum.
 // Replace with z.enum([...]) once backend publishes OpenAPI. See spec §2.3 note.
 export const GarmentUploadResponseSchema = z.object({
   garment_id: z.string().uuid(),
   category: z.string(),
-  top_aesthetics: z.array(AestheticScoreSchema).min(1),
+  position: GarmentPositionSchema.optional(),
+  top_aesthetics: z.array(AestheticScoreSchema).min(1).optional(),
   dominant_colors: z.array(DominantColorSchema).min(1),
   processed_image_url: z.string().url(),
 });
