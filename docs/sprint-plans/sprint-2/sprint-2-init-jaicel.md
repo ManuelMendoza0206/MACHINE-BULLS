@@ -9,6 +9,14 @@
 > `main`. Cero commits directos. Declaración de uso de IA en cada PR (ya lo vienes haciendo
 > bien — mantenlo).
 
+> **⚠️ Actualización 17-sep (noche):** `[EPIC] frontend/api-client-and-schemas` ya aparece
+> `complete` en ClickUp, con las 11 subtareas (validación de red, jerarquía de errores, los 4
+> schemas de §2.3-2.6, cobertura ≥90%) también cerradas. **Si ya terminaste esto, las Tareas
+> 1-2 de abajo no aplican — no las repitas.** Confirma el estado real y, si corresponde, deja
+> el comentario de handoff que falta en el epic (regla §4.1 del plan de rotación — el cambio de
+> estado está, el comentario no). Si terminaste temprano, la Tarea 3 (contract tests) sigue
+> siendo válida, o puedes adelantar trabajo de tu propio epic de Sprint 6 (`vton-flow`).
+
 ---
 
 ## 🎯 Objetivo de Sprint

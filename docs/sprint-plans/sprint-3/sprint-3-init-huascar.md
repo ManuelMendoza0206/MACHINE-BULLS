@@ -47,6 +47,10 @@ Este sprint es sobre construir la UI y el flujo completo encima de esa base, no 
 **Spec:** `openspec/specs/frontend/wardrobe-flow/spec.md` — Requirement "Subida por lote con
 techo de concurrencia".
 
+> **Reusa, no reescribas:** Leonardo dejó un scaffold `test.skip` en
+> `tests/e2e/wardrobe-upload.spec.ts` (Sprint 2, Q1) con los pasos esperados de este flujo.
+> Quita el `skip` y complétalo cuando la UI esté lista — no escribas un E2E nuevo desde cero.
+
 1. UI de selección múltiple de imágenes (`<input type="file" multiple>` o drag-and-drop) que
    alimenta `uploadQueue` (ya existe) respetando su techo de concurrencia — no lances N
    requests simultáneas sin límite.

@@ -5,12 +5,14 @@
 **Qué validas:** `frontend/design-system`, `frontend/app-shell-and-navigation`
 (Leonardo, Asiento A Sprint 1), `frontend/landing-and-auth-flow` (Jaicel, Asiento B Sprint 1)
 
-> **Por qué esto es urgente:** al 17-sep, con el sprint por cerrar en 5 días, **no hay rastro de
-> que esta validación haya ocurrido** — ni comentario en los 3 epics, ni review formal de GitHub
-> en los PRs que los cierran (#9, #14, #16). El ciclo de rotación depende de este rezago
-> deliberado (`team-rotation-plan.md` §1: "valida trabajo ya terminado y estable"); si Sprint 3
-> arranca sin esto, Leonardo (Asiento C de Sprint 3) no tiene contra qué validar el epic de
-> Jaicel de este sprint, y el hueco se propaga.
+> **Por qué esto es urgente:** al 17-sep, con el sprint por cerrar en 5 días, `design-system`
+> ya aparece `complete` en ClickUp (sin que quede claro si fuiste tú quien lo validó — ver
+> Tarea 1), pero `app-shell-and-navigation` y `landing-and-auth-flow` **siguen en `to do`** pese
+> a estar mergeados y verificados. Ninguno de los 3 tiene comentario de handoff, ni hay review
+> formal de GitHub en los PRs que los cierran (#9, #14, #16). El ciclo de rotación depende de
+> este rezago deliberado (`team-rotation-plan.md` §1: "valida trabajo ya terminado y estable");
+> si Sprint 3 arranca sin esto, Leonardo (Asiento C de Sprint 3) no tiene contra qué validar el
+> epic de Jaicel de este sprint, y el hueco se propaga.
 
 ---
 
@@ -37,6 +39,12 @@ necesita para seguir construyendo encima sin reabrir supuestos.
 ---
 
 ### Tarea 1: Validar `frontend/design-system` (Leonardo) — 1 día
+
+> **⚠️ Actualización 17-sep (noche):** este epic ya aparece `complete` en ClickUp. Si ya lo
+> validaste tú, no repitas el trabajo — pero **deja el comentario de handoff que falta**
+> (regla §4.1: el cambio de estado no sustituye el registro de qué se verificó). Si el cambio
+> de estado lo hizo otra persona sin que tú validaras, dilo explícitamente — no asumas que
+> "está en `complete`" significa "ya está validado por QA".
 
 **Spec:** `openspec/specs/frontend/design-system/spec.md` — 6 Requirements (tokens WCAG-AA,
 theme switching sin FOUC, `cn()`, `getContrastRatio()`, 5 componentes UI, app layout).

@@ -8,6 +8,15 @@ auditoría real de GitHub + ClickUp ejecutada el **17-sep-2026** (5 días antes 
 > Por qué existe: al auditar Sprint 2 el 17-sep se encontró que ClickUp no refleja el trabajo
 > real ya mergeado en `main` (ver §3), y que al menos una tarea de Asiento D está mal asignada
 > respecto a la tabla de rotación (ver §4). Este manifiesto corrige ambas cosas.
+>
+> **Corrección metodológica (17-sep, misma noche):** la primera versión de este documento se
+> basó en una consulta a la API de ClickUp que se cortó en 100 tareas por lista (paginación
+> incompleta — la lista `Build` tiene 136 tareas, no 100). Con el dataset completo (225 tareas,
+> no 189), 2 epics **sí** están reconciliados: `frontend/design-system` (Leonardo, Sprint 1) y
+> `frontend/api-client-and-schemas` (Jaicel, este sprint, con sus 11 subtareas también en
+> `complete`) — ambos movidos a `complete` en algún momento entre la primera auditoría y esta
+> corrección. §3 queda actualizado con esto; el resto de hallazgos (app-shell-and-navigation,
+> landing-and-auth-flow, los 2 duplicados de Leonardo/Manuel) siguen vigentes, reverificados.
 
 ---
 
@@ -46,25 +55,33 @@ corresponde a trabajo de **Sprint 1** que se completó tarde (el PR de Leonardo 
 | #15 | Next 16 + React 19 + Tailwind v4 | infra (no epic feature) | 17-sep |
 | #16 | Flujo multicapa VTON (schemas + api) | `frontend/vton-flow` (Sprint 6, adelantado) | 17-sep |
 
-**Implicación para este sprint:** el epic de Jaicel (`api-client-and-schemas`) ya tiene una base
-real en `main` desde el PR #14 (cliente HTTP + schemas Zod). La Tarea de Jaicel en Sprint 2 es
-**cerrar** lo que falta (jerarquía de errores por clase, contract tests), no partir de cero.
+**Implicación para este sprint:** el epic de Jaicel (`api-client-and-schemas`) **ya está
+`complete` en ClickUp**, con sus 11 subtareas también cerradas (validación de red, jerarquía de
+errores, schemas de §2.3-2.6, cobertura ≥90% en `src/lib/api/` y `errors.ts`). **Su Tarea 1-2 en
+`sprint-2-init-jaicel.md` ya no aplica tal como está redactada** — verificar con Jaicel si
+efectivamente terminó, y si es así, su prompt de Sprint 2 pasa a ser solo la Tarea 3 (contract
+tests) o directamente se libera para adelantar trabajo de Sprint 3/4.
 
-## 3. Qué NO está hecho — brecha real de ClickUp
+## 3. Qué NO está hecho — brecha real de ClickUp (dataset completo, 225 tareas)
 
-Verificado por API contra el espacio `MachineBulls⚙️🐂` el 17-sep:
+Verificado por API contra el espacio `MachineBulls⚙️🐂` el 17-sep, con paginación completa:
 
-- **0 tareas de Sprint 1 o 2 están en `complete`** (solo 3 tareas de Discovery/Sprint-0
-  histórico lo están, en todo el tablero de 189 tareas).
-- Los epics `[EPIC] frontend/design-system`, `[EPIC] frontend/app-shell-and-navigation`,
-  `[EPIC] frontend/landing-and-auth-flow` — **ya mergeados y verificados** — siguen en `to do`
-  en ClickUp, `date_updated` de fines de agosto (antes de que existiera el código que los cierra).
-- **Ningún epic frontend de Sprint 0-2 tiene comentario de handoff** (regla §4.1 del plan de
-  rotación: "quien ocupó A/B debe dejar, antes del Sprint Review, un comentario con qué quedó
-  completo, qué en `update required`, y decisiones técnicas no documentadas").
-- La tarea de Asiento C de Manuel (**validar Sprint 1**) no tiene rastro: ni comentario de
-  revisión en los epics, ni review formal de GitHub en los PRs #14/#15/#16/#17 (Manuel los
-  mergeó pero no dejó un review — `constitution.md` §3 exige ≥1 revisor aprobando).
+- **16 de 225 tareas están en `complete`** — no 3. De esas 16: 3 de Discovery (histórico), y
+  **12 son subtareas + el epic de `frontend/api-client-and-schemas`** (Jaicel), **1 es el epic
+  `frontend/design-system`** (Leonardo, Sprint 1). Es decir, de los epics de features, solo 2
+  de 7 relevantes a Sprint 1-2 están reconciliados.
+- Los epics `[EPIC] frontend/app-shell-and-navigation` y `[EPIC] frontend/landing-and-auth-flow`
+  — **ya mergeados y verificados** (PR #9 y #14/#16 respectivamente) — siguen en `to do` en
+  ClickUp. Este es el gap real que queda, no "todo el tablero sin tocar" como decía la versión
+  anterior de este documento.
+- **Ningún epic frontend pendiente tiene comentario de handoff** (regla §4.1 del plan de
+  rotación) — ni siquiera los 2 que sí se cerraron llevan ese comentario, solo el cambio de
+  estado.
+- La tarea de Asiento C de Manuel (**validar Sprint 1**) sigue sin rastro completo: dado que
+  `design-system` ya está `complete`, es posible que Manuel ya validara ese epic y solo falte
+  `app-shell-and-navigation` y `landing-and-auth-flow` — pero no hay comentario que lo confirme,
+  así que no se puede distinguir "validado y aprobado" de "cerrado sin validar". Tampoco hay
+  review formal de GitHub en los PRs #14/#15/#16/#17 (`constitution.md` §3 exige ≥1 revisor).
 
 ## 4. Corrección de asignación — Asiento D (Leonardo)
 
@@ -93,10 +110,12 @@ por inercia.
 
 ## 5. Checklist de reconciliación ClickUp (dueño: Manuel / Asiento C este sprint)
 
-- [ ] Mover `[EPIC] frontend/design-system`, `app-shell-and-navigation`, `landing-and-auth-flow`
-      a `complete` con el link del PR correspondiente como evidencia (#9, #9, #14/#16).
-- [ ] Dejar comentario de handoff en cada uno de esos 3 epics (qué quedó completo / en
-      `update required` / decisiones no documentadas) — regla §4.1 del plan de rotación.
+- [ ] Mover `[EPIC] frontend/app-shell-and-navigation` (PR #9) y
+      `[EPIC] frontend/landing-and-auth-flow` (PR #14/#16) a `complete` con el link del PR
+      como evidencia — `design-system` y `api-client-and-schemas` ya están cerrados.
+- [ ] Dejar comentario de handoff en los 4 epics de Sprint 1-2 ya cerrados o por cerrar
+      (`design-system`, `api-client-and-schemas`, `app-shell-and-navigation`,
+      `landing-and-auth-flow`) — regla §4.1 del plan de rotación, ninguno lo tiene todavía.
 - [ ] Aclarar la duplicación "Registro de modelos" (Leonardo) vs. "Model Registry & Versioning"
       (Manuel) — fusionar en una sola tarea con un solo dueño.
 - [ ] Reasignar o confirmar el dueño real de "Completar la suite E2E" (¿Leonardo por rotación,

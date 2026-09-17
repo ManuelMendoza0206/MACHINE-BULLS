@@ -95,36 +95,46 @@ tiene sentido *ahora*:
 
 ---
 
-### Tarea 3: E2E del flujo de upload de prenda — 1.5 días
+### Tarea 3-4: Scaffold E2E de los 4 flujos críticos — 2 días
 
-**Spec:** `openspec/specs/frontend/wardrobe-flow/spec.md` — Requirement "Subida por lote con
-techo de concurrencia" (la base ya existe: `detectBlur`, `uploadQueue` del PR #10 de Huascar).
+**Corrección de alcance (17-sep, tras validar contra el código real):** las versiones
+anteriores de estas Tareas pedían un E2E "en verde" del flujo de upload. Verificado contra
+`main`: `frontend/src/app/{wardrobe,outfits,try-on}/page.tsx` son **stubs** creados en la
+Tarea 5 de Sprint 1 solo para que la navegación compile (commit `e2593c3`, "stubs (flow specs
+own them)") — la UI real de cada flujo es un epic de otra persona en un sprint futuro
+(`wardrobe-flow` → Huascar, Sprint 3; `outfits-flow` → Manuel, Sprint 4; `vton-flow` → Jaicel,
+Sprint 6). Escribir un E2E que se espera "en verde" contra una UI que no existe dejaría CI rojo
+en `main` durante semanas — spec-first no significa test-antes-que-código-de-otra-persona.
 
-1. `tests/e2e/wardrobe-upload.spec.ts` — sube 1 prenda válida → aparece en el resultado
-   editable antes de confirmar (segundo Requirement de la spec). Usa los fixtures de
-   `tests/fixtures/api/garmentUploadResponse.json` (ya existen) o mockea la respuesta del
-   backend si el endpoint real no está listo (coordina con Huascar/Jaicel — puede no estarlo
-   aún, ver sus prompts de este sprint).
-2. Caso de error: subida que excede el techo de concurrencia → mensaje de error, no crash.
+**Alcance real de esta Tarea (coherente con tu mandato de Asiento D — Q1, infraestructura de
+test automation, no features de UI):** dejar el **scaffold** de E2E de los 4 flujos críticos,
+explícitamente `test.skip(...)`, para que cada dueño de epic solo tenga que quitar el skip y
+llenar los pasos cuando construya la UI — no empezar de cero cada vez.
+
+1. `tests/e2e/wardrobe-upload.spec.ts` — `test.skip('sube 1 prenda válida → aparece en
+   resultado editable antes de confirmar', () => { /* TODO(sprint-3, Huascar): implementar
+   cuando wardrobe-flow tenga UI real — ver wardrobe-flow/spec.md Requirement "Resultado de
+   análisis editable antes de confirmar" */ })`. Describe los pasos esperados en comentarios
+   (seleccionar archivo → esperar `detectBlur` → confirmar/editar resultado), usando
+   `tests/fixtures/api/garmentUploadResponse.json` (ya existe) como referencia de forma de
+   dato para cuando se implemente.
+2. `tests/e2e/outfit-recommendation.spec.ts` — mismo patrón, `test.skip`, referencia a
+   `outfits-flow/spec.md`, TODO apuntando a Sprint 4 / Manuel.
+3. `tests/e2e/vton-submit-and-poll.spec.ts` — mismo patrón, referencia a `vton-flow/spec.md`,
+   TODO apuntando a Sprint 6 / Jaicel.
+4. `tests/e2e/vton-result-view.spec.ts` — mismo patrón, referencia a `vton-flow/spec.md`
+   (visualización de resultado), TODO apuntando a Sprint 6 / Jaicel.
+5. Añade una nota equivalente en `sprint-3-init-huascar.md` (y deja el mismo tipo de nota
+   pendiente para quien redacte los prompts de Sprint 4 y 6): al implementar el flujo, **quitar
+   el `skip`** del spec que dejaste, no escribir uno nuevo desde cero.
 
 **AC:**
-- [ ] Test E2E del flujo de upload, camino feliz + 1 caso de error
+- [ ] Los 4 archivos de scaffold existen, cada uno con `test.skip` + comentario de spec +
+      TODO con sprint/owner
+- [ ] `npm run test:e2e` (en `frontend/`) exit 0 — Playwright reporta los 4 como `skipped`, no
+      `failed`
+- [ ] Nota de "quitar el skip" añadida en `sprint-3-init-huascar.md`
 - [ ] PR revisado y mergeado
-
----
-
-### Tarea 4: E2E del flujo de recomendación + inicio de VTON — 1 día (si alcanza)
-
-**Spec:** `frontend/outfits-flow/spec.md` (aún no implementado como feature — este test puede
-quedar como esqueleto/skip documentado si el flujo de UI todavía no existe).
-
-Si el flujo de outfits/VTON no tiene UI todavía (epics de Sprint 4 y 6 respectivamente), no
-inventes un test contra código que no existe — documenta el gap y dedica el tiempo restante a
-reforzar la Tarea 3, que sí tiene base real.
-
-**AC:**
-- [ ] O el test existe y pasa, o el gap está documentado explícitamente (no un test vacío
-      fingiendo cobertura)
 
 ---
 
@@ -135,7 +145,7 @@ reforzar la Tarea 3, que sí tiene base real.
 | 1 | mié 17 sep | Aclarar duplicados (advertencia arriba) + Tarea 0 (alcance registro) |
 | 2 | jue 18 sep | Tarea 1 (registro de modelos) |
 | 3 | vie 19 sep | Tarea 2 (auditoría E2E actual) |
-| 4-5 | sáb 20 – lun 22 sep | Tarea 3 (E2E upload) + Tarea 4 si alcanza |
+| 4-5 | sáb 20 – lun 22 sep | Tarea 3-4 (scaffold E2E de los 4 flujos) |
 
 ---
 
@@ -145,8 +155,9 @@ reforzar la Tarea 3, que sí tiene base real.
 - [ ] Dueño de la tarea de E2E confirmado con el equipo (tú o Manuel, no ambos por separado)
 - [ ] `docs/ml/MODEL_REGISTRY.md` existe y refleja el estado real (aunque sea "nada en
       producción, ver baseline")
-- [ ] Al menos 1 flujo crítico (upload) con test E2E real, no solo navegación/tema
-- [ ] `npm run test:e2e` (dentro de `frontend/`) exit 0, incluyendo lo nuevo
+- [ ] Los 4 flujos críticos tienen scaffold E2E (`test.skip`) con referencia a spec + sprint/
+      owner que lo implementa — no una feature fingida contra UI que no existe
+- [ ] `npm run test:e2e` (dentro de `frontend/`) exit 0, incluyendo lo nuevo (skipped, no failed)
 - [ ] PRs mergeados con ≥1 aprobación y declaración de uso de IA
 
 ---
@@ -154,6 +165,8 @@ reforzar la Tarea 3, que sí tiene base real.
 ## 🤝 Pair Sessions
 
 - **Tarea 0:** Manuel/Jaicel — resolver el duplicado y el alcance del registro, 20 min.
-- **Tarea 3:** Huascar (dueño de `uploadQueue`/`detectBlur`) si necesitas contexto del flujo.
+- **Tarea 3-4:** Huascar/Manuel/Jaicel (dueños futuros de cada flujo) — confirma que el
+  `test.skip` describe los pasos que ellos realmente necesitan, no una suposición tuya del
+  flujo de UI.
 - Deja handoff en `[EPIC] Q1` y `[EPIC] Q3` antes del 22-sep — no hay Asiento C específico para
   epics transversales, pero el equipo completo los revisa en el Sprint Review del 23-sep.
