@@ -2,15 +2,15 @@
 
 ## Purpose
 
-Initialize a production-ready Next.js 14 project with TypeScript strict mode, Tailwind CSS, testing infrastructure (Vitest + Playwright), and CI/CD pipeline. This is the unconditional blocker before any feature work begins.
+Initialize a production-ready Next.js 16 project with TypeScript strict mode, Tailwind CSS v4, testing infrastructure (Vitest + Playwright), and CI/CD pipeline. This is the unconditional blocker before any feature work begins.
 
 ---
 
 ## Requirements
 
-### Requirement: Next.js 14 project with TypeScript strict mode and ESLint
+### Requirement: Next.js 16 project with TypeScript strict mode and ESLint
 
-The scaffold SHALL establish a Next.js 14 App Router project with `strict: true` TypeScript configuration and zero ESLint warnings.
+The scaffold SHALL establish a Next.js 16 App Router project with `strict: true` TypeScript configuration and zero ESLint warnings.
 
 #### Scenario: Project initializes without errors
 
@@ -29,7 +29,7 @@ The scaffold SHALL establish a Next.js 14 App Router project with `strict: true`
 
 #### Acceptance Criteria
 
-- [ ] `package.json` pins Next.js 14.2, React 18.3, TypeScript 5.6+; `package-lock.json` committed and in sync (`npm ci` exits 0)
+- [ ] `package.json` pins Next.js 16, React 19, TypeScript 5.9+; `package-lock.json` committed and in sync (`npm ci` exits 0)
 - [ ] `tsconfig.json` sets `strict: true`, `noUncheckedIndexedAccess: true`, `jsx: preserve` (Next convention)
 - [ ] `.eslintrc.json` extends `next/core-web-vitals` + `next/typescript` + `prettier`; enforces `@typescript-eslint/no-explicit-any`
 - [ ] `npm ci && npm run typecheck && npm run lint` all exit 0
@@ -102,7 +102,7 @@ The scaffold SHALL include a GitHub Actions workflow that runs the quality gates
 #### Acceptance Criteria
 
 - [ ] `.github/workflows/ci.yml` has 3 jobs: `quality` (lint + typecheck + test --coverage + codecov), `build`, `e2e`
-- [ ] All jobs run on `ubuntu-latest`, Node 20; `concurrency` cancels superseded runs
+- [ ] All jobs run on `ubuntu-latest`, Node 22; `concurrency` cancels superseded runs
 - [ ] `e2e` job runs `npx playwright install --with-deps chromium` before `npm run test:e2e`
 - [ ] `codecov` upload uses `CODECOV_TOKEN` secret and does not fail the job on upload error
 
@@ -145,13 +145,13 @@ The scaffold SHALL provide a README with setup/dev/build/test commands and team 
 #### Scenario: README explains stack
 
 - **WHEN** developer reads `README.md` or `CLAUDE.md` §2
-- **THEN** tech stack (Next.js 14, React 18.3, Tailwind, Vitest, Playwright, TypeScript strict) is documented with rationale
+- **THEN** tech stack (Next.js 16, React 19, Tailwind v4, Vitest, Playwright, TypeScript strict) is documented with rationale
 
 #### Acceptance Criteria
 
 - [ ] `README.md` **and** `docs/onboarding.md` exist; `CONTRIBUTING.md` summarizes the PR flow
 - [ ] Onboarding documents `nvm use`, `npm ci`, `npm run verify`, `npm run test:e2e`, `npm run dev`
-- [ ] `README` "Tech Stack" explains why Next.js 14, React 18.3, not 19
+- [ ] `README` "Tech Stack" explains why Next.js 16, React 19, Tailwind v4
 - [ ] New developer goes from `git clone` to green in < 5 min with just `docs/onboarding.md`
 
 ---
@@ -196,20 +196,20 @@ team expects, so that quality problems are caught before they reach CI.
 
 ```
 MACHINE-BULLS/
-├── package.json / package-lock.json  # Next 14.2 + React 18.3, lockfile committed & in sync
+├── package.json / package-lock.json  # Next 16 + React 19, lockfile committed & in sync
 ├── tsconfig.json                     # strict, noUncheckedIndexedAccess, jsx: preserve
-├── .eslintrc.json                    # next/core-web-vitals + next/typescript + prettier
+├── eslint.config.mjs                 # next/core-web-vitals + next/typescript + prettier (flat config)
 ├── .prettierrc.json / .gitattributes # formatter + LF normalization
 ├── next.config.js                    # CSP baseline, Cloudinary-scoped images, poweredByHeader off
 ├── tailwind.config.ts                # colour scale derived from design-tokens.ts keys; darkMode: 'class'
 ├── vitest.config.ts                  # jsdom + @vitejs/plugin-react, v8 coverage, no thresholds
 ├── playwright.config.ts              # baseURL + webServer (dev)
 ├── .github/
-│   ├── workflows/ci.yml              # 3 jobs: quality / build / e2e (Node 20)
+│   ├── workflows/ci.yml              # 3 jobs: quality / build / e2e (Node 22)
 │   ├── CODEOWNERS  dependabot.yml  pull_request_template.md
 │   └── ISSUE_TEMPLATE/{task,bug_report,config}.yml
 ├── .husky/{pre-commit,commit-msg,pre-push}   # lint-staged / commitlint / typecheck
-├── .editorconfig  commitlint.config.cjs  .nvmrc (20)
+├── .editorconfig  commitlint.config.cjs  .nvmrc (22)
 ├── .vscode/{extensions.json,settings.json}
 ├── CONTRIBUTING.md  docs/onboarding.md
 ├── src/
@@ -233,4 +233,4 @@ MACHINE-BULLS/
 
 **Status:** Delivered and verified (see SCAFFOLD-VERIFICATION.md). Tarea 0 = confirm it builds in your environment.
 **Owner:** Leonardo Ibarra López (Feature Lead).
-**Last updated:** 31 ago 2026.
+**Last updated:** 17 sep 2026 — sync to Next 16 / React 19 / Tailwind v4 / Node 22 (PR #15).
