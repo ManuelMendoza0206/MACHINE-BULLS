@@ -1,0 +1,75 @@
+<svg viewBox="0 0 680 430" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="hybrid-title hybrid-desc">
+  <title id="hybrid-title">Infraestructura híbrida</title>
+  <desc id="hybrid-desc">GPU local RTX 4070 para desarrollo y GPU cloud H100/A100 para producción, sincronizadas por Git, DVC y almacenamiento S3.</desc>
+  <defs>
+    <style>
+      :root { --primary: #2563eb; --warning: #f59e0b; --teal: #06b6d4; --secondary: #7c3aed; --success: #10b981; --text: #1f2937; --gray: #6b7280; --bg: #f9fafb; }
+      .zone-title { font: 700 16px -apple-system, 'Segoe UI', sans-serif; }
+      .item { font: 600 12.5px -apple-system, 'Segoe UI', sans-serif; fill: var(--text); }
+      .item-box { fill: #fff; stroke-width: 1.5; }
+      .comm-title { font: 700 12.5px -apple-system, 'Segoe UI', sans-serif; fill: #fff; text-anchor: middle; }
+      .caption { font: 600 13px -apple-system, 'Segoe UI', sans-serif; fill: var(--text); text-anchor: middle; }
+      .arrow { stroke: var(--gray); stroke-width: 2.5; fill: none; }
+    </style>
+    <marker id="hybrid-arrow-r" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#6b7280"/>
+    </marker>
+  </defs>
+
+  <rect x="0" y="0" width="680" height="430" fill="var(--bg)"/>
+  <text x="340" y="30" class="caption" style="font-size:15px">Infraestructura híbrida — dev local, producción en la nube</text>
+
+  <!-- LOCAL zone -->
+  <rect x="20" y="55" width="290" height="255" rx="12" fill="none" stroke="var(--primary)" stroke-width="2.5" stroke-dasharray="8 5"/>
+  <text x="165" y="82" text-anchor="middle" class="zone-title" fill="var(--primary)">💻 LOCAL — Desarrollo</text>
+
+  <rect class="item-box" x="45" y="100" width="240" height="46" rx="8" stroke="var(--primary)"/>
+  <text x="65" y="128" class="item">🎮 GPU: RTX 4070</text>
+
+  <rect class="item-box" x="45" y="156" width="240" height="46" rx="8" stroke="var(--primary)"/>
+  <text x="65" y="184" class="item">📦 8 GB VRAM</text>
+
+  <rect class="item-box" x="45" y="212" width="240" height="46" rx="8" stroke="var(--primary)"/>
+  <text x="65" y="240" class="item">🧮 CPU 16 núcleos</text>
+
+  <rect class="item-box" x="45" y="268" width="240" height="34" rx="8" stroke="var(--primary)" fill="#eff6ff"/>
+  <text x="165" y="290" text-anchor="middle" class="item" style="font-size:11.5px">Costo marginal: $0 (hardware propio)</text>
+
+  <!-- CLOUD zone -->
+  <rect x="370" y="55" width="290" height="255" rx="12" fill="none" stroke="var(--warning)" stroke-width="2.5" stroke-dasharray="8 5"/>
+  <text x="515" y="82" text-anchor="middle" class="zone-title" fill="#b45309">☁️ CLOUD — Producción</text>
+
+  <rect class="item-box" x="395" y="100" width="240" height="46" rx="8" stroke="var(--warning)"/>
+  <text x="415" y="128" class="item">🎮 GPU: H100 / A100</text>
+
+  <rect class="item-box" x="395" y="156" width="240" height="46" rx="8" stroke="var(--warning)"/>
+  <text x="415" y="184" class="item">📦 40+ GB VRAM</text>
+
+  <rect class="item-box" x="395" y="212" width="240" height="46" rx="8" stroke="var(--warning)"/>
+  <text x="415" y="240" class="item">📈 Auto-scaling bajo demanda</text>
+
+  <rect class="item-box" x="395" y="268" width="240" height="34" rx="8" stroke="var(--warning)" fill="#fffbeb"/>
+  <text x="515" y="290" text-anchor="middle" class="item" style="font-size:11.5px">Facturado por hora de inferencia</text>
+
+  <!-- Communication layer -->
+  <text x="340" y="335" class="caption">Sincronización</text>
+
+  <rect x="30" y="345" width="190" height="52" rx="10" fill="var(--primary)"/>
+  <text x="125" y="367" class="comm-title">Git Sync</text>
+  <text x="125" y="384" class="comm-title" style="font-weight:400;font-size:11px">código y configuración</text>
+
+  <rect x="245" y="345" width="190" height="52" rx="10" fill="var(--secondary)"/>
+  <text x="340" y="367" class="comm-title">DVC Artifacts</text>
+  <text x="340" y="384" class="comm-title" style="font-weight:400;font-size:11px">datasets y checkpoints</text>
+
+  <rect x="460" y="345" width="190" height="52" rx="10" fill="var(--teal)"/>
+  <text x="555" y="367" class="comm-title">S3 Storage</text>
+  <text x="555" y="384" class="comm-title" style="font-weight:400;font-size:11px">artefactos e imágenes</text>
+
+  <!-- bidirectional arrows LOCAL <-> comm <-> CLOUD -->
+  <path class="arrow" marker-end="url(#hybrid-arrow-r)" marker-start="url(#hybrid-arrow-r)" d="M165,310 V343"/>
+  <path class="arrow" marker-end="url(#hybrid-arrow-r)" marker-start="url(#hybrid-arrow-r)" d="M340,310 V343"/>
+  <path class="arrow" marker-end="url(#hybrid-arrow-r)" marker-start="url(#hybrid-arrow-r)" d="M515,310 V343"/>
+
+  <text x="340" y="420" class="caption" style="fill:#6b7280;font-weight:400">Un mismo pipeline corre en ambos entornos — solo cambia dónde se ejecuta el cómputo</text>
+</svg>
