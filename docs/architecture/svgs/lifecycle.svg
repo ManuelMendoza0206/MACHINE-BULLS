@@ -1,0 +1,66 @@
+<svg viewBox="0 0 680 340" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="lifecycle-title lifecycle-desc">
+  <title id="lifecycle-title">Ciclo de vida del modelo</title>
+  <desc id="lifecycle-desc">Development, Training, Evaluation, Decision Gate y Production, con un bucle de retroalimentación cuando el gate rechaza.</desc>
+  <defs>
+    <style>
+      :root { --primary: #2563eb; --secondary: #7c3aed; --teal: #06b6d4; --warning: #f59e0b; --success: #10b981; --danger: #ef4444; --text: #1f2937; --gray: #6b7280; --bg: #f9fafb; }
+      .box-title { font: 700 12.5px -apple-system, 'Segoe UI', sans-serif; fill: #fff; text-anchor: middle; }
+      .box-sub { font: 400 10.5px -apple-system, 'Segoe UI', sans-serif; fill: #fff; text-anchor: middle; opacity: .9; }
+      .caption { font: 600 13px -apple-system, 'Segoe UI', sans-serif; fill: var(--text); text-anchor: middle; }
+      .arrow { stroke: var(--gray); stroke-width: 2.5; fill: none; marker-end: url(#lifecycle-arrow); }
+      .arrow-ok { stroke: var(--success); stroke-width: 2.5; fill: none; marker-end: url(#lifecycle-arrow-ok); }
+      .arrow-fail { stroke: var(--danger); stroke-width: 2; fill: none; stroke-dasharray: 6 4; marker-end: url(#lifecycle-arrow-fail); }
+      .lbl { font: 600 11px -apple-system, 'Segoe UI', sans-serif; text-anchor: middle; }
+    </style>
+    <marker id="lifecycle-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#6b7280"/></marker>
+    <marker id="lifecycle-arrow-ok" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#10b981"/></marker>
+    <marker id="lifecycle-arrow-fail" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#ef4444"/></marker>
+  </defs>
+
+  <rect x="0" y="0" width="680" height="340" fill="var(--bg)"/>
+  <text x="340" y="28" class="caption" style="font-size:15px">Ciclo de vida del modelo — 5 fases con gate de calidad</text>
+
+  <!-- 1. Development -->
+  <rect x="20" y="100" width="120" height="100" rx="10" fill="var(--teal)"/>
+  <text x="80" y="130" class="box-title">Development</text>
+  <text x="80" y="150" class="box-sub">código</text>
+  <text x="80" y="164" class="box-sub">datos</text>
+  <text x="80" y="178" class="box-sub">base model</text>
+
+  <!-- 2. Training -->
+  <rect x="150" y="100" width="120" height="100" rx="10" fill="var(--primary)"/>
+  <text x="210" y="130" class="box-title">Training</text>
+  <text x="210" y="150" class="box-sub">experiment</text>
+  <text x="210" y="164" class="box-sub">tracking</text>
+
+  <!-- 3. Evaluation -->
+  <rect x="280" y="100" width="120" height="100" rx="10" fill="var(--secondary)"/>
+  <text x="340" y="130" class="box-title">Evaluation</text>
+  <text x="340" y="150" class="box-sub">quality</text>
+  <text x="340" y="164" class="box-sub">metrics</text>
+
+  <!-- 4. Decision Gate -->
+  <rect x="410" y="100" width="120" height="100" rx="10" fill="var(--warning)"/>
+  <text x="470" y="130" class="box-title">Decision Gate</text>
+  <text x="470" y="152" class="box-sub" style="font-weight:700">✅ APPROVED</text>
+  <text x="470" y="168" class="box-sub" style="font-weight:700">❌ REJECTED</text>
+
+  <!-- 5. Production -->
+  <rect x="540" y="100" width="120" height="100" rx="10" fill="var(--success)"/>
+  <text x="600" y="130" class="box-title">Production</text>
+  <text x="600" y="150" class="box-sub">model registry</text>
+  <text x="600" y="164" class="box-sub">→ deploy</text>
+
+  <path class="arrow" d="M140,150 H148"/>
+  <path class="arrow" d="M270,150 H278"/>
+  <path class="arrow" d="M400,150 H408"/>
+  <path class="arrow-ok" d="M530,140 H538"/>
+  <text x="534" y="126" class="lbl" style="fill:#10803d">✅</text>
+
+  <!-- Feedback loop on rejection -->
+  <path class="arrow-fail" d="M470,98 C 470,60 210,60 210,98"/>
+  <text x="340" y="55" class="lbl" style="fill:#b91c1c">❌ REJECTED → retrain con feedback del evaluador</text>
+
+  <text x="340" y="232" class="caption">Development → Training → Evaluation → Gate → Production</text>
+  <text x="340" y="256" class="caption" style="fill:#6b7280;font-weight:400">Ningún modelo llega a producción sin pasar el gate de calidad — sin excepciones</text>
+</svg>

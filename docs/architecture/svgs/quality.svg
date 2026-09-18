@@ -1,0 +1,93 @@
+<svg viewBox="0 0 680 400" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="quality-title quality-desc">
+  <title id="quality-title">Monitoreo de calidad</title>
+  <desc id="quality-desc">La salida generada se evalúa en calidad visual, performance y artefactos; los resultados alimentan el sistema de alertas.</desc>
+  <defs>
+    <style>
+      :root { --primary: #2563eb; --teal: #06b6d4; --warning: #f59e0b; --danger: #ef4444; --text: #1f2937; --gray: #6b7280; --bg: #f9fafb; }
+      .hdr { font: 700 12.5px -apple-system, 'Segoe UI', sans-serif; fill: #fff; text-anchor: middle; }
+      .item { font: 500 11px -apple-system, 'Segoe UI', sans-serif; fill: var(--text); text-anchor: middle; }
+      .item-box { fill: #fff; stroke-width: 1.5; }
+      .caption { font: 600 13px -apple-system, 'Segoe UI', sans-serif; fill: var(--text); text-anchor: middle; }
+      .arrow { stroke: var(--gray); stroke-width: 2; fill: none; marker-end: url(#quality-arrow); }
+    </style>
+    <marker id="quality-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#6b7280"/>
+    </marker>
+  </defs>
+
+  <rect x="0" y="0" width="680" height="400" fill="var(--bg)"/>
+
+  <!-- Generated Output -->
+  <rect x="260" y="16" width="160" height="46" rx="10" fill="var(--primary)"/>
+  <text x="340" y="44" class="hdr" style="font-size:13.5px">🖼️ Generated Output</text>
+
+  <path class="arrow" d="M300,62 V90 H115 V96"/>
+  <path class="arrow" d="M320,62 V90 H285 V96"/>
+  <path class="arrow" d="M360,62 V90 H455 V96"/>
+
+  <!-- Column headers -->
+  <g>
+    <rect x="20" y="98" width="150" height="34" rx="8" fill="var(--primary)"/>
+    <text x="95" y="120" class="hdr">Visual Quality</text>
+  </g>
+  <g>
+    <rect x="190" y="98" width="150" height="34" rx="8" fill="var(--teal)"/>
+    <text x="265" y="120" class="hdr">Performance</text>
+  </g>
+  <g>
+    <rect x="360" y="98" width="150" height="34" rx="8" fill="var(--warning)"/>
+    <text x="435" y="120" class="hdr">Artifacts</text>
+  </g>
+  <g>
+    <rect x="530" y="98" width="130" height="34" rx="8" fill="var(--danger)"/>
+    <text x="595" y="120" class="hdr">Alerting</text>
+  </g>
+
+  <!-- Column 1: Visual Quality -->
+  <rect class="item-box" x="20" y="142" width="150" height="34" rx="7" stroke="var(--primary)"/>
+  <text x="95" y="164" class="item">Identity</text>
+  <rect class="item-box" x="20" y="182" width="150" height="34" rx="7" stroke="var(--primary)"/>
+  <text x="95" y="204" class="item">Garment Fidelity</text>
+  <rect class="item-box" x="20" y="222" width="150" height="34" rx="7" stroke="var(--primary)"/>
+  <text x="95" y="244" class="item">Geometry</text>
+  <rect class="item-box" x="20" y="262" width="150" height="34" rx="7" stroke="var(--primary)"/>
+  <text x="95" y="284" class="item">Layer Coherence</text>
+
+  <!-- Column 2: Performance -->
+  <rect class="item-box" x="190" y="142" width="150" height="34" rx="7" stroke="var(--teal)"/>
+  <text x="265" y="164" class="item">Latency</text>
+  <rect class="item-box" x="190" y="182" width="150" height="34" rx="7" stroke="var(--teal)"/>
+  <text x="265" y="204" class="item">GPU Utilization</text>
+  <rect class="item-box" x="190" y="222" width="150" height="34" rx="7" stroke="var(--teal)"/>
+  <text x="265" y="244" class="item">Throughput</text>
+  <rect class="item-box" x="190" y="262" width="150" height="34" rx="7" stroke="var(--teal)"/>
+  <text x="265" y="284" class="item">Error Rate</text>
+
+  <!-- Column 3: Artifacts -->
+  <rect class="item-box" x="360" y="142" width="150" height="34" rx="7" stroke="var(--warning)"/>
+  <text x="435" y="164" class="item">Visual Issues</text>
+  <rect class="item-box" x="360" y="182" width="150" height="34" rx="7" stroke="var(--warning)"/>
+  <text x="435" y="204" class="item">Anatomical</text>
+  <rect class="item-box" x="360" y="222" width="150" height="34" rx="7" stroke="var(--warning)"/>
+  <text x="435" y="244" class="item">Model Drift</text>
+  <rect class="item-box" x="360" y="262" width="150" height="34" rx="7" stroke="var(--warning)"/>
+  <text x="435" y="284" class="item">Consistency Score</text>
+
+  <!-- Column 4: Alerting -->
+  <rect class="item-box" x="530" y="142" width="130" height="34" rx="7" stroke="var(--danger)"/>
+  <text x="595" y="164" class="item">📧 Email</text>
+  <rect class="item-box" x="530" y="182" width="130" height="34" rx="7" stroke="var(--danger)"/>
+  <text x="595" y="204" class="item">💬 Slack</text>
+  <rect class="item-box" x="530" y="222" width="130" height="34" rx="7" stroke="var(--danger)"/>
+  <text x="595" y="244" class="item">📊 Dashboard</text>
+  <rect class="item-box" x="530" y="262" width="130" height="34" rx="7" stroke="var(--danger)"/>
+  <text x="595" y="284" class="item">📟 Incident Log</text>
+
+  <!-- Columns 1-3 feed into Alerting -->
+  <path class="arrow" d="M95,298 V320 H595 V298"/>
+  <path class="arrow" d="M265,298 V320"/>
+  <path class="arrow" d="M435,298 V320"/>
+
+  <text x="340" y="352" class="caption">Toda métrica fuera de rango dispara una alerta — nunca falla en silencio</text>
+  <text x="340" y="374" class="caption" style="fill:#6b7280;font-weight:400">Objetivo: 85% identity · 80% fidelity · &lt;60s latencia · &lt;1% error</text>
+</svg>

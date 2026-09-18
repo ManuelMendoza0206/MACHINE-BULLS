@@ -273,7 +273,7 @@ tests/integration/layout.test.tsx
 ## References
 
 - `docs/context/frontend-plan.md` §1, §5 (design system vision, token spec)
-- `docs/sprint-plans/sprint-1-init-leonardo.md` (Tareas 1-5: tokens, theme, layout, components, shell)
+- `docs/sprint-plans/sprint-1/sprint-1-init-leonardo.md` (Tareas 1-5: tokens, theme, layout, components, shell)
 - `CLAUDE.md` §2 (tech stack: TypeScript strict, Tailwind, shadcn/ui)
 
 ---
