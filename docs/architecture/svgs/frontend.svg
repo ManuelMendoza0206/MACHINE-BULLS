@@ -1,0 +1,52 @@
+<svg viewBox="0 0 680 400" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="frontend-title frontend-desc">
+  <title id="frontend-title">Componentes de frontend</title>
+  <desc id="frontend-desc">Tres capas: páginas de Next.js, componentes de UI compartidos y features de dominio.</desc>
+  <defs>
+    <style>
+      :root { --primary: #2563eb; --teal: #06b6d4; --secondary: #7c3aed; --text: #1f2937; --gray: #6b7280; --bg: #f9fafb; }
+      .layer-lbl { font: 700 13px -apple-system, 'Segoe UI', sans-serif; fill: var(--text); }
+      .box-title { font: 600 12px -apple-system, 'Segoe UI', sans-serif; fill: #fff; text-anchor: middle; }
+      .caption { font: 600 13px -apple-system, 'Segoe UI', sans-serif; fill: var(--text); text-anchor: middle; }
+      .arrow { stroke: var(--gray); stroke-width: 2.5; fill: none; marker-end: url(#frontend-arrow); }
+    </style>
+    <marker id="frontend-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#6b7280"/>
+    </marker>
+  </defs>
+
+  <rect x="0" y="0" width="680" height="400" fill="var(--bg)"/>
+  <text x="340" y="26" class="caption" style="font-size:15px">Next.js App Router — capas del frontend</text>
+
+  <!-- Layer 1: Páginas -->
+  <text x="20" y="58" class="layer-lbl">📄 Páginas (app/)</text>
+  <rect x="20" y="66" width="118" height="46" rx="8" fill="var(--primary)"/><text x="79" y="94" class="box-title">Auth</text>
+  <rect x="148" y="66" width="118" height="46" rx="8" fill="var(--primary)"/><text x="207" y="94" class="box-title">Dashboard</text>
+  <rect x="276" y="66" width="118" height="46" rx="8" fill="var(--primary)"/><text x="335" y="94" class="box-title">Wardrobe</text>
+  <rect x="404" y="66" width="118" height="46" rx="8" fill="var(--primary)"/><text x="463" y="94" class="box-title">Generator</text>
+  <rect x="532" y="66" width="118" height="46" rx="8" fill="var(--primary)"/><text x="591" y="94" class="box-title">Profile</text>
+
+  <path class="arrow" d="M340,116 V150"/>
+
+  <!-- Layer 2: Componentes -->
+  <text x="20" y="178" class="layer-lbl">🧩 Componentes (components/)</text>
+  <rect x="20" y="186" width="118" height="46" rx="8" fill="var(--teal)"/><text x="79" y="214" class="box-title">Header</text>
+  <rect x="148" y="186" width="118" height="46" rx="8" fill="var(--teal)"/><text x="207" y="214" class="box-title">Sidebar</text>
+  <rect x="276" y="186" width="118" height="46" rx="8" fill="var(--teal)"/><text x="335" y="214" class="box-title">Form</text>
+  <rect x="404" y="186" width="118" height="46" rx="8" fill="var(--teal)"/><text x="463" y="214" class="box-title">Card</text>
+  <rect x="532" y="186" width="118" height="46" rx="8" fill="var(--teal)"/><text x="591" y="214" class="box-title">Modal</text>
+
+  <path class="arrow" d="M340,236 V270"/>
+
+  <!-- Layer 3: Features -->
+  <text x="20" y="298" class="layer-lbl">⚙️ Features (features/)</text>
+  <rect x="20" y="306" width="150" height="52" rx="8" fill="var(--secondary)"/>
+  <text x="95" y="328" class="box-title">Wardrobe</text><text x="95" y="345" class="box-title">Manager</text>
+  <rect x="180" y="306" width="150" height="52" rx="8" fill="var(--secondary)"/>
+  <text x="255" y="328" class="box-title">Image</text><text x="255" y="345" class="box-title">Uploader</text>
+  <rect x="340" y="306" width="150" height="52" rx="8" fill="var(--secondary)"/>
+  <text x="415" y="328" class="box-title">Generator</text><text x="415" y="345" class="box-title">Form</text>
+  <rect x="500" y="306" width="150" height="52" rx="8" fill="var(--secondary)"/>
+  <text x="575" y="328" class="box-title">Result</text><text x="575" y="345" class="box-title">Viewer</text>
+
+  <text x="340" y="384" class="caption" style="fill:#6b7280;font-weight:400">Estado de servidor: TanStack Query · Estado de UI: Zustand · Tiempo real: WebSocket</text>
+</svg>

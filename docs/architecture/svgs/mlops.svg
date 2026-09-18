@@ -1,0 +1,55 @@
+<svg viewBox="0 0 680 260" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="mlops-title mlops-desc">
+  <title id="mlops-title">Arquitectura MLOps</title>
+  <desc id="mlops-desc">Pipeline de versionado end-to-end: Git, DVC, Docker y Model Registry conectados en secuencia.</desc>
+  <defs>
+    <style>
+      :root {
+        --primary: #2563eb; --secondary: #7c3aed; --teal: #06b6d4; --coral: #fb7185;
+        --text: #1f2937; --gray: #6b7280; --bg: #f9fafb;
+      }
+      .box { stroke-width: 2; }
+      .box-title { font: 700 16px -apple-system, 'Segoe UI', sans-serif; fill: #fff; }
+      .box-sub { font: 400 11.5px -apple-system, 'Segoe UI', sans-serif; fill: #fff; opacity: .92; }
+      .caption { font: 600 13px -apple-system, 'Segoe UI', sans-serif; fill: var(--text); text-anchor: middle; }
+      .arrow { stroke: var(--gray); stroke-width: 2.5; fill: none; marker-end: url(#mlops-arrowhead); }
+    </style>
+    <marker id="mlops-arrowhead" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#6b7280"/>
+    </marker>
+  </defs>
+
+  <rect x="0" y="0" width="680" height="260" fill="var(--bg)"/>
+  <text x="340" y="32" class="caption" style="font-size:15px">Pipeline MLOps — reproducibilidad end-to-end</text>
+
+  <!-- Git -->
+  <rect class="box" x="20" y="80" width="130" height="100" rx="10" fill="var(--primary)" stroke="#1d4ed8"/>
+  <text x="85" y="118" text-anchor="middle" class="box-title">Git</text>
+  <text x="85" y="140" text-anchor="middle" class="box-sub">Versionado de</text>
+  <text x="85" y="155" text-anchor="middle" class="box-sub">código fuente</text>
+
+  <!-- DVC -->
+  <rect class="box" x="190" y="80" width="130" height="100" rx="10" fill="var(--secondary)" stroke="#6d28d9"/>
+  <text x="255" y="118" text-anchor="middle" class="box-title">DVC</text>
+  <text x="255" y="140" text-anchor="middle" class="box-sub">Versionado de</text>
+  <text x="255" y="155" text-anchor="middle" class="box-sub">datos y modelos</text>
+
+  <!-- Docker -->
+  <rect class="box" x="360" y="80" width="130" height="100" rx="10" fill="var(--teal)" stroke="#0891b2"/>
+  <text x="425" y="118" text-anchor="middle" class="box-title">Docker</text>
+  <text x="425" y="140" text-anchor="middle" class="box-sub">Contenedores</text>
+  <text x="425" y="155" text-anchor="middle" class="box-sub">reproducibles</text>
+
+  <!-- Model Registry -->
+  <rect class="box" x="530" y="80" width="130" height="100" rx="10" fill="var(--coral)" stroke="#e11d48"/>
+  <text x="595" y="112" text-anchor="middle" class="box-title" style="font-size:14px">Model</text>
+  <text x="595" y="130" text-anchor="middle" class="box-title" style="font-size:14px">Registry</text>
+  <text x="595" y="150" text-anchor="middle" class="box-sub">Catálogo de</text>
+  <text x="595" y="163" text-anchor="middle" class="box-sub">modelos versionados</text>
+
+  <path class="arrow" d="M150,130 H188"/>
+  <path class="arrow" d="M320,130 H358"/>
+  <path class="arrow" d="M490,130 H528"/>
+
+  <text x="340" y="215" class="caption">commit → data/model versionado → imagen reproducible → catálogo servible</text>
+  <text x="340" y="238" class="caption" style="fill:#6b7280;font-weight:400">Cada etapa referencia a la anterior por hash — cualquier experimento es rehacible desde cero</text>
+</svg>

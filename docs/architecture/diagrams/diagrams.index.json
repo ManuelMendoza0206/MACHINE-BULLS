@@ -1,0 +1,138 @@
+{
+  "project": "StyleSync IA",
+  "generatedBy": "scripts/generate_diagrams.py",
+  "diagrams": [
+    {
+      "id": "mlops",
+      "title": "Arquitectura MLOps",
+      "tabLabel": "MLOps",
+      "svg": "../svgs/mlops.svg",
+      "description": "Pipeline de versionado end-to-end que garantiza reproducibilidad total: cada commit de código (Git) está vinculado a una versión exacta de datos y modelos (DVC), empaquetada en una imagen de contenedor (Docker) y publicada en un catálogo versionado (Model Registry). Cualquier experimento pasado puede rehacerse desde cero con un solo comando.",
+      "metrics": [
+        {
+          "label": "Reproducibilidad",
+          "value": "100%"
+        },
+        {
+          "label": "Setup de entorno",
+          "value": "5 min"
+        },
+        {
+          "label": "Experimentos trackeados",
+          "value": "50+"
+        }
+      ],
+      "anchor": "viewer.html#mlops"
+    },
+    {
+      "id": "hybrid",
+      "title": "Infraestructura Híbrida",
+      "tabLabel": "Infra Híbrida",
+      "svg": "../svgs/hybrid.svg",
+      "description": "Desarrollo iterativo en una RTX 4070 local (8GB VRAM, costo marginal $0) para prototipar rápido, y entrenamiento/inferencia a escala en GPUs cloud H100/A100 (40+ GB VRAM) cuando el experimento está listo para correr en serio. Git, DVC y S3 mantienen ambos entornos sincronizados sin duplicar trabajo manual.",
+      "metrics": [
+        {
+          "label": "VRAM local",
+          "value": "8 GB"
+        },
+        {
+          "label": "VRAM cloud",
+          "value": "40+ GB"
+        },
+        {
+          "label": "Costo de desarrollo",
+          "value": "$0"
+        }
+      ],
+      "anchor": "viewer.html#hybrid"
+    },
+    {
+      "id": "quality",
+      "title": "Monitoreo de Calidad",
+      "tabLabel": "Calidad",
+      "svg": "../svgs/quality.svg",
+      "description": "Toda imagen generada se evalúa automáticamente en tres dimensiones — calidad visual (identity, fidelidad de prenda, geometría, coherencia de capas), performance (latencia, uso de GPU, throughput, tasa de error) y artefactos (issues visuales, anomalías anatómicas, drift del modelo) — y cualquier desviación dispara una alerta por email, Slack o dashboard. Nunca falla en silencio.",
+      "metrics": [
+        {
+          "label": "Identity score",
+          "value": "85%"
+        },
+        {
+          "label": "Latencia",
+          "value": "<60s"
+        },
+        {
+          "label": "Error rate",
+          "value": "<1%"
+        }
+      ],
+      "anchor": "viewer.html#quality"
+    },
+    {
+      "id": "frontend",
+      "title": "Componentes de Frontend",
+      "tabLabel": "Frontend",
+      "svg": "../svgs/frontend.svg",
+      "description": "Arquitectura en tres capas sobre Next.js App Router: páginas que orquestan la navegación, componentes de UI reutilizables sin lógica de negocio, y features de dominio que encapsulan estado y llamadas a la API. TanStack Query cachea datos de servidor, Zustand maneja estado de cliente puro, y WebSocket entrega actualizaciones en tiempo real durante la generación.",
+      "metrics": [
+        {
+          "label": "Páginas",
+          "value": "5"
+        },
+        {
+          "label": "Componentes base",
+          "value": "8"
+        },
+        {
+          "label": "Tiempo real",
+          "value": "WebSocket"
+        }
+      ],
+      "anchor": "viewer.html#frontend"
+    },
+    {
+      "id": "protocol",
+      "title": "Protocolo de Entrada de Imágenes",
+      "tabLabel": "Protocolo de Entrada",
+      "svg": "../svgs/protocol.svg",
+      "description": "Cada solicitud de try-on virtual requiere dos fotos que cumplen requisitos estrictos y verificables: una foto de cuerpo en A-Pose sobre fondo neutro, y una foto de la prenda extendida sobre fondo liso, ambas en 512×512px como mínimo. La validación corre primero en el cliente (feedback inmediato) y luego en el servidor (garantía real); un rechazo siempre viene con una razón específica y accionable, nunca un error genérico.",
+      "metrics": [
+        {
+          "label": "Pose requerida",
+          "value": "A-Pose"
+        },
+        {
+          "label": "Resolución mínima",
+          "value": "512×512px"
+        },
+        {
+          "label": "Validación",
+          "value": "Automática"
+        }
+      ],
+      "anchor": "viewer.html#protocol"
+    },
+    {
+      "id": "lifecycle",
+      "title": "Ciclo de Vida del Modelo",
+      "tabLabel": "Ciclo de Vida",
+      "svg": "../svgs/lifecycle.svg",
+      "description": "Todo modelo recorre cinco fases antes de servir tráfico real: desarrollo (código + datos + modelo base), entrenamiento (con tracking de experimentos), evaluación (métricas de calidad objetivas), un gate de decisión que aprueba o rechaza, y solo entonces producción (registro de modelos → despliegue). Un rechazo no es un callejón sin salida: alimenta un bucle de reentrenamiento con el feedback del evaluador.",
+      "metrics": [
+        {
+          "label": "Fases",
+          "value": "5"
+        },
+        {
+          "label": "Gate de calidad",
+          "value": "Obligatorio"
+        },
+        {
+          "label": "Monitoreo",
+          "value": "Continuo en producción"
+        }
+      ],
+      "anchor": "viewer.html#lifecycle"
+    }
+  ]
+}
