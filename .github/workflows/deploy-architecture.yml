@@ -1,0 +1,106 @@
+name: Architecture diagrams
+
+# Keeps docs/architecture/diagrams/viewer.html honest: it must always be exactly what
+# scripts/generate_diagrams.py produces from the SVGs in docs/architecture/svgs/.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'docs/architecture/**'
+      - 'scripts/generate_diagrams.py'
+      - '.github/workflows/deploy-architecture.yml'
+  pull_request:
+    paths:
+      - 'docs/architecture/**'
+      - 'scripts/generate_diagrams.py'
+      - '.github/workflows/deploy-architecture.yml'
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: generate · validate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Regenerate viewer.html + diagrams.index.json
+        run: python scripts/generate_diagrams.py
+
+      - name: Fail if the committed viewer is out of date
+        run: |
+          if ! git diff --quiet -- docs/architecture/diagrams/viewer.html docs/architecture/diagrams/diagrams.index.json; then
+            echo "::error::docs/architecture/diagrams/viewer.html (or diagrams.index.json) is stale."
+            echo "::error::Run 'python scripts/generate_diagrams.py' locally and commit the result."
+            git diff --stat -- docs/architecture/diagrams/
+            exit 1
+          fi
+          echo "viewer.html is in sync with the SVGs and generator."
+
+      - name: Validate every referenced SVG is well-formed XML
+        run: |
+          python - <<'PY'
+          import glob
+          import sys
+          import xml.dom.minidom as minidom
+
+          failures = []
+          for path in sorted(glob.glob('docs/architecture/svgs/*.svg')):
+              try:
+                  minidom.parse(path)
+              except Exception as exc:  # noqa: BLE001
+                  failures.append(f'{path}: {exc}')
+
+          if failures:
+              print('::error::Invalid SVG(s):')
+              for f in failures:
+                  print(f'  - {f}')
+              sys.exit(1)
+          print(f'{len(glob.glob("docs/architecture/svgs/*.svg"))} SVG(s) OK')
+          PY
+
+      - name: Upload generated viewer as a build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: architecture-viewer
+          path: docs/architecture/diagrams/
+          retention-days: 14
+
+  # Publishes docs/architecture/diagrams/ to GitHub Pages. Requires a one-time repo setting:
+  # Settings → Pages → Source: "GitHub Actions". Until that's enabled this job is a no-op
+  # failure that does not block the `validate` job above (it's a separate job).
+  deploy-pages:
+    name: deploy (GitHub Pages)
+    needs: validate
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - run: python scripts/generate_diagrams.py
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs/architecture/diagrams/
+
+      - id: deployment
+        uses: actions/deploy-pages@v4

@@ -1,0 +1,1032 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>StyleSync IA — Arquitectura Interactiva (C4+)</title>
+<meta name="description" content="Diagramas de arquitectura C4+ interactivos de StyleSync IA: MLOps, infraestructura híbrida, calidad, frontend, protocolo de entrada y ciclo de vida del modelo." />
+<style>
+
+  :root {
+    --primary: #2563eb;
+    --primary-dark: #1d4ed8;
+    --secondary: #7c3aed;
+    --teal: #06b6d4;
+    --success: #10b981;
+    --warning: #f59e0b;
+    --danger: #ef4444;
+    --gray: #6b7280;
+    --text: #1f2937;
+    --bg: #f8fafc;
+    --card-bg: #ffffff;
+    --border: #e5e7eb;
+    --shadow: 0 1px 3px rgba(0,0,0,.06), 0 8px 24px -8px rgba(30,41,59,.15);
+    --radius: 14px;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  a { color: var(--primary); }
+
+  .hero {
+    background: linear-gradient(120deg, var(--primary) 0%, var(--secondary) 60%, var(--teal) 100%);
+    color: #fff;
+    padding: 48px 20px 56px;
+    text-align: center;
+    animation: fadeIn .6s ease both;
+  }
+  .hero-inner { max-width: 900px; margin: 0 auto; }
+  .eyebrow {
+    text-transform: uppercase;
+    letter-spacing: .12em;
+    font-size: .78rem;
+    font-weight: 700;
+    opacity: .85;
+    margin: 0 0 10px;
+  }
+  .hero h1 { font-size: clamp(1.6rem, 4vw, 2.4rem); margin: 0 0 12px; font-weight: 800; }
+  .badge-c4 {
+    display: inline-block;
+    background: rgba(255,255,255,.18);
+    border: 1px solid rgba(255,255,255,.4);
+    border-radius: 999px;
+    padding: 2px 14px;
+    font-size: .7em;
+    vertical-align: middle;
+    margin-left: 6px;
+  }
+  .hero-sub { font-size: 1.02rem; opacity: .92; max-width: 640px; margin: 0 auto; line-height: 1.55; }
+
+  .tabs {
+    max-width: 1400px;
+    margin: -26px auto 0;
+    padding: 0 20px;
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    justify-content: center;
+    position: relative;
+    z-index: 2;
+  }
+  .tab-btn {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 12px 20px;
+    font-size: .92rem;
+    font-weight: 600;
+    color: var(--gray);
+    cursor: pointer;
+    box-shadow: var(--shadow);
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: transform .18s ease, color .18s ease, background .18s ease, box-shadow .18s ease;
+  }
+  .tab-btn:hover { transform: translateY(-2px); color: var(--primary); }
+  .tab-btn.active {
+    background: linear-gradient(120deg, var(--primary), var(--secondary));
+    color: #fff;
+    border-color: transparent;
+  }
+  .tab-icon { font-size: 1.05em; }
+
+  .panels { max-width: 1400px; margin: 32px auto 60px; padding: 0 20px; }
+
+  .panel { display: none; animation: fadeIn .4s ease both; }
+  .panel.active { display: block; }
+
+  .panel-header {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 26px 28px;
+    margin-bottom: 18px;
+  }
+  .panel-header h2 { margin: 0 0 10px; font-size: 1.4rem; }
+  .panel-desc { margin: 0; line-height: 1.65; color: #374151; max-width: 900px; }
+
+  .toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 12px 16px;
+    margin-bottom: 18px;
+    box-shadow: var(--shadow);
+  }
+  .zoom-controls { display: flex; align-items: center; gap: 10px; }
+  .tool-btn {
+    border: 1px solid var(--border);
+    background: #fff;
+    border-radius: 8px;
+    padding: 8px 14px;
+    font-size: .88rem;
+    font-weight: 600;
+    color: var(--text);
+    cursor: pointer;
+    transition: background .15s ease, transform .15s ease, border-color .15s ease;
+  }
+  .tool-btn:hover { background: #f1f5f9; border-color: var(--primary); }
+  .tool-btn:active { transform: scale(.96); }
+  .zoom-out, .zoom-in { width: 38px; padding: 8px 0; font-size: 1.1rem; line-height: 1; }
+  .zoom-level { min-width: 48px; text-align: center; font-weight: 700; color: var(--gray); font-size: .85rem; }
+  .action-buttons { display: flex; gap: 10px; flex-wrap: wrap; }
+  .action-btn.copy-btn.copied { background: var(--success); color: #fff; border-color: var(--success); }
+
+  .svg-viewport {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    overflow: auto;
+    padding: 24px;
+    min-height: 220px;
+  }
+  .svg-stage {
+    width: fit-content;
+    transform-origin: top left;
+    transition: transform .15s ease;
+    margin: 0 auto;
+  }
+  .svg-stage svg { display: block; width: 100%; max-width: 720px; height: auto; }
+
+  .metrics-row {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
+    margin-top: 18px;
+  }
+  .metric-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 18px 16px;
+    text-align: center;
+    animation: fadeIn .5s ease both;
+  }
+  .metric-value {
+    font-size: 1.5rem;
+    font-weight: 800;
+    background: linear-gradient(120deg, var(--primary), var(--secondary));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .metric-label { margin-top: 4px; font-size: .82rem; color: var(--gray); font-weight: 600; }
+
+  .site-footer {
+    border-top: 1px solid var(--border);
+    padding: 24px 20px 40px;
+    background: #fff;
+  }
+  .footer-inner {
+    max-width: 1400px;
+    margin: 0 auto;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 18px;
+    justify-content: space-between;
+    font-size: .85rem;
+    color: var(--gray);
+  }
+  .footer-links a { color: var(--gray); text-decoration: none; }
+  .footer-links a:hover { color: var(--primary); text-decoration: underline; }
+  .footer-dot { margin: 0 6px; opacity: .6; }
+
+  .toast {
+    position: fixed;
+    left: 50%;
+    bottom: 24px;
+    transform: translate(-50%, 20px);
+    background: var(--text);
+    color: #fff;
+    padding: 10px 18px;
+    border-radius: 999px;
+    font-size: .85rem;
+    font-weight: 600;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .25s ease, transform .25s ease;
+    z-index: 50;
+  }
+  .toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @media (max-width: 640px) {
+    .hero { padding: 36px 16px 48px; }
+    .tabs { margin-top: -20px; gap: 8px; }
+    .tab-btn { padding: 10px 14px; font-size: .85rem; }
+    .panel-header { padding: 20px 18px; }
+    .toolbar { flex-direction: column; align-items: stretch; }
+    .action-buttons { justify-content: stretch; }
+    .action-btn { flex: 1; }
+    .metrics-row { grid-template-columns: 1fr; }
+    .svg-viewport { padding: 14px; }
+  }
+
+</style>
+</head>
+<body>
+  <header class="hero">
+    <div class="hero-inner">
+      <p class="eyebrow">StyleSync IA · Documentación Técnica</p>
+      <h1>Arquitectura Interactiva <span class="badge-c4">C4+</span></h1>
+      <p class="hero-sub">Seis diagramas navegables del sistema completo: desde el pipeline de MLOps hasta el ciclo de vida del modelo en producción.</p>
+    </div>
+  </header>
+
+  <nav class="tabs" role="tablist" aria-label="Diagramas de arquitectura">
+<button class="tab-btn active" data-target="mlops" role="tab" aria-selected="true" id="tab-mlops" aria-controls="panel-mlops"><span class="tab-icon">🔧</span><span class="tab-label">MLOps</span></button>
+<button class="tab-btn" data-target="hybrid" role="tab" aria-selected="false" id="tab-hybrid" aria-controls="panel-hybrid"><span class="tab-icon">☁️</span><span class="tab-label">Infra Híbrida</span></button>
+<button class="tab-btn" data-target="quality" role="tab" aria-selected="false" id="tab-quality" aria-controls="panel-quality"><span class="tab-icon">📊</span><span class="tab-label">Calidad</span></button>
+<button class="tab-btn" data-target="frontend" role="tab" aria-selected="false" id="tab-frontend" aria-controls="panel-frontend"><span class="tab-icon">🖥️</span><span class="tab-label">Frontend</span></button>
+<button class="tab-btn" data-target="protocol" role="tab" aria-selected="false" id="tab-protocol" aria-controls="panel-protocol"><span class="tab-icon">📸</span><span class="tab-label">Protocolo de Entrada</span></button>
+<button class="tab-btn" data-target="lifecycle" role="tab" aria-selected="false" id="tab-lifecycle" aria-controls="panel-lifecycle"><span class="tab-icon">🔄</span><span class="tab-label">Ciclo de Vida</span></button>
+  </nav>
+
+  <main class="panels">
+
+    <section class="panel active" id="panel-mlops" data-diagram="mlops"
+             role="tabpanel" aria-labelledby="tab-mlops">
+      <div class="panel-header">
+        <h2>🔧 Arquitectura MLOps</h2>
+        <p class="panel-desc">Pipeline de versionado end-to-end que garantiza reproducibilidad total: cada commit de código (Git) está vinculado a una versión exacta de datos y modelos (DVC), empaquetada en una imagen de contenedor (Docker) y publicada en un catálogo versionado (Model Registry). Cualquier experimento pasado puede rehacerse desde cero con un solo comando.</p>
+      </div>
+
+      <div class="toolbar">
+        <div class="zoom-controls" role="group" aria-label="Controles de zoom">
+          <button class="tool-btn zoom-out" data-diagram="mlops" aria-label="Alejar">−</button>
+          <span class="zoom-level" data-diagram="mlops">100%</span>
+          <button class="tool-btn zoom-in" data-diagram="mlops" aria-label="Acercar">+</button>
+        </div>
+        <div class="action-buttons">
+          <button class="tool-btn action-btn download-btn" data-diagram="mlops">⬇ Descargar PNG</button>
+          <button class="tool-btn action-btn copy-btn" data-diagram="mlops">🔗 Copiar enlace</button>
+        </div>
+      </div>
+
+      <div class="svg-viewport">
+        <div class="svg-stage" data-diagram="mlops" style="transform: scale(1)">
+          <svg viewBox="0 0 680 260" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="mlops-title mlops-desc">
+  <title id="mlops-title">Arquitectura MLOps</title>
+  <desc id="mlops-desc">Pipeline de versionado end-to-end: Git, DVC, Docker y Model Registry conectados en secuencia.</desc>
+  <defs>
+    <style>
+      :root {
+        --primary: #2563eb; --secondary: #7c3aed; --teal: #06b6d4; --coral: #fb7185;
+        --text: #1f2937; --gray: #6b7280; --bg: #f9fafb;
+      }
+      .box { stroke-width: 2; }
+      .box-title { font: 700 16px -apple-system, 'Segoe UI', sans-serif; fill: #fff; }
+      .box-sub { font: 400 11.5px -apple-system, 'Segoe UI', sans-serif; fill: #fff; opacity: .92; }
+      .caption { font: 600 13px -apple-system, 'Segoe UI', sans-serif; fill: var(--text); text-anchor: middle; }
+      .arrow { stroke: var(--gray); stroke-width: 2.5; fill: none; marker-end: url(#mlops-arrowhead); }
+    </style>
+    <marker id="mlops-arrowhead" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#6b7280"/>
+    </marker>
+  </defs>
+
+  <rect x="0" y="0" width="680" height="260" fill="var(--bg)"/>
+  <text x="340" y="32" class="caption" style="font-size:15px">Pipeline MLOps — reproducibilidad end-to-end</text>
+
+  <!-- Git -->
+  <rect class="box" x="20" y="80" width="130" height="100" rx="10" fill="var(--primary)" stroke="#1d4ed8"/>
+  <text x="85" y="118" text-anchor="middle" class="box-title">Git</text>
+  <text x="85" y="140" text-anchor="middle" class="box-sub">Versionado de</text>
+  <text x="85" y="155" text-anchor="middle" class="box-sub">código fuente</text>
+
+  <!-- DVC -->
+  <rect class="box" x="190" y="80" width="130" height="100" rx="10" fill="var(--secondary)" stroke="#6d28d9"/>
+  <text x="255" y="118" text-anchor="middle" class="box-title">DVC</text>
+  <text x="255" y="140" text-anchor="middle" class="box-sub">Versionado de</text>
+  <text x="255" y="155" text-anchor="middle" class="box-sub">datos y modelos</text>
+
+  <!-- Docker -->
+  <rect class="box" x="360" y="80" width="130" height="100" rx="10" fill="var(--teal)" stroke="#0891b2"/>
+  <text x="425" y="118" text-anchor="middle" class="box-title">Docker</text>
+  <text x="425" y="140" text-anchor="middle" class="box-sub">Contenedores</text>
+  <text x="425" y="155" text-anchor="middle" class="box-sub">reproducibles</text>
+
+  <!-- Model Registry -->
+  <rect class="box" x="530" y="80" width="130" height="100" rx="10" fill="var(--coral)" stroke="#e11d48"/>
+  <text x="595" y="112" text-anchor="middle" class="box-title" style="font-size:14px">Model</text>
+  <text x="595" y="130" text-anchor="middle" class="box-title" style="font-size:14px">Registry</text>
+  <text x="595" y="150" text-anchor="middle" class="box-sub">Catálogo de</text>
+  <text x="595" y="163" text-anchor="middle" class="box-sub">modelos versionados</text>
+
+  <path class="arrow" d="M150,130 H188"/>
+  <path class="arrow" d="M320,130 H358"/>
+  <path class="arrow" d="M490,130 H528"/>
+
+  <text x="340" y="215" class="caption">commit → data/model versionado → imagen reproducible → catálogo servible</text>
+  <text x="340" y="238" class="caption" style="fill:#6b7280;font-weight:400">Cada etapa referencia a la anterior por hash — cualquier experimento es rehacible desde cero</text>
+</svg>
+
+        </div>
+      </div>
+
+      <div class="metrics-row">
+        <div class="metric-card"><div class="metric-value">100%</div><div class="metric-label">Reproducibilidad</div></div><div class="metric-card"><div class="metric-value">5 min</div><div class="metric-label">Setup de entorno</div></div><div class="metric-card"><div class="metric-value">50+</div><div class="metric-label">Experimentos trackeados</div></div>
+      </div>
+    </section>
+
+    <section class="panel" id="panel-hybrid" data-diagram="hybrid"
+             role="tabpanel" aria-labelledby="tab-hybrid">
+      <div class="panel-header">
+        <h2>☁️ Infraestructura Híbrida</h2>
+        <p class="panel-desc">Desarrollo iterativo en una RTX 4070 local (8GB VRAM, costo marginal $0) para prototipar rápido, y entrenamiento/inferencia a escala en GPUs cloud H100/A100 (40+ GB VRAM) cuando el experimento está listo para correr en serio. Git, DVC y S3 mantienen ambos entornos sincronizados sin duplicar trabajo manual.</p>
+      </div>
+
+      <div class="toolbar">
+        <div class="zoom-controls" role="group" aria-label="Controles de zoom">
+          <button class="tool-btn zoom-out" data-diagram="hybrid" aria-label="Alejar">−</button>
+          <span class="zoom-level" data-diagram="hybrid">100%</span>
+          <button class="tool-btn zoom-in" data-diagram="hybrid" aria-label="Acercar">+</button>
+        </div>
+        <div class="action-buttons">
+          <button class="tool-btn action-btn download-btn" data-diagram="hybrid">⬇ Descargar PNG</button>
+          <button class="tool-btn action-btn copy-btn" data-diagram="hybrid">🔗 Copiar enlace</button>
+        </div>
+      </div>
+
+      <div class="svg-viewport">
+        <div class="svg-stage" data-diagram="hybrid" style="transform: scale(1)">
+          <svg viewBox="0 0 680 430" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="hybrid-title hybrid-desc">
+  <title id="hybrid-title">Infraestructura híbrida</title>
+  <desc id="hybrid-desc">GPU local RTX 4070 para desarrollo y GPU cloud H100/A100 para producción, sincronizadas por Git, DVC y almacenamiento S3.</desc>
+  <defs>
+    <style>
+      :root { --primary: #2563eb; --warning: #f59e0b; --teal: #06b6d4; --secondary: #7c3aed; --success: #10b981; --text: #1f2937; --gray: #6b7280; --bg: #f9fafb; }
+      .zone-title { font: 700 16px -apple-system, 'Segoe UI', sans-serif; }
+      .item { font: 600 12.5px -apple-system, 'Segoe UI', sans-serif; fill: var(--text); }
+      .item-box { fill: #fff; stroke-width: 1.5; }
+      .comm-title { font: 700 12.5px -apple-system, 'Segoe UI', sans-serif; fill: #fff; text-anchor: middle; }
+      .caption { font: 600 13px -apple-system, 'Segoe UI', sans-serif; fill: var(--text); text-anchor: middle; }
+      .arrow { stroke: var(--gray); stroke-width: 2.5; fill: none; }
+    </style>
+    <marker id="hybrid-arrow-r" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#6b7280"/>
+    </marker>
+  </defs>
+
+  <rect x="0" y="0" width="680" height="430" fill="var(--bg)"/>
+  <text x="340" y="30" class="caption" style="font-size:15px">Infraestructura híbrida — dev local, producción en la nube</text>
+
+  <!-- LOCAL zone -->
+  <rect x="20" y="55" width="290" height="255" rx="12" fill="none" stroke="var(--primary)" stroke-width="2.5" stroke-dasharray="8 5"/>
+  <text x="165" y="82" text-anchor="middle" class="zone-title" fill="var(--primary)">💻 LOCAL — Desarrollo</text>
+
+  <rect class="item-box" x="45" y="100" width="240" height="46" rx="8" stroke="var(--primary)"/>
+  <text x="65" y="128" class="item">🎮 GPU: RTX 4070</text>
+
+  <rect class="item-box" x="45" y="156" width="240" height="46" rx="8" stroke="var(--primary)"/>
+  <text x="65" y="184" class="item">📦 8 GB VRAM</text>
+
+  <rect class="item-box" x="45" y="212" width="240" height="46" rx="8" stroke="var(--primary)"/>
+  <text x="65" y="240" class="item">🧮 CPU 16 núcleos</text>
+
+  <rect class="item-box" x="45" y="268" width="240" height="34" rx="8" stroke="var(--primary)" fill="#eff6ff"/>
+  <text x="165" y="290" text-anchor="middle" class="item" style="font-size:11.5px">Costo marginal: $0 (hardware propio)</text>
+
+  <!-- CLOUD zone -->
+  <rect x="370" y="55" width="290" height="255" rx="12" fill="none" stroke="var(--warning)" stroke-width="2.5" stroke-dasharray="8 5"/>
+  <text x="515" y="82" text-anchor="middle" class="zone-title" fill="#b45309">☁️ CLOUD — Producción</text>
+
+  <rect class="item-box" x="395" y="100" width="240" height="46" rx="8" stroke="var(--warning)"/>
+  <text x="415" y="128" class="item">🎮 GPU: H100 / A100</text>
+
+  <rect class="item-box" x="395" y="156" width="240" height="46" rx="8" stroke="var(--warning)"/>
+  <text x="415" y="184" class="item">📦 40+ GB VRAM</text>
+
+  <rect class="item-box" x="395" y="212" width="240" height="46" rx="8" stroke="var(--warning)"/>
+  <text x="415" y="240" class="item">📈 Auto-scaling bajo demanda</text>
+
+  <rect class="item-box" x="395" y="268" width="240" height="34" rx="8" stroke="var(--warning)" fill="#fffbeb"/>
+  <text x="515" y="290" text-anchor="middle" class="item" style="font-size:11.5px">Facturado por hora de inferencia</text>
+
+  <!-- Communication layer -->
+  <text x="340" y="335" class="caption">Sincronización</text>
+
+  <rect x="30" y="345" width="190" height="52" rx="10" fill="var(--primary)"/>
+  <text x="125" y="367" class="comm-title">Git Sync</text>
+  <text x="125" y="384" class="comm-title" style="font-weight:400;font-size:11px">código y configuración</text>
+
+  <rect x="245" y="345" width="190" height="52" rx="10" fill="var(--secondary)"/>
+  <text x="340" y="367" class="comm-title">DVC Artifacts</text>
+  <text x="340" y="384" class="comm-title" style="font-weight:400;font-size:11px">datasets y checkpoints</text>
+
+  <rect x="460" y="345" width="190" height="52" rx="10" fill="var(--teal)"/>
+  <text x="555" y="367" class="comm-title">S3 Storage</text>
+  <text x="555" y="384" class="comm-title" style="font-weight:400;font-size:11px">artefactos e imágenes</text>
+
+  <!-- bidirectional arrows LOCAL <-> comm <-> CLOUD -->
+  <path class="arrow" marker-end="url(#hybrid-arrow-r)" marker-start="url(#hybrid-arrow-r)" d="M165,310 V343"/>
+  <path class="arrow" marker-end="url(#hybrid-arrow-r)" marker-start="url(#hybrid-arrow-r)" d="M340,310 V343"/>
+  <path class="arrow" marker-end="url(#hybrid-arrow-r)" marker-start="url(#hybrid-arrow-r)" d="M515,310 V343"/>
+
+  <text x="340" y="420" class="caption" style="fill:#6b7280;font-weight:400">Un mismo pipeline corre en ambos entornos — solo cambia dónde se ejecuta el cómputo</text>
+</svg>
+
+        </div>
+      </div>
+
+      <div class="metrics-row">
+        <div class="metric-card"><div class="metric-value">8 GB</div><div class="metric-label">VRAM local</div></div><div class="metric-card"><div class="metric-value">40+ GB</div><div class="metric-label">VRAM cloud</div></div><div class="metric-card"><div class="metric-value">$0</div><div class="metric-label">Costo de desarrollo</div></div>
+      </div>
+    </section>
+
+    <section class="panel" id="panel-quality" data-diagram="quality"
+             role="tabpanel" aria-labelledby="tab-quality">
+      <div class="panel-header">
+        <h2>📊 Monitoreo de Calidad</h2>
+        <p class="panel-desc">Toda imagen generada se evalúa automáticamente en tres dimensiones — calidad visual (identity, fidelidad de prenda, geometría, coherencia de capas), performance (latencia, uso de GPU, throughput, tasa de error) y artefactos (issues visuales, anomalías anatómicas, drift del modelo) — y cualquier desviación dispara una alerta por email, Slack o dashboard. Nunca falla en silencio.</p>
+      </div>
+
+      <div class="toolbar">
+        <div class="zoom-controls" role="group" aria-label="Controles de zoom">
+          <button class="tool-btn zoom-out" data-diagram="quality" aria-label="Alejar">−</button>
+          <span class="zoom-level" data-diagram="quality">100%</span>
+          <button class="tool-btn zoom-in" data-diagram="quality" aria-label="Acercar">+</button>
+        </div>
+        <div class="action-buttons">
+          <button class="tool-btn action-btn download-btn" data-diagram="quality">⬇ Descargar PNG</button>
+          <button class="tool-btn action-btn copy-btn" data-diagram="quality">🔗 Copiar enlace</button>
+        </div>
+      </div>
+
+      <div class="svg-viewport">
+        <div class="svg-stage" data-diagram="quality" style="transform: scale(1)">
+          <svg viewBox="0 0 680 400" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="quality-title quality-desc">
+  <title id="quality-title">Monitoreo de calidad</title>
+  <desc id="quality-desc">La salida generada se evalúa en calidad visual, performance y artefactos; los resultados alimentan el sistema de alertas.</desc>
+  <defs>
+    <style>
+      :root { --primary: #2563eb; --teal: #06b6d4; --warning: #f59e0b; --danger: #ef4444; --text: #1f2937; --gray: #6b7280; --bg: #f9fafb; }
+      .hdr { font: 700 12.5px -apple-system, 'Segoe UI', sans-serif; fill: #fff; text-anchor: middle; }
+      .item { font: 500 11px -apple-system, 'Segoe UI', sans-serif; fill: var(--text); text-anchor: middle; }
+      .item-box { fill: #fff; stroke-width: 1.5; }
+      .caption { font: 600 13px -apple-system, 'Segoe UI', sans-serif; fill: var(--text); text-anchor: middle; }
+      .arrow { stroke: var(--gray); stroke-width: 2; fill: none; marker-end: url(#quality-arrow); }
+    </style>
+    <marker id="quality-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#6b7280"/>
+    </marker>
+  </defs>
+
+  <rect x="0" y="0" width="680" height="400" fill="var(--bg)"/>
+
+  <!-- Generated Output -->
+  <rect x="260" y="16" width="160" height="46" rx="10" fill="var(--primary)"/>
+  <text x="340" y="44" class="hdr" style="font-size:13.5px">🖼️ Generated Output</text>
+
+  <path class="arrow" d="M300,62 V90 H115 V96"/>
+  <path class="arrow" d="M320,62 V90 H285 V96"/>
+  <path class="arrow" d="M360,62 V90 H455 V96"/>
+
+  <!-- Column headers -->
+  <g>
+    <rect x="20" y="98" width="150" height="34" rx="8" fill="var(--primary)"/>
+    <text x="95" y="120" class="hdr">Visual Quality</text>
+  </g>
+  <g>
+    <rect x="190" y="98" width="150" height="34" rx="8" fill="var(--teal)"/>
+    <text x="265" y="120" class="hdr">Performance</text>
+  </g>
+  <g>
+    <rect x="360" y="98" width="150" height="34" rx="8" fill="var(--warning)"/>
+    <text x="435" y="120" class="hdr">Artifacts</text>
+  </g>
+  <g>
+    <rect x="530" y="98" width="130" height="34" rx="8" fill="var(--danger)"/>
+    <text x="595" y="120" class="hdr">Alerting</text>
+  </g>
+
+  <!-- Column 1: Visual Quality -->
+  <rect class="item-box" x="20" y="142" width="150" height="34" rx="7" stroke="var(--primary)"/>
+  <text x="95" y="164" class="item">Identity</text>
+  <rect class="item-box" x="20" y="182" width="150" height="34" rx="7" stroke="var(--primary)"/>
+  <text x="95" y="204" class="item">Garment Fidelity</text>
+  <rect class="item-box" x="20" y="222" width="150" height="34" rx="7" stroke="var(--primary)"/>
+  <text x="95" y="244" class="item">Geometry</text>
+  <rect class="item-box" x="20" y="262" width="150" height="34" rx="7" stroke="var(--primary)"/>
+  <text x="95" y="284" class="item">Layer Coherence</text>
+
+  <!-- Column 2: Performance -->
+  <rect class="item-box" x="190" y="142" width="150" height="34" rx="7" stroke="var(--teal)"/>
+  <text x="265" y="164" class="item">Latency</text>
+  <rect class="item-box" x="190" y="182" width="150" height="34" rx="7" stroke="var(--teal)"/>
+  <text x="265" y="204" class="item">GPU Utilization</text>
+  <rect class="item-box" x="190" y="222" width="150" height="34" rx="7" stroke="var(--teal)"/>
+  <text x="265" y="244" class="item">Throughput</text>
+  <rect class="item-box" x="190" y="262" width="150" height="34" rx="7" stroke="var(--teal)"/>
+  <text x="265" y="284" class="item">Error Rate</text>
+
+  <!-- Column 3: Artifacts -->
+  <rect class="item-box" x="360" y="142" width="150" height="34" rx="7" stroke="var(--warning)"/>
+  <text x="435" y="164" class="item">Visual Issues</text>
+  <rect class="item-box" x="360" y="182" width="150" height="34" rx="7" stroke="var(--warning)"/>
+  <text x="435" y="204" class="item">Anatomical</text>
+  <rect class="item-box" x="360" y="222" width="150" height="34" rx="7" stroke="var(--warning)"/>
+  <text x="435" y="244" class="item">Model Drift</text>
+  <rect class="item-box" x="360" y="262" width="150" height="34" rx="7" stroke="var(--warning)"/>
+  <text x="435" y="284" class="item">Consistency Score</text>
+
+  <!-- Column 4: Alerting -->
+  <rect class="item-box" x="530" y="142" width="130" height="34" rx="7" stroke="var(--danger)"/>
+  <text x="595" y="164" class="item">📧 Email</text>
+  <rect class="item-box" x="530" y="182" width="130" height="34" rx="7" stroke="var(--danger)"/>
+  <text x="595" y="204" class="item">💬 Slack</text>
+  <rect class="item-box" x="530" y="222" width="130" height="34" rx="7" stroke="var(--danger)"/>
+  <text x="595" y="244" class="item">📊 Dashboard</text>
+  <rect class="item-box" x="530" y="262" width="130" height="34" rx="7" stroke="var(--danger)"/>
+  <text x="595" y="284" class="item">📟 Incident Log</text>
+
+  <!-- Columns 1-3 feed into Alerting -->
+  <path class="arrow" d="M95,298 V320 H595 V298"/>
+  <path class="arrow" d="M265,298 V320"/>
+  <path class="arrow" d="M435,298 V320"/>
+
+  <text x="340" y="352" class="caption">Toda métrica fuera de rango dispara una alerta — nunca falla en silencio</text>
+  <text x="340" y="374" class="caption" style="fill:#6b7280;font-weight:400">Objetivo: 85% identity · 80% fidelity · &lt;60s latencia · &lt;1% error</text>
+</svg>
+
+        </div>
+      </div>
+
+      <div class="metrics-row">
+        <div class="metric-card"><div class="metric-value">85%</div><div class="metric-label">Identity score</div></div><div class="metric-card"><div class="metric-value"><60s</div><div class="metric-label">Latencia</div></div><div class="metric-card"><div class="metric-value"><1%</div><div class="metric-label">Error rate</div></div>
+      </div>
+    </section>
+
+    <section class="panel" id="panel-frontend" data-diagram="frontend"
+             role="tabpanel" aria-labelledby="tab-frontend">
+      <div class="panel-header">
+        <h2>🖥️ Componentes de Frontend</h2>
+        <p class="panel-desc">Arquitectura en tres capas sobre Next.js App Router: páginas que orquestan la navegación, componentes de UI reutilizables sin lógica de negocio, y features de dominio que encapsulan estado y llamadas a la API. TanStack Query cachea datos de servidor, Zustand maneja estado de cliente puro, y WebSocket entrega actualizaciones en tiempo real durante la generación.</p>
+      </div>
+
+      <div class="toolbar">
+        <div class="zoom-controls" role="group" aria-label="Controles de zoom">
+          <button class="tool-btn zoom-out" data-diagram="frontend" aria-label="Alejar">−</button>
+          <span class="zoom-level" data-diagram="frontend">100%</span>
+          <button class="tool-btn zoom-in" data-diagram="frontend" aria-label="Acercar">+</button>
+        </div>
+        <div class="action-buttons">
+          <button class="tool-btn action-btn download-btn" data-diagram="frontend">⬇ Descargar PNG</button>
+          <button class="tool-btn action-btn copy-btn" data-diagram="frontend">🔗 Copiar enlace</button>
+        </div>
+      </div>
+
+      <div class="svg-viewport">
+        <div class="svg-stage" data-diagram="frontend" style="transform: scale(1)">
+          <svg viewBox="0 0 680 400" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="frontend-title frontend-desc">
+  <title id="frontend-title">Componentes de frontend</title>
+  <desc id="frontend-desc">Tres capas: páginas de Next.js, componentes de UI compartidos y features de dominio.</desc>
+  <defs>
+    <style>
+      :root { --primary: #2563eb; --teal: #06b6d4; --secondary: #7c3aed; --text: #1f2937; --gray: #6b7280; --bg: #f9fafb; }
+      .layer-lbl { font: 700 13px -apple-system, 'Segoe UI', sans-serif; fill: var(--text); }
+      .box-title { font: 600 12px -apple-system, 'Segoe UI', sans-serif; fill: #fff; text-anchor: middle; }
+      .caption { font: 600 13px -apple-system, 'Segoe UI', sans-serif; fill: var(--text); text-anchor: middle; }
+      .arrow { stroke: var(--gray); stroke-width: 2.5; fill: none; marker-end: url(#frontend-arrow); }
+    </style>
+    <marker id="frontend-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#6b7280"/>
+    </marker>
+  </defs>
+
+  <rect x="0" y="0" width="680" height="400" fill="var(--bg)"/>
+  <text x="340" y="26" class="caption" style="font-size:15px">Next.js App Router — capas del frontend</text>
+
+  <!-- Layer 1: Páginas -->
+  <text x="20" y="58" class="layer-lbl">📄 Páginas (app/)</text>
+  <rect x="20" y="66" width="118" height="46" rx="8" fill="var(--primary)"/><text x="79" y="94" class="box-title">Auth</text>
+  <rect x="148" y="66" width="118" height="46" rx="8" fill="var(--primary)"/><text x="207" y="94" class="box-title">Dashboard</text>
+  <rect x="276" y="66" width="118" height="46" rx="8" fill="var(--primary)"/><text x="335" y="94" class="box-title">Wardrobe</text>
+  <rect x="404" y="66" width="118" height="46" rx="8" fill="var(--primary)"/><text x="463" y="94" class="box-title">Generator</text>
+  <rect x="532" y="66" width="118" height="46" rx="8" fill="var(--primary)"/><text x="591" y="94" class="box-title">Profile</text>
+
+  <path class="arrow" d="M340,116 V150"/>
+
+  <!-- Layer 2: Componentes -->
+  <text x="20" y="178" class="layer-lbl">🧩 Componentes (components/)</text>
+  <rect x="20" y="186" width="118" height="46" rx="8" fill="var(--teal)"/><text x="79" y="214" class="box-title">Header</text>
+  <rect x="148" y="186" width="118" height="46" rx="8" fill="var(--teal)"/><text x="207" y="214" class="box-title">Sidebar</text>
+  <rect x="276" y="186" width="118" height="46" rx="8" fill="var(--teal)"/><text x="335" y="214" class="box-title">Form</text>
+  <rect x="404" y="186" width="118" height="46" rx="8" fill="var(--teal)"/><text x="463" y="214" class="box-title">Card</text>
+  <rect x="532" y="186" width="118" height="46" rx="8" fill="var(--teal)"/><text x="591" y="214" class="box-title">Modal</text>
+
+  <path class="arrow" d="M340,236 V270"/>
+
+  <!-- Layer 3: Features -->
+  <text x="20" y="298" class="layer-lbl">⚙️ Features (features/)</text>
+  <rect x="20" y="306" width="150" height="52" rx="8" fill="var(--secondary)"/>
+  <text x="95" y="328" class="box-title">Wardrobe</text><text x="95" y="345" class="box-title">Manager</text>
+  <rect x="180" y="306" width="150" height="52" rx="8" fill="var(--secondary)"/>
+  <text x="255" y="328" class="box-title">Image</text><text x="255" y="345" class="box-title">Uploader</text>
+  <rect x="340" y="306" width="150" height="52" rx="8" fill="var(--secondary)"/>
+  <text x="415" y="328" class="box-title">Generator</text><text x="415" y="345" class="box-title">Form</text>
+  <rect x="500" y="306" width="150" height="52" rx="8" fill="var(--secondary)"/>
+  <text x="575" y="328" class="box-title">Result</text><text x="575" y="345" class="box-title">Viewer</text>
+
+  <text x="340" y="384" class="caption" style="fill:#6b7280;font-weight:400">Estado de servidor: TanStack Query · Estado de UI: Zustand · Tiempo real: WebSocket</text>
+</svg>
+
+        </div>
+      </div>
+
+      <div class="metrics-row">
+        <div class="metric-card"><div class="metric-value">5</div><div class="metric-label">Páginas</div></div><div class="metric-card"><div class="metric-value">8</div><div class="metric-label">Componentes base</div></div><div class="metric-card"><div class="metric-value">WebSocket</div><div class="metric-label">Tiempo real</div></div>
+      </div>
+    </section>
+
+    <section class="panel" id="panel-protocol" data-diagram="protocol"
+             role="tabpanel" aria-labelledby="tab-protocol">
+      <div class="panel-header">
+        <h2>📸 Protocolo de Entrada de Imágenes</h2>
+        <p class="panel-desc">Cada solicitud de try-on virtual requiere dos fotos que cumplen requisitos estrictos y verificables: una foto de cuerpo en A-Pose sobre fondo neutro, y una foto de la prenda extendida sobre fondo liso, ambas en 512×512px como mínimo. La validación corre primero en el cliente (feedback inmediato) y luego en el servidor (garantía real); un rechazo siempre viene con una razón específica y accionable, nunca un error genérico.</p>
+      </div>
+
+      <div class="toolbar">
+        <div class="zoom-controls" role="group" aria-label="Controles de zoom">
+          <button class="tool-btn zoom-out" data-diagram="protocol" aria-label="Alejar">−</button>
+          <span class="zoom-level" data-diagram="protocol">100%</span>
+          <button class="tool-btn zoom-in" data-diagram="protocol" aria-label="Acercar">+</button>
+        </div>
+        <div class="action-buttons">
+          <button class="tool-btn action-btn download-btn" data-diagram="protocol">⬇ Descargar PNG</button>
+          <button class="tool-btn action-btn copy-btn" data-diagram="protocol">🔗 Copiar enlace</button>
+        </div>
+      </div>
+
+      <div class="svg-viewport">
+        <div class="svg-stage" data-diagram="protocol" style="transform: scale(1)">
+          <svg viewBox="0 0 680 440" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="protocol-title protocol-desc">
+  <title id="protocol-title">Protocolo de entrada</title>
+  <desc id="protocol-desc">Requisitos de foto de usuario y de prenda, pipeline de validación y feedback de rechazo.</desc>
+  <defs>
+    <style>
+      :root { --primary: #2563eb; --secondary: #7c3aed; --teal: #06b6d4; --success: #10b981; --danger: #ef4444; --text: #1f2937; --gray: #6b7280; --bg: #f9fafb; }
+      .card-title { font: 700 13.5px -apple-system, 'Segoe UI', sans-serif; }
+      .req { font: 500 11.5px -apple-system, 'Segoe UI', sans-serif; fill: var(--text); }
+      .box-title { font: 700 12px -apple-system, 'Segoe UI', sans-serif; fill: #fff; text-anchor: middle; }
+      .caption { font: 600 13px -apple-system, 'Segoe UI', sans-serif; fill: var(--text); text-anchor: middle; }
+      .arrow { stroke: var(--gray); stroke-width: 2.5; fill: none; marker-end: url(#protocol-arrow); }
+      .arrow-danger { stroke: var(--danger); stroke-width: 2; fill: none; stroke-dasharray: 6 4; marker-end: url(#protocol-arrow-danger); }
+    </style>
+    <marker id="protocol-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#6b7280"/>
+    </marker>
+    <marker id="protocol-arrow-danger" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#ef4444"/>
+    </marker>
+  </defs>
+
+  <rect x="0" y="0" width="680" height="440" fill="var(--bg)"/>
+
+  <!-- Left card: User body photo -->
+  <rect x="20" y="20" width="300" height="180" rx="12" fill="#fff" stroke="var(--primary)" stroke-width="2"/>
+  <rect x="20" y="20" width="300" height="38" rx="12" fill="var(--primary)"/>
+  <rect x="20" y="40" width="300" height="18" fill="var(--primary)"/>
+  <text x="170" y="45" text-anchor="middle" class="card-title" fill="#fff">📷 Foto de Cuerpo (Usuario)</text>
+  <text x="38" y="82" class="req">• Pose: A-Pose obligatoria</text>
+  <text x="38" y="108" class="req">• Fondo: neutro y liso</text>
+  <text x="38" y="134" class="req">• Resolución: ≥ 512×512 px</text>
+  <text x="38" y="160" class="req">• Iluminación: uniforme, sin sombras fuertes</text>
+  <text x="38" y="186" class="req" style="fill:#6b7280">• Formato: JPG / PNG</text>
+
+  <!-- Right card: Garment photo -->
+  <rect x="360" y="20" width="300" height="180" rx="12" fill="#fff" stroke="var(--secondary)" stroke-width="2"/>
+  <rect x="360" y="20" width="300" height="38" rx="12" fill="var(--secondary)"/>
+  <rect x="360" y="40" width="300" height="18" fill="var(--secondary)"/>
+  <text x="510" y="45" text-anchor="middle" class="card-title" fill="#fff">👕 Foto de Prenda</text>
+  <text x="378" y="82" class="req">• Pose: prenda extendida / plana</text>
+  <text x="378" y="108" class="req">• Fondo: blanco o neutro</text>
+  <text x="378" y="134" class="req">• Resolución: ≥ 512×512 px</text>
+  <text x="378" y="160" class="req">• Iluminación: difusa, sin reflejos</text>
+  <text x="378" y="186" class="req" style="fill:#6b7280">• Formato: JPG / PNG</text>
+
+  <path class="arrow" d="M170,200 V220 H255 V236"/>
+  <path class="arrow" d="M510,200 V220 H425 V236"/>
+
+  <!-- Pipeline -->
+  <text x="340" y="228" class="caption">Pipeline de validación</text>
+  <rect x="20" y="240" width="140" height="52" rx="8" fill="var(--teal)"/>
+  <text x="90" y="271" class="box-title">Client</text>
+  <rect x="180" y="240" width="140" height="52" rx="8" fill="var(--primary)"/>
+  <text x="250" y="271" class="box-title">Server</text>
+  <rect x="340" y="240" width="140" height="52" rx="8" fill="var(--secondary)"/>
+  <text x="410" y="271" class="box-title">Preprocessing</text>
+  <rect x="500" y="240" width="140" height="52" rx="8" fill="var(--success)"/>
+  <text x="570" y="271" class="box-title">Acceptance</text>
+
+  <path class="arrow" d="M160,266 H178"/>
+  <path class="arrow" d="M320,266 H338"/>
+  <path class="arrow" d="M480,266 H498"/>
+
+  <!-- Rejection feedback -->
+  <rect x="120" y="330" width="440" height="60" rx="10" fill="#fef2f2" stroke="var(--danger)" stroke-width="2"/>
+  <text x="340" y="356" text-anchor="middle" class="req" style="font-weight:700;fill:#b91c1c">❌ Rechazo → feedback específico y accionable</text>
+  <text x="340" y="376" text-anchor="middle" class="req" style="fill:#b91c1c;font-size:11px">ej. "Sube una foto con fondo neutro" — nunca un error genérico</text>
+
+  <path class="arrow-danger" d="M300,330 C 230,320 120,300 90,294"/>
+
+  <text x="340" y="416" class="caption" style="fill:#6b7280;font-weight:400">Validación en dos capas: heurística rápida en cliente + verificación estricta en servidor</text>
+</svg>
+
+        </div>
+      </div>
+
+      <div class="metrics-row">
+        <div class="metric-card"><div class="metric-value">A-Pose</div><div class="metric-label">Pose requerida</div></div><div class="metric-card"><div class="metric-value">512×512px</div><div class="metric-label">Resolución mínima</div></div><div class="metric-card"><div class="metric-value">Automática</div><div class="metric-label">Validación</div></div>
+      </div>
+    </section>
+
+    <section class="panel" id="panel-lifecycle" data-diagram="lifecycle"
+             role="tabpanel" aria-labelledby="tab-lifecycle">
+      <div class="panel-header">
+        <h2>🔄 Ciclo de Vida del Modelo</h2>
+        <p class="panel-desc">Todo modelo recorre cinco fases antes de servir tráfico real: desarrollo (código + datos + modelo base), entrenamiento (con tracking de experimentos), evaluación (métricas de calidad objetivas), un gate de decisión que aprueba o rechaza, y solo entonces producción (registro de modelos → despliegue). Un rechazo no es un callejón sin salida: alimenta un bucle de reentrenamiento con el feedback del evaluador.</p>
+      </div>
+
+      <div class="toolbar">
+        <div class="zoom-controls" role="group" aria-label="Controles de zoom">
+          <button class="tool-btn zoom-out" data-diagram="lifecycle" aria-label="Alejar">−</button>
+          <span class="zoom-level" data-diagram="lifecycle">100%</span>
+          <button class="tool-btn zoom-in" data-diagram="lifecycle" aria-label="Acercar">+</button>
+        </div>
+        <div class="action-buttons">
+          <button class="tool-btn action-btn download-btn" data-diagram="lifecycle">⬇ Descargar PNG</button>
+          <button class="tool-btn action-btn copy-btn" data-diagram="lifecycle">🔗 Copiar enlace</button>
+        </div>
+      </div>
+
+      <div class="svg-viewport">
+        <div class="svg-stage" data-diagram="lifecycle" style="transform: scale(1)">
+          <svg viewBox="0 0 680 340" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="lifecycle-title lifecycle-desc">
+  <title id="lifecycle-title">Ciclo de vida del modelo</title>
+  <desc id="lifecycle-desc">Development, Training, Evaluation, Decision Gate y Production, con un bucle de retroalimentación cuando el gate rechaza.</desc>
+  <defs>
+    <style>
+      :root { --primary: #2563eb; --secondary: #7c3aed; --teal: #06b6d4; --warning: #f59e0b; --success: #10b981; --danger: #ef4444; --text: #1f2937; --gray: #6b7280; --bg: #f9fafb; }
+      .box-title { font: 700 12.5px -apple-system, 'Segoe UI', sans-serif; fill: #fff; text-anchor: middle; }
+      .box-sub { font: 400 10.5px -apple-system, 'Segoe UI', sans-serif; fill: #fff; text-anchor: middle; opacity: .9; }
+      .caption { font: 600 13px -apple-system, 'Segoe UI', sans-serif; fill: var(--text); text-anchor: middle; }
+      .arrow { stroke: var(--gray); stroke-width: 2.5; fill: none; marker-end: url(#lifecycle-arrow); }
+      .arrow-ok { stroke: var(--success); stroke-width: 2.5; fill: none; marker-end: url(#lifecycle-arrow-ok); }
+      .arrow-fail { stroke: var(--danger); stroke-width: 2; fill: none; stroke-dasharray: 6 4; marker-end: url(#lifecycle-arrow-fail); }
+      .lbl { font: 600 11px -apple-system, 'Segoe UI', sans-serif; text-anchor: middle; }
+    </style>
+    <marker id="lifecycle-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#6b7280"/></marker>
+    <marker id="lifecycle-arrow-ok" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#10b981"/></marker>
+    <marker id="lifecycle-arrow-fail" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#ef4444"/></marker>
+  </defs>
+
+  <rect x="0" y="0" width="680" height="340" fill="var(--bg)"/>
+  <text x="340" y="28" class="caption" style="font-size:15px">Ciclo de vida del modelo — 5 fases con gate de calidad</text>
+
+  <!-- 1. Development -->
+  <rect x="20" y="100" width="120" height="100" rx="10" fill="var(--teal)"/>
+  <text x="80" y="130" class="box-title">Development</text>
+  <text x="80" y="150" class="box-sub">código</text>
+  <text x="80" y="164" class="box-sub">datos</text>
+  <text x="80" y="178" class="box-sub">base model</text>
+
+  <!-- 2. Training -->
+  <rect x="150" y="100" width="120" height="100" rx="10" fill="var(--primary)"/>
+  <text x="210" y="130" class="box-title">Training</text>
+  <text x="210" y="150" class="box-sub">experiment</text>
+  <text x="210" y="164" class="box-sub">tracking</text>
+
+  <!-- 3. Evaluation -->
+  <rect x="280" y="100" width="120" height="100" rx="10" fill="var(--secondary)"/>
+  <text x="340" y="130" class="box-title">Evaluation</text>
+  <text x="340" y="150" class="box-sub">quality</text>
+  <text x="340" y="164" class="box-sub">metrics</text>
+
+  <!-- 4. Decision Gate -->
+  <rect x="410" y="100" width="120" height="100" rx="10" fill="var(--warning)"/>
+  <text x="470" y="130" class="box-title">Decision Gate</text>
+  <text x="470" y="152" class="box-sub" style="font-weight:700">✅ APPROVED</text>
+  <text x="470" y="168" class="box-sub" style="font-weight:700">❌ REJECTED</text>
+
+  <!-- 5. Production -->
+  <rect x="540" y="100" width="120" height="100" rx="10" fill="var(--success)"/>
+  <text x="600" y="130" class="box-title">Production</text>
+  <text x="600" y="150" class="box-sub">model registry</text>
+  <text x="600" y="164" class="box-sub">→ deploy</text>
+
+  <path class="arrow" d="M140,150 H148"/>
+  <path class="arrow" d="M270,150 H278"/>
+  <path class="arrow" d="M400,150 H408"/>
+  <path class="arrow-ok" d="M530,140 H538"/>
+  <text x="534" y="126" class="lbl" style="fill:#10803d">✅</text>
+
+  <!-- Feedback loop on rejection -->
+  <path class="arrow-fail" d="M470,98 C 470,60 210,60 210,98"/>
+  <text x="340" y="55" class="lbl" style="fill:#b91c1c">❌ REJECTED → retrain con feedback del evaluador</text>
+
+  <text x="340" y="232" class="caption">Development → Training → Evaluation → Gate → Production</text>
+  <text x="340" y="256" class="caption" style="fill:#6b7280;font-weight:400">Ningún modelo llega a producción sin pasar el gate de calidad — sin excepciones</text>
+</svg>
+
+        </div>
+      </div>
+
+      <div class="metrics-row">
+        <div class="metric-card"><div class="metric-value">5</div><div class="metric-label">Fases</div></div><div class="metric-card"><div class="metric-value">Obligatorio</div><div class="metric-label">Gate de calidad</div></div><div class="metric-card"><div class="metric-value">Continuo en producción</div><div class="metric-label">Monitoreo</div></div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="footer-inner">
+      <div>
+        <strong>StyleSync IA</strong> — Virtual Try-On con IA
+        <span class="footer-dot">·</span> Python · PyTorch · FastAPI · Next.js
+        <span class="footer-dot">·</span> RTX 4070 local + H100/A100 cloud
+      </div>
+      <div class="footer-links">
+        <a href="./README.md">Documentación de diagramas</a>
+        <span class="footer-dot">·</span>
+        <a href="../../context/plan-base.md">Plan base del proyecto</a>
+        <span class="footer-dot">·</span>
+        <a href="../../../README.md">Repositorio</a>
+      </div>
+    </div>
+  </footer>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+
+(function () {
+  'use strict';
+
+  var tabs = Array.prototype.slice.call(document.querySelectorAll('.tab-btn'));
+  var panels = Array.prototype.slice.call(document.querySelectorAll('.panel'));
+  var zoomState = {};
+
+  function activate(id) {
+    tabs.forEach(function (btn) {
+      var isActive = btn.dataset.target === id;
+      btn.classList.toggle('active', isActive);
+      btn.setAttribute('aria-selected', isActive ? 'true' : 'false');
+    });
+    panels.forEach(function (panel) {
+      panel.classList.toggle('active', panel.dataset.diagram === id);
+    });
+    if (history.replaceState) {
+      history.replaceState(null, '', '#' + id);
+    } else {
+      location.hash = id;
+    }
+  }
+
+  tabs.forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      activate(btn.dataset.target);
+    });
+  });
+
+  var initial = (location.hash || '').replace('#', '');
+  if (initial && document.getElementById('panel-' + initial)) {
+    activate(initial);
+  }
+
+  function getZoom(id) {
+    return zoomState[id] || 1;
+  }
+
+  function setZoom(id, value) {
+    var clamped = Math.min(2.5, Math.max(0.5, value));
+    zoomState[id] = clamped;
+    var stage = document.querySelector('.svg-stage[data-diagram="' + id + '"]');
+    if (stage) stage.style.transform = 'scale(' + clamped + ')';
+    var label = document.querySelector('.zoom-level[data-diagram="' + id + '"]');
+    if (label) label.textContent = Math.round(clamped * 100) + '%';
+  }
+
+  document.querySelectorAll('.zoom-in').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var id = btn.dataset.diagram;
+      setZoom(id, getZoom(id) + 0.1);
+    });
+  });
+  document.querySelectorAll('.zoom-out').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var id = btn.dataset.diagram;
+      setZoom(id, getZoom(id) - 0.1);
+    });
+  });
+
+  function showToast(message) {
+    var toast = document.getElementById('toast');
+    if (!toast) return;
+    toast.textContent = message;
+    toast.classList.add('show');
+    clearTimeout(toast._hideTimer);
+    toast._hideTimer = setTimeout(function () {
+      toast.classList.remove('show');
+    }, 2200);
+  }
+
+  document.querySelectorAll('.copy-btn').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var id = btn.dataset.diagram;
+      var url = location.href.split('#')[0] + '#' + id;
+      var done = function () {
+        btn.classList.add('copied');
+        var original = btn.textContent;
+        btn.textContent = '✓ ¡Copiado!';
+        showToast('Enlace copiado al portapapeles');
+        setTimeout(function () {
+          btn.classList.remove('copied');
+          btn.textContent = original;
+        }, 1600);
+      };
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(url).then(done).catch(function () {
+          window.prompt('Copia el enlace:', url);
+        });
+      } else {
+        window.prompt('Copia el enlace:', url);
+      }
+    });
+  });
+
+  function downloadSvgAsPng(svgEl, filename) {
+    var clone = svgEl.cloneNode(true);
+    if (!clone.getAttribute('xmlns')) {
+      clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+    }
+    var viewBox = (svgEl.getAttribute('viewBox') || '0 0 680 400').split(/\s+/).map(Number);
+    var width = viewBox[2] || 680;
+    var height = viewBox[3] || 400;
+    var scale = 2; // export at 2x for a crisp PNG
+
+    var xml = new XMLSerializer().serializeToString(clone);
+    var svgDataUrl = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(xml);
+
+    var img = new Image();
+    img.onload = function () {
+      var canvas = document.createElement('canvas');
+      canvas.width = width * scale;
+      canvas.height = height * scale;
+      var ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      canvas.toBlob(function (blob) {
+        if (!blob) { showToast('No se pudo generar el PNG en este navegador'); return; }
+        var link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        setTimeout(function () { URL.revokeObjectURL(link.href); }, 1000);
+        showToast('PNG descargado: ' + filename);
+      }, 'image/png');
+    };
+    img.onerror = function () {
+      showToast('No se pudo renderizar el SVG para exportar');
+    };
+    img.src = svgDataUrl;
+  }
+
+  document.querySelectorAll('.download-btn').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var id = btn.dataset.diagram;
+      var svg = document.querySelector('#panel-' + id + ' svg');
+      if (!svg) { showToast('Diagrama no disponible'); return; }
+      downloadSvgAsPng(svg, 'stylesync-' + id + '.png');
+    });
+  });
+
+  document.documentElement.style.scrollBehavior = 'smooth';
+})();
+
+</script>
+</body>
+</html>

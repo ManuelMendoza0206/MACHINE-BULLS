@@ -258,7 +258,7 @@ era un duplicado. `src/lib/errors.ts` ya existe (scaffold). Sprint 1 Leonardo = 
 (sus dos epics: design-system + app-shell) — cierra la brecha de cronograma del Asiento A.
 
 **D5: Fuente de verdad del alcance** — estructura canónica del Sprint 1 en
-`docs/sprint-plans/sprint-1-manifest.md` (derivada de specs + rotación); `sprint-1-task-list.md`
+`docs/sprint-plans/sprint-1/sprint-1-manifest.md` (derivada de specs + rotación); `sprint-1-task-list.md`
 (mirror del tablero) ya alineado con él. La reconciliación de ClickUp la ejecuta el **Asiento D
 (Manuel)** con `scripts/clickup/sync-sprint-1.mjs` (checklist en el manifiesto §7). _Pendiente:_
 los prompts de Jaicel/Huascar/Manuel aún llevan fechas/conteos viejos — se corrigen al preparar
@@ -303,7 +303,7 @@ de specs de flujo se migran spec-first al empezar su Tarea correspondiente.
 
 **Asiento A (Feature Lead) Sprint 1 = Leonardo** — epics `frontend/design-system` +
 `frontend/app-shell-and-navigation`, 6 tareas (Tarea 0–6), detalle en
-`docs/sprint-plans/sprint-1-init-leonardo.md`. Asientos B/C/D (Jaicel / Huascar / Manuel):
+`docs/sprint-plans/sprint-1/sprint-1-init-leonardo.md`. Asientos B/C/D (Jaicel / Huascar / Manuel):
 sus `sprint-1-init-*.md`. Reparto y conteo exacto: **ClickUp** (`SPRINT-1-MASTER.csv`), no estos docs.
 
 **Alcance:** este repo = frontend. Todo ML/Data/CLIP vive en el **repositorio backend** (§1).
