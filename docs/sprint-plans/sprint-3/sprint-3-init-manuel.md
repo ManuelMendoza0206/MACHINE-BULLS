@@ -3,8 +3,17 @@
 **Rol:** Feature Support — Garment Analysis Service
 **Ventana:** 23 sep – 6 oct 2026
 **Epic:** `backend/garment-analysis-service`
-**Depende de:** `backend/api-gateway` (Huascar, Sprint 2) — confirmar en el kickoff que al
-menos el endpoint base de garments mergeó antes de asumirlo como cimiento.
+**Depende de:** `backend/api-gateway` y `backend/domain-and-database` (Huascar, Sprint 2).
+
+> **⚠️ Actualización 18-sep (diagnóstico pre-kickoff):** verificado contra `main` —
+> `backend/src/` solo tiene `__init__.py` vacíos. Ni `domain-and-database` ni `api-gateway`
+> tienen código real. Tu spec (línea 114) exige persistir `processed_image_url`, así que **tu
+> Tarea 0 se amplía**: antes de la lógica de análisis, crea el mínimo de persistencia que TU
+> feature necesita (el modelo `Garment` — no los 6 modelos completos de domain-and-database —
+> y el endpoint mínimo de gateway que lo expone). Ver
+> `docs/sprint-plans/sprint-3/INTEGRATION-DIAGNOSIS-2026-09-18.md` §3.1 para el razonamiento
+> completo y la alternativa si el tiempo no alcanza (test que falla intencionalmente, no un
+> mock permanente que finja estar conectado).
 
 > **Nota de continuidad:** eres Asiento C en Sprint 2 (validas el trabajo de Leonardo/Jaicel de
 > Sprint 1) y Asiento B aquí en Sprint 3 — cierra bien esa validación antes del 22-sep para no
@@ -33,6 +42,31 @@ el frontend este mismo sprint.
 
 **Aceptación:**
 - [ ] Contrato confirmado por escrito (comentario en el epic) antes de implementar
+
+---
+
+### Tarea 0.5: Mínimo de persistencia — el que tu propia spec exige — 1 día
+
+**Nuevo, agregado 18-sep** (ver actualización arriba). No existe todavía el modelo `Garment`
+ni ningún endpoint de `api-gateway` en `main` — verificado, no supuesto.
+
+1. `backend/src/domain/garment.py` — modelo SQLAlchemy `Garment` **solo** con los campos que
+   tu endpoint necesita persistir (`processed_image_url`, categoría, top_aesthetics,
+   dominant_colors — espejando `frontend/src/schemas/api/garments.ts`). No implementes los
+   otros 5 modelos de `domain-and-database` (`User`, `GarmentOwnership`, `Outfit`, etc.) — eso
+   sigue siendo responsabilidad de quien cierre ese epic completo, no la tuya.
+2. Migración Alembic mínima para esa sola tabla.
+3. `backend/src/api/garments.py` — endpoint `POST /api/v1/garments/upload` mínimo que recibe
+   la imagen, invoca tu pipeline de análisis (Tareas 1-4) y persiste el resultado.
+4. Si no alcanza el tiempo: en vez de un mock permanente, deja el endpoint con
+   `raise NotImplementedError` + un test marcado `pytest.mark.skip(reason="...")` citando este
+   documento — nunca fingir una respuesta hardcodeada como si viniera de la base de datos.
+
+**AC:**
+- [ ] Modelo `Garment` + migración existen y persisten de verdad (test de integración con
+      Postgres real, no solo en memoria)
+- [ ] `POST /api/v1/garments/upload` funcional end-to-end, o explícitamente `skip` con motivo
+- [ ] No se tocan los otros 5 modelos de `domain-and-database` — alcance acotado a lo propio
 
 ---
 

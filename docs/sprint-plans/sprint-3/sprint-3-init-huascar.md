@@ -101,16 +101,22 @@ verificable"; coordina con el seed de Huascar... espera, **tú mismo** hiciste e
 catálogo cápsula en el backend en Sprint 2 (tu propio prompt de `sprint-2-init-huascar.md`,
 Tarea 1) — este es el lado frontend de lo mismo, consume esa data, no la reinventes.
 
+> **⚠️ Confirmado 18-sep (no "si aplica"):** el endpoint `POST /garments/capsule/{id}/adopt`
+> (gap G4) **no existe** — `backend/src/` sigue vacío. Desarrolla directamente contra mocks
+> MSW, sin perder tiempo confirmando si ya lo expusieron. Ver
+> `INTEGRATION-DIAGNOSIS-2026-09-18.md` §3.2.
+
 1. Vista del catálogo cápsula compartido — el usuario ve qué prendas cápsula existen y puede
-   "adoptar" una a su guardarropa (endpoint `POST /garments/capsule/{id}/adopt`, gap G4 de
-   `api-contract-gaps/spec.md` — confirma si Huascar/Manuel ya lo expusieron en el gateway).
-2. Si el endpoint no está listo, documenta el bloqueo explícitamente — no construyas la UI
-   contra un endpoint que no existe sin dejarlo anotado como dependencia externa.
+   "adoptar" una a su guardarropa. Implementa contra un mock MSW de
+   `POST /garments/capsule/{id}/adopt`, **marcado explícitamente en el código** (comentario
+   `// MOCK: gap G4 abierto, api-contract-gaps/spec.md` en el handler MSW) para que Sprint 4
+   no confunda esto con una integración real.
+2. Cuando G4 cierre (backend real), el cambio es solo reemplazar el mock — el contrato del
+   schema ya está fijado por `api-client-and-schemas`.
 
 **AC:**
-- [ ] Vista de catálogo cápsula, con estado de carga/error explícito si el endpoint no responde
-- [ ] Si el endpoint de adopción no está listo: bloqueo documentado en el epic, no una feature
-      a medias sin explicación
+- [ ] Vista de catálogo cápsula, funcional contra mock MSW documentado como tal
+- [ ] El mock está marcado en el código como gap G4 abierto, no como dato real
 - [ ] PR revisado y mergeado
 
 ---
