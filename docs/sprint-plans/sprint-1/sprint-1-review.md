@@ -20,8 +20,8 @@ partida verificado el 24-sep-2026 por Leonardo (Asiento C de Sprint 3), no la re
 
 | Epic | Dueño | PR | Estado ClickUp al 24-sep | Nota |
 |---|---|---|---|---|
-| `frontend/design-system` | Leonardo (A) | #9, mergeado 16-sep | `complete` (**debería bajar a `update required` primero** — si sigue en `complete` cuando empieces, avísale a Leonardo antes de asumir que ya está listo para que tú lo cierres) | Único epic de S1 ya reconciliado en apariencia, pero sin tu validación de QA todavía |
-| `frontend/app-shell-and-navigation` | Leonardo (A) | #9, mismo PR | `to do` (pendiente de que Leonardo lo suba a `update required`) | Verificar: 88 tests, 97.9% cobertura reportados en su momento — reprodúcelo, no lo asumas |
+| `frontend/design-system` | Leonardo (A) | #9, mergeado 16-sep | `update required` (25-sep) — **lista para tu revisión** | Sin validación de QA real todavía — confirma tú mismo antes de mover a `complete` |
+| `frontend/app-shell-and-navigation` | Leonardo (A) | #9, mismo PR | `update required` (25-sep) — **lista para tu revisión** | Verificar: 88 tests, 97.9% cobertura reportados en su momento — reprodúcelo, no lo asumas |
 | `frontend/landing-and-auth-flow` | Jaicel (B) | #14/#16, mergeados | `to do` | Sin ningún comentario de handoff ni validación — revisa desde cero |
 
 Ningún PR de Sprint 1 tiene review formal de GitHub registrado (detalle completo de reviews por
