@@ -57,4 +57,4 @@ Tailwind, EditorConfig, Vitest, Playwright. `format-on-save` ya está configurad
 | `openspec/specs/frontend/`                 | specs — la verdad de los contratos                     |
 | `docs/sprint-plans/sprint-1/sprint-1-manifest.md`   | estructura canónica del Sprint 1                       |
 | `docs/sprint-plans/sprint-1/sprint-1-init-<vos>.md` | tu lista de tareas                                     |
-| `docs/sprint-0/SCAFFOLD-VERIFICATION.md`   | estado del scaffold + follow-ups                       |
+| `docs/sprint-plans/sprint-0/sprint-0-review.md`   | estado del scaffold + follow-ups                       |

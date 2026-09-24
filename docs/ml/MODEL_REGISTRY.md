@@ -7,15 +7,23 @@ mínimo viable de este sprint. No se integra una herramienta externa (MLflow, We
 todavía — se reevalúa cuando el número de modelos o la necesidad de comparar runs lo justifique.
 Decisión registrada también en el epic `[EPIC] Q3 — MLOps` de ClickUp.
 
+**Actualización (Sprint 3, PR #31):** Jaicel adoptó MLflow (vía ngrok, corriendo en Colab) para
+comparar runs de los notebooks de baseline — ver `docs/adr/adr-sprint-3/ADR-302-mlflow-tracking.md`.
+Es tracking de experimentos, **no reemplaza este registro**: MLflow-vía-ngrok es efímero (la URL
+muere con la sesión de Colab), este documento sigue siendo el registro permanente de qué modelo
+quedó en qué versión. Cuando el primer modelo pase de `experimental` a `candidato`, su fila aquí
+debe referenciar el run de MLflow que lo respalda (run ID), no reemplazar la fila por un link.
+
 ---
 
 ## Estado actual: sin modelos en producción
 
 **Ningún modelo de este proyecto está entrenado, versionado ni desplegado en producción a la
-fecha de este documento.** Los notebooks del PR #18 (`01_baseline_stylesync_garments2look.ipynb`,
-`01_baseline_stylesync_garments2lookA.ipynb`, `02_eda_visualizacion_outfits.ipynb`) son trabajo
-**exploratorio** — EDA y una inferencia de prueba con CatVTON — no un modelo entrenado con
-versión, dataset y métrica fijados. No confundir con un entregable de este registro.
+fecha de este documento.** Los notebooks del PR #18 (`notebooks/01_baseline_stylesync_garments2look.ipynb`,
+`notebooks/01_baseline_stylesync_garments2lookA.ipynb`, `notebooks/02_eda_visualizacion_outfits.ipynb`
+— movidos de la raíz a `notebooks/` en el PR #23) son trabajo **exploratorio** — EDA y una
+inferencia de prueba con CatVTON — no un modelo entrenado con versión, dataset y métrica
+fijados. No confundir con un entregable de este registro.
 
 Los 3 modelos previstos por el proyecto (`plan-base.md` §11, `openspec/specs/backend/`):
 

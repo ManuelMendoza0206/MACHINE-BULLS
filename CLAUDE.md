@@ -213,7 +213,7 @@ Cualquier sesión de Claude Code que trabaje en este repo debe operar dentro de 
   derivada de `src/config/design-tokens.ts`), Vitest + RTL (jsdom), Playwright, CI de 3 jobs.
 - Entregado vía PR `chore/sprint-1-prep`. Puertas verdes verificadas por ejecución real:
   `npm ci`, `typecheck`, `lint`, `test`, `test:e2e`, `build` → todas exit 0.
-  Evidencia: `docs/sprint-0/SCAFFOLD-VERIFICATION.md`.
+  Evidencia: `docs/sprint-plans/sprint-0/sprint-0-review.md`.
 
 **P0#2: 5 componentes en Sprint 1, 4 diferidos a Sprint 2**
 
@@ -282,7 +282,7 @@ cada asiento (el manifiesto §4–§6 ya lista qué cambiar).
 
 ### P2: Gobernanza
 
-**P2#1: Trazabilidad** — este §10 es el registro. El prep se entregó por PR (no commit directo a `main`), con declaración de IA. Trail histórico en `docs/sprint-0/`.
+**P2#1: Trazabilidad** — este §10 es el registro. El prep se entregó por PR (no commit directo a `main`), con declaración de IA. Trail histórico en `docs/sprint-plans/sprint-0/` (limpiado 24-sep).
 
 **P2#2: Migración a formato OpenSpec nativo** — `design-system/spec.md` y
 `app-shell-and-navigation/spec.md`: **ambas migradas** (Requirement + Scenario + AC). El resto

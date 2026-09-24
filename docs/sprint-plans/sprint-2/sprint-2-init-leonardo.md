@@ -66,9 +66,10 @@ tiene sentido *ahora*:
 2. Si además se acuerda una convención de nombres de artefactos (ej. `<modelo>-v<semver>-
    <fecha>.pt`), documéntala aquí mismo — es lo que usará quien primero promueva un modelo a
    producción (Sprint 4, gate de promoción de modelo, Q3 sigue apareciendo ahí).
-3. Vincula esto con los notebooks de PR #18 — al menos anota en el registro que
-   `01_baseline_stylesync_garments2look.ipynb` y `02_eda_visualizacion_outfits.ipynb` son
-   trabajo exploratorio, no modelos versionados, para que no se confundan con un entregable.
+3. Vincula esto con los notebooks de PR #18 (movidos a `notebooks/` en el PR #23) — al menos
+   anota en el registro que `01_baseline_stylesync_garments2look.ipynb` y
+   `02_eda_visualizacion_outfits.ipynb` son trabajo exploratorio, no modelos versionados, para
+   que no se confundan con un entregable.
 
 **AC:**
 - [x] `docs/ml/MODEL_REGISTRY.md` existe, con al menos una fila (aunque sea "ninguno en
