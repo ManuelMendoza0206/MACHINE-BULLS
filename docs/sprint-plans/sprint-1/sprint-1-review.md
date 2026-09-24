@@ -137,11 +137,21 @@ explícitas, no `complete`.
 
 ### 4. ADRs escritas este cierre
 
-**Ninguna todavía — pendiente.** `docs/adr/adr-sprint-1/README.md` ya lista 2 candidatas
-(reajuste de paleta WCAG AA, CSP baseline) y ambas se confirman reales en esta review (la
-primera está directamente verificada arriba en la sección 1; la segunda no la audité en este
-pase). Las dejo como siguiente paso explícito, no las inventé para cerrar esta sección — mejor
-un "pendiente" honesto que una ADR apurada.
+Las 2 candidatas de `docs/adr/adr-sprint-1/README.md` están escritas:
+
+- **`ADR-008-paleta-wcag-aa.md`** — reajuste de `mutedForeground`/`success`/`destructive` (tema
+  claro) a WCAG AA, + token `warning` nuevo. Cita el commit real (`f4f5a3a`, 31-ago-2026) y la
+  evidencia de esta misma review (sección 1, 45 tests de contraste).
+- **`ADR-009-csp-baseline.md`** — `script-src` con `'unsafe-inline'` en vez de nonce +
+  `strict-dynamic`, por el conflicto con el prerender estático. Cita los commits reales
+  (`9366b6d`, `5333dd8`, ambos 31-ago-2026) y deja explícito que es una brecha de XSS conocida
+  y aceptada, no accidental, con el follow-up (nonce en rutas autenticadas) sin dueño de sprint
+  todavía.
+
+No encontré ninguna otra decisión de arquitectura de Sprint 1 sin documentar más allá de estas
+2 — el README de `adr-sprint-1/` decía explícitamente que su lista "no es necesariamente
+completa"; revisé los PRs de Sprint 1 (`#9` y el rango 26 ago–8 sep) buscando algo más y no
+encontré una tercera decisión con el mismo nivel de impacto arquitectónico.
 
 ### 5. Handoff para Sprint 2 (quien valide tu trabajo de este sprint)
 
