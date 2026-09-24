@@ -1,6 +1,14 @@
 import '@testing-library/jest-dom/vitest';
-import { afterEach, vi } from 'vitest';
+import { afterAll, afterEach, beforeAll, vi } from 'vitest';
 import { cleanup } from '@testing-library/react';
+import { server } from './fixtures/msw/server';
+
+// MSW — intercepts real `fetch` calls; tests that instead do `vi.stubGlobal('fetch', ...)`
+// bypass it entirely (existing convention, e.g. tests/unit/lib/api/client.test.ts), so this is
+// additive infra, not a replacement for that pattern.
+beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
+afterEach(() => server.resetHandlers());
+afterAll(() => server.close());
 
 // Node >=22 exposes an experimental global `localStorage` that can leave jsdom's
 // `window.localStorage` undefined in some runtimes. Provide a tiny in-memory shim
