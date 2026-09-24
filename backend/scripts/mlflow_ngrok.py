@@ -49,7 +49,7 @@ def main() -> int:
         "--default-artifact-root", str(ARTIFACT_ROOT),
         "--host", "0.0.0.0",
         "--port", str(MLFLOW_PORT),
-        "--allowed-hosts", "humorous-trusting-domelike.ngrok-free.dev,127.0.0.1,localhost",
+        "--allowed-hosts", "humorous-trusting-domelike.ngrok-free.dev,127.0.0.1,localhost,127.0.0.1:5000,localhost:5000",
         "--cors-allowed-origins", "https://humorous-trusting-domelike.ngrok-free.dev",
     ]
     print(f"> Iniciando MLflow server en 0.0.0.0:{MLFLOW_PORT}")
