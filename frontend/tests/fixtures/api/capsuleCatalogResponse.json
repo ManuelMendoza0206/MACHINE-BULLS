@@ -1,0 +1,25 @@
+{
+  "garments": [
+    {
+      "id": "c1a1a1a1-1111-4111-8111-111111111111",
+      "processed_image_url": "https://res.cloudinary.com/styleme/garments/capsule-shirt-1.webp",
+      "category": "shirt",
+      "dominant_aesthetic": "old_money",
+      "position": "top"
+    },
+    {
+      "id": "c2b2b2b2-2222-4222-8222-222222222222",
+      "processed_image_url": "https://res.cloudinary.com/styleme/garments/capsule-pants-1.webp",
+      "category": "pants",
+      "dominant_aesthetic": "streetwear",
+      "position": "bottom"
+    },
+    {
+      "id": "c3c3c3c3-3333-4333-8333-333333333333",
+      "processed_image_url": "https://res.cloudinary.com/styleme/garments/capsule-sneakers-1.webp",
+      "category": "sneakers",
+      "dominant_aesthetic": "soft_boy",
+      "position": "footwear"
+    }
+  ]
+}

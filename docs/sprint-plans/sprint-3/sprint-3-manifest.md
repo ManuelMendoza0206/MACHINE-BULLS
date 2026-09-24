@@ -5,6 +5,14 @@ este documento (17-sep-2026, Sprint 2 sigue en curso hasta el 22-sep). Este mani
 estructura antes del kickoff para que no se repita el patrón de Sprint 1-2 (prompts corregidos
 a medio sprint porque no se verificó el punto de partida real).
 
+> **⚠️ Actualización 18-sep — leer antes de seguir cualquier prompt individual:**
+> `INTEGRATION-DIAGNOSIS-2026-09-18.md` (en esta misma carpeta) confirma que el punto de
+> partida real es peor de lo asumido abajo: `backend/domain-and-database` y `backend/
+> api-gateway` **no tienen código**, solo `__init__.py` vacíos. Esto afecta directamente el
+> alcance de Manuel (Tarea 0.5 nueva), Jaicel (Tarea 4 bloqueada/reordenada) y Leonardo (Tarea
+> 2 pasa de "validar" a "escalar bloqueador"). Los 4 prompts individuales ya están corregidos
+> con esto — este manifiesto queda como estaba en lo demás (§1 sigue correcto).
+
 ---
 
 ## 1. Ventana y asientos
@@ -37,9 +45,10 @@ partida:
 - `frontend/wardrobe-flow` (epic de Huascar este sprint) ya tiene una base adelantada: PR #10
   (16-sep) trajo `detectBlur`, `onboardingStore`, `uploadQueue`. Huascar arranca este sprint
   **cerrando**, no desde cero — ver su prompt para el inventario exacto.
-- `backend/garment-analysis-service` (epic de Manuel) depende de que `backend/api-gateway`
-  (Huascar, Sprint 2) tenga al menos el endpoint base de garments — confirmar en el kickoff que
-  eso mergeó, si no, es un bloqueo real, no solo una dependencia de papel.
+- `backend/garment-analysis-service` (epic de Manuel) **confirmado bloqueado** —
+  `backend/api-gateway` (Huascar, Sprint 2) no tiene el endpoint base de garments, ni ningún
+  otro. No es hipotético: es un bloqueo real, resuelto en su prompt con la Tarea 0.5 (mínimo de
+  persistencia acotado a su propia feature).
 - La validación de Leonardo (Asiento C) depende de que Jaicel y Huascar dejen handoff en sus
   epics de Sprint 2 antes del 22-sep (regla §4.1) — si no lo dejan, avisar en el Sprint Review
   del 23-sep, no reconstruir contexto solo.
