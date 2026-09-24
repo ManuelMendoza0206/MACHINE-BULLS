@@ -28,6 +28,12 @@ export default defineConfig({
     timeout: 180_000,
     stdout: 'pipe',
     stderr: 'pipe',
+    env: {
+      // apiRequest() throws at call time without this; no .env.local exists in CI/most dev
+      // machines. Every e2e spec that hits the API mocks it via page.route(), so this origin
+      // is never actually dialed — it only has to be a syntactically valid URL.
+      NEXT_PUBLIC_API_BASE_URL: process.env['NEXT_PUBLIC_API_BASE_URL'] ?? 'http://localhost:8000',
+    },
   },
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
 });
