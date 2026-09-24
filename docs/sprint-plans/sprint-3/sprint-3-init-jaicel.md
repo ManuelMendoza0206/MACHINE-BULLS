@@ -18,8 +18,9 @@ Dos entregables, el primero bloqueante para el resto del equipo:
 1. **Diseño e implementación del mecanismo de consentimiento explícito y política de retención**
    para fotos de prenda y de usuario — sin esto, `wardrobe-flow` (Huascar) y el futuro
    `vton-flow` construyen sobre un supuesto no validado.
-2. **Pagination del gateway** — extender lo que Huascar dejó como base en Sprint 2
-   (`GET /api/v1/garments` con cursor) al resto de endpoints de listado.
+2. **Pagination del gateway** — bloqueada hasta que Manuel entregue el mínimo de persistencia
+   de su Tarea 0.5 (ver Tarea 4 más abajo); no asumas que Huascar dejó una base de Sprint 2,
+   verificado que no la dejó.
 
 ---
 
@@ -108,18 +109,30 @@ se formaliza; sigue el flujo de `CLAUDE.md` §3 (spec antes que código).
 ### Tarea 4: Pagination del gateway — 2 días
 
 **Spec:** `openspec/specs/backend/api-gateway/spec.md` — Requirement "Paginación por cursor en
-todos los endpoints de listado" (Huascar ya cubrió `GET /api/v1/garments` en Sprint 2).
+todos los endpoints de listado".
 
-1. Extiende la paginación por cursor al resto de endpoints de listado que existan a esta altura
-   (outfits, si `outfits-flow`/`recommender-engine` ya expone algo — si no, documenta cuáles
-   quedan pendientes para cuando esos epics arranquen en Sprint 4).
-2. Test: un listado con más elementos que el tamaño de página devuelve un cursor válido para la
+> **⚠️ Corrección 18-sep:** `GET /api/v1/garments` **no existe** — Huascar no llegó a cerrar
+> `api-gateway` en Sprint 2 (verificado: `backend/src/` vacío). Esta tarea queda **bloqueada
+> hasta que Manuel (Asiento B) entregue su Tarea 0.5** (mínimo de persistencia +
+> `POST /garments/upload`, ver `INTEGRATION-DIAGNOSIS-2026-09-18.md` §3.1/§3.4) — no hay nada
+> sobre lo cual paginar antes de eso. **Reordena tu sprint: adelanta Q5 (Tareas 0-3, no
+> dependen del backend) y deja esta Tarea 4 para la segunda mitad**, coordinando con Manuel
+> cuándo su endpoint mínimo esté listo.
+
+1. Extiende la paginación por cursor al endpoint que Manuel entregue (`GET /api/v1/garments`,
+   sobre el modelo `Garment` mínimo de su Tarea 0.5) y a cualquier otro que exista a esta
+   altura (outfits, si `outfits-flow`/`recommender-engine` ya expone algo).
+2. Si Manuel no llega a tener el endpoint listo dentro del sprint: documenta esta Tarea como
+   bloqueada explícitamente (no la fuerces contra un endpoint que no existe) y pásala a
+   Sprint 4 junto con el resto de `api-gateway`.
+3. Test: un listado con más elementos que el tamaño de página devuelve un cursor válido para la
    siguiente página, y la última página no devuelve cursor.
 
 **AC:**
-- [ ] Todos los endpoints de listado existentes al momento usan cursor, no offset/limit
-- [ ] Los que aún no existen quedan documentados como pendiente explícito (no ignorados)
-- [ ] PR revisado y mergeado
+- [ ] Todos los endpoints de listado que existan al momento usan cursor, no offset/limit
+- [ ] Los que aún no existen (incluyendo la posibilidad de que ninguno exista) quedan
+      documentados como pendiente explícito, no ignorados ni forzados
+- [ ] PR revisado y mergeado, o Tarea formalmente movida a Sprint 4 con motivo
 
 ---
 

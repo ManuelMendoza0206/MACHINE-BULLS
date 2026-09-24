@@ -61,25 +61,33 @@ genéricos").
 
 ---
 
-### Tarea 2: Validar `backend/domain-and-database` (Huascar) — 2 días
+### Tarea 2: "Validar" `backend/domain-and-database` — no hay nada que validar, hay que escalarlo
 
-**Spec:** `openspec/specs/backend/domain-and-database/spec.md` — 5 Requirements.
+**Actualización 18-sep (diagnóstico pre-kickoff):** verificado contra `main` —
+`backend/src/` solo tiene `__init__.py` vacíos. Huascar no implementó `domain-and-database` en
+Sprint 2. **No existe código que validar.** Ejecutar los pasos originales de esta Tarea (correr
+pytest, probar el trigger, correr migraciones) sobre un módulo vacío no produciría una
+validación real — produciría la apariencia de una, que es exactamente el antipatrón que este
+plan de rotación existe para evitar.
 
-1. Corre `pytest backend/tests/ -v --cov=src` tú mismo — no confíes en el número reportado en
-   el PR, reprodúcelo.
-2. Verifica el trigger de identidad (`on_auth_user_created`, el más crítico de Sprint 2 por
-   regla §4.4) — prueba el camino de fallo transaccional manualmente si el test no lo cubre de
-   forma convincente.
-3. Corre la migración Alembic `upgrade` y luego `downgrade` en un entorno limpio — confirma que
-   es simétrica de verdad, no solo que el PR dice que lo es.
-4. Revisa el seed del catálogo cápsula: ¿la "cobertura mínima verificable" tiene un test que
-   realmente falla si la cobertura baja, o es solo un conteo de filas insertadas?
+**Lo que sí corresponde hacer (Asiento C, con honestidad sobre el estado real):**
+
+1. Confirmar el hallazgo por mi cuenta (ya hecho, ver
+   `INTEGRATION-DIAGNOSIS-2026-09-18.md` §1) — no asumir que "seguramente algo hay".
+2. Reportarlo en ClickUp como **bloqueador abierto desde Sprint 1**, no como "pendiente de
+   validar" — son estados distintos y el segundo minimiza el problema.
+3. Escalarlo en el Sprint Review del 23-sep para que el equipo decida cómo se cierra — no es
+   una decisión de Asiento C resolverla sola (yo no tengo mandato de features este sprint).
+4. Dar seguimiento a si Manuel (Tarea 0.5 de `sprint-3-init-manuel.md`) cierra al menos el
+   subconjunto de `Garment` que su propia feature necesita — eso sí sería validable de verdad
+   dentro de este sprint, aunque sea parcial.
 
 **AC:**
-- [ ] Los 5 Requirements verificados con comandos ejecutados por ti, con output pegado en el
-      comentario del epic
-- [ ] Trigger de identidad probado en su camino de fallo, no solo el de éxito
-- [ ] Epic movido a `complete` o `update required` con motivo preciso
+- [ ] `[EPIC] backend/domain-and-database` en ClickUp refleja "bloqueador abierto", con el link
+      a este diagnóstico como evidencia — no `to do` genérico ni una validación fabricada
+- [ ] Hallazgo levantado explícitamente en el Sprint Review del 23-sep
+- [ ] Si Manuel entrega su Tarea 0.5: esa porción sí validada con comandos reales (mismo
+      estándar que el resto de esta Tarea originalmente pedía)
 
 ---
 
