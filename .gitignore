@@ -85,3 +85,6 @@ backend/scripts/mlflow_ui.sh
 # team skills under .claude/skills/openspec-* stay tracked)
 skills/
 skills-lock.json
+
+# Fotos de prenda locales (binarios de trabajo, no van al repo)
+sample_data/prenda_*.jpg
