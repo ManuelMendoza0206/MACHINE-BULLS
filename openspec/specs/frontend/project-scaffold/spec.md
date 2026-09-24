@@ -226,7 +226,7 @@ MACHINE-BULLS/
 ## References
 
 - `CLAUDE.md` §2 (stack) · §4 (directory structure) · §10 P0#1 (this scaffold's decision record)
-- `docs/sprint-0/SCAFFOLD-VERIFICATION.md` (real gate output)
+- `docs/sprint-plans/sprint-0/sprint-0-review.md` (real gate output)
 - `docs/context/frontend-plan.md` (product vision)
 
 ---
