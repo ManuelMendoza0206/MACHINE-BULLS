@@ -78,3 +78,10 @@ graphify-out/
 backend/mlflow.db
 backend/mlruns/
 backend/mlartifacts/
+/mlflow.db
+backend/scripts/mlflow_ui.sh
+
+# Local skill installer leftovers (personal skills live in ~/.claude/skills,
+# team skills under .claude/skills/openspec-* stay tracked)
+skills/
+skills-lock.json
