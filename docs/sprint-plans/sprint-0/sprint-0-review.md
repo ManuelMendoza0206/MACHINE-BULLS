@@ -1,11 +1,15 @@
-# Sprint 0 — Scaffold Verification (authoritative)
+# Sprint 0 — Review (12 – 25 ago 2026)
 
 **Branch:** `chore/sprint-1-prep` → PR to `main`
-**Stack locked:** Next.js 14.2 · React 18.3 · Node 20 LTS · TypeScript strict
+**Stack locked at the time:** Next.js 14.2 · React 18.3 · Node 20 LTS · TypeScript strict
+(superseded in Sprint 2, PR #15 — see `docs/adr/adr-sprint-0/ADR-001-stack-frontend.md`)
 
-Authoritative status of the scaffold. Everything else in `docs/sprint-0/` is the historical
-trail (three rounds that declared "READY" without ever running `npm ci`). Trust this file and
-`CLAUDE.md` §10.
+**Limpieza 24-sep-2026:** esta carpeta (`docs/sprint-0/`, antigua ubicación) tenía 7 documentos
+adicionales de tres rondas de remediación pre-proyecto que declararon "READY"/"GO"/"PRODUCTION
+READY" sin haber corrido `npm ci` — quedaron eliminados por no aportar nada que este archivo y
+`GO-NO-GO.md` no cubran ya, y por generar confusión sobre cuál era la fuente de verdad. Este
+archivo (renombrado de `SCAFFOLD-VERIFICATION.md`) y `GO-NO-GO.md` son los dos documentos
+reales del Sprint 0 — junto con `CLAUDE.md` §10, que sigue siendo el registro de decisiones.
 
 ---
 

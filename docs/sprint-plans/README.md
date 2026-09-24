@@ -7,11 +7,17 @@ Un directorio por sprint. Cada carpeta contiene el manifiesto canónico del spri
 
 | Sprint | Ventana | Estado | Carpeta |
 |---|---|---|---|
-| 0 | 12 – 25 ago 2026 | Cerrado (scaffold) — ver `../sprint-0/` | — |
-| 1 | 2 – 8 sep 2026 | Cerrado, mergeado el 16-sep (PR #9) | [`sprint-1/`](./sprint-1/) |
-| 2 | 9 – 22 sep 2026 | **En curso** (hoy: 17-sep) | [`sprint-2/`](./sprint-2/) |
-| 3 | 23 sep – 6 oct 2026 | Planificado, no iniciado | [`sprint-3/`](./sprint-3/) |
+| 0 | 12 – 25 ago 2026 | Cerrado (scaffold) | [`sprint-0/`](./sprint-0/) |
+| 1 | 26 ago – 8 sep 2026 | Cerrado en código; review formal **pendiente de Huascar** (QA — handoff comunicado directamente, fuera del repo) | [`sprint-1/`](./sprint-1/) |
+| 2 | 9 – 22 sep 2026 | Cerrado en código; review formal **pendiente de Huascar** | [`sprint-2/`](./sprint-2/) |
+| 3 | 23 sep – 6 oct 2026 | **En curso** (hoy: 24-sep) — review vivo, Leonardo (QA) | [`sprint-3/`](./sprint-3/) |
 | 4-8 | oct – dic 2026 | Ver `../clickup/team-rotation-plan.md` §3 | — |
+
+**Convención de review:** cada sprint tiene un `sprint-N-review.md` — la validación de QA de
+ese sprint (Asiento C), con estado real de cada epic (código vs. ClickUp vs. specs) y las ADRs
+que ese cierre produjo en `docs/adr/adr-sprint-N/`. Sprint 1 y 2 tuvieron un intercambio de
+asiento (Huascar toma la QA de ambos en sustitución de Manuel) — el handoff con el detalle
+completo se comunicó directamente a Huascar, fuera del repo.
 
 ## Convención de nombres
 
