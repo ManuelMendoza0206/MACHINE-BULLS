@@ -1,0 +1,13 @@
+# Config del skeleton de entrenamiento (historia bccr).
+# Valores de ejemplo, no tuned. El loop real los consume en su sprint.
+model:
+  name: "baseline"
+  backbone: "noop"
+dataset:
+  name: "garments2look-sample"
+  path: "sample_data/"
+training:
+  epochs: 1
+  batch_size: 8
+  lr: 0.001
+seed: 42
