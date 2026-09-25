@@ -137,6 +137,26 @@ describe('LandingCta', () => {
     // Initially loading -> defaults to /signup per spec §3.4
     expect(screen.getByRole('link', { name: /empezar/i })).toHaveAttribute('href', '/signup');
   });
+
+  it('switches to /wardrobe once authenticated', async () => {
+    const fakeUser = { id: 'u1', email: 'a@b.com', user_metadata: { name: 'Ana' } };
+    mockGetUser.mockResolvedValue({ data: { user: fakeUser } });
+    mockOnAuthStateChange.mockImplementation((cb: (event: string, session: unknown) => void) => {
+      setTimeout(() => cb('SIGNED_IN', { user: fakeUser }), 0);
+      return { data: { subscription: { unsubscribe: vi.fn() } } };
+    });
+
+    render(
+      <AuthProvider>
+        <LandingCta />
+      </AuthProvider>
+    );
+
+    // Post-hydration: authenticated CTA points to /wardrobe per AC dqn
+    await waitFor(() =>
+      expect(screen.getByRole('link', { name: /empezar/i })).toHaveAttribute('href', '/wardrobe')
+    );
+  });
 });
 
 describe('useAuth transitions', () => {
