@@ -4,14 +4,19 @@ import type { JSX } from 'react';
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useAuth } from '@/features/auth/hooks/useAuth';
 import { NAV_ITEMS } from '@/config/navigation';
 import { isNavItemActive } from '@/lib/navigation/isNavItemActive';
 import { cn } from '@/lib/utils/cn';
+import { Button } from '@/components/ui/button';
 import { ThemeToggle } from './ThemeToggle';
 
 /** Desktop navigation. Visible at `lg+` only, via CSS — no viewport JS (app-shell/spec.md §2.3). */
 export function TopNav(): JSX.Element {
   const pathname = usePathname();
+  const { user, status, signOut } = useAuth();
+
+  const identidad = user ? (user.name ?? user.email) : null;
 
   return (
     <header className="hidden border-b border-border lg:block">
@@ -47,7 +52,17 @@ export function TopNav(): JSX.Element {
             );
           })}
         </ul>
-        <div className="ml-auto">
+        <div className="ml-auto flex items-center gap-3">
+          {/* Nothing while `loading`: rendering an empty identity would reflow the header on
+              every page load (app-shell/spec.md, "Estado de sesión en el shell"). */}
+          {status === 'authenticated' && identidad ? (
+            <>
+              <span className="max-w-40 truncate text-sm text-muted-foreground">{identidad}</span>
+              <Button variant="ghost" size="sm" onClick={() => void signOut()}>
+                Cerrar sesión
+              </Button>
+            </>
+          ) : null}
           <ThemeToggle />
         </div>
       </nav>
