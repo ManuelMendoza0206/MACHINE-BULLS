@@ -65,6 +65,13 @@ dist/
 .jupyter/
 .jupyter_ystore.db
 
+# Notebook 03 outputs (heavy binaries, regenerate from the notebook)
+# Las fotos van a Drive en Colab o se regeneran bajando los shards de nuevo.
+# Los CSV de etiquetas y el reporte si se versionan.
+sample_data/clip_grueso/
+sample_data/clip_fino/
+sample_data/figures/
+
 # Local tooling
 .opencode/
 opencode.json
