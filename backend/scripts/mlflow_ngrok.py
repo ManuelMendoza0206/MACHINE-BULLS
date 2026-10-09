@@ -7,12 +7,14 @@ Uso:
   # o
   uv run --project backend python backend/scripts/mlflow_ngrok.py
 """
+
 from __future__ import annotations
+
 import os
-import sys
-import time
 import signal
 import subprocess
+import sys
+import time
 from pathlib import Path
 
 BACKEND_DIR = Path(__file__).resolve().parent.parent
@@ -24,12 +26,15 @@ MLFLOW_DB = BACKEND_DIR / "mlflow.db"
 ARTIFACT_ROOT = BACKEND_DIR / "mlartifacts"
 ARTIFACT_ROOT.mkdir(exist_ok=True)
 
+
 def main() -> int:
     # Verificar uv/mlflow
     try:
-        from pyngrok import ngrok, conf  # type: ignore
+        from pyngrok import conf, ngrok  # type: ignore
     except ImportError:
-        print("[ERR] pyngrok no instalado. Ejecuta: uv add --project backend pyngrok", file=sys.stderr)
+        print(
+            "[ERR] pyngrok no instalado. Ejecuta: uv add --project backend pyngrok", file=sys.stderr
+        )
         return 1
 
     # Authtoken: usa el global ya configurado (~/.config/ngrok/ngrok.yml).
@@ -44,13 +49,22 @@ def main() -> int:
 
     # Iniciar MLflow server — pin a tu dominio ngrok fijo (2 años estable)
     mlflow_cmd = [
-        sys.executable, "-m", "mlflow", "server",
-        "--backend-store-uri", f"sqlite:///{MLFLOW_DB}",
-        "--default-artifact-root", str(ARTIFACT_ROOT),
-        "--host", "0.0.0.0",
-        "--port", str(MLFLOW_PORT),
-        "--allowed-hosts", "humorous-trusting-domelike.ngrok-free.dev,127.0.0.1,localhost,127.0.0.1:5000,localhost:5000",
-        "--cors-allowed-origins", "https://humorous-trusting-domelike.ngrok-free.dev",
+        sys.executable,
+        "-m",
+        "mlflow",
+        "server",
+        "--backend-store-uri",
+        f"sqlite:///{MLFLOW_DB}",
+        "--default-artifact-root",
+        str(ARTIFACT_ROOT),
+        "--host",
+        "0.0.0.0",
+        "--port",
+        str(MLFLOW_PORT),
+        "--allowed-hosts",
+        "humorous-trusting-domelike.ngrok-free.dev,127.0.0.1,localhost,127.0.0.1:5000,localhost:5000",
+        "--cors-allowed-origins",
+        "https://humorous-trusting-domelike.ngrok-free.dev",
     ]
     print(f"> Iniciando MLflow server en 0.0.0.0:{MLFLOW_PORT}")
     print(f"  DB: {MLFLOW_DB}")
@@ -67,29 +81,32 @@ def main() -> int:
         public_url = ngrok.connect(MLFLOW_PORT, "http")
         # pyngrok retorna objeto con public_url attr
         url_str = getattr(public_url, "public_url", str(public_url))
-        print("\n" + "="*60)
+        print("\n" + "=" * 60)
         print(f"[OK] MLflow público en: {url_str}")
-        print(f"   Pon esto en Colab:")
+        print("   Pon esto en Colab:")
         print(f'   import mlflow; mlflow.set_tracking_uri("{url_str}")')
         print(f"   o export MLFLOW_TRACKING_URI={url_str}")
         print(f"   UI local: http://127.0.0.1:{MLFLOW_PORT}")
-        print("="*60 + "\n")
+        print("=" * 60 + "\n")
         print("Presiona Ctrl+C para detener...")
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 - pyngrok lanza tipos propios; se reporta y se limpia
         print(f"[ERR] Error al abrir túnel ngrok: {e}", file=sys.stderr)
         mlflow_proc.terminate()
         return 1
 
     def shutdown(signum, frame):
         print("\n> Cerrando...")
+        # Atrapado amplio a proposito: el teardown corre en un signal handler y
+        # una excepcion ahi deja el tunel abierto y el proceso colgado. Se
+        # reporta igual para que quede en la salida y no se pierda.
         try:
             ngrok.disconnect(url_str)
-        except Exception:
-            pass
+        except Exception as exc:  # noqa: BLE001 - signal handler: el teardown no puede fallar
+            print(f"[WARN] no se pudo cerrar el tunel: {exc}", file=sys.stderr)
         try:
             ngrok.kill()
-        except Exception:
-            pass
+        except Exception as exc:  # noqa: BLE001 - idem
+            print(f"[WARN] ngrok.kill() fallo: {exc}", file=sys.stderr)
         mlflow_proc.terminate()
         try:
             mlflow_proc.wait(timeout=5)
@@ -105,6 +122,7 @@ def main() -> int:
     except KeyboardInterrupt:
         shutdown(None, None)
     return 0
+
 
 if __name__ == "__main__":
     raise SystemExit(main())
