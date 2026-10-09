@@ -14,6 +14,7 @@ dependencies = [
   "mlflow>=3.16.1",
   "psutil>=7.2.2",
   "pyngrok>=8.1.2",
+  "pyyaml>=6.0.3",
 ]
 
 [project.optional-dependencies]
@@ -24,7 +25,7 @@ line-length = 100
 target-version = "py311"
 
 [tool.pytest.ini_options]
-testpaths = ["tests"]
+testpaths = ["tests", "src/ml"]
 pythonpath = ["src"]
 
 [dependency-groups]
