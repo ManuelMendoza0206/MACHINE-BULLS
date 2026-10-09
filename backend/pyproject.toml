@@ -11,6 +11,9 @@ dependencies = [
   "pydantic>=2.7",
   "psycopg[binary]>=3.1",
   "supabase>=2.4",
+  "mlflow>=3.16.1",
+  "psutil>=7.2.2",
+  "pyngrok>=8.1.2",
   "pyyaml>=6.0.3",
 ]
 
@@ -24,3 +27,8 @@ target-version = "py311"
 [tool.pytest.ini_options]
 testpaths = ["tests", "src/ml"]
 pythonpath = ["src"]
+
+[dependency-groups]
+dev = [
+    "ipykernel>=7.3.0",
+]
