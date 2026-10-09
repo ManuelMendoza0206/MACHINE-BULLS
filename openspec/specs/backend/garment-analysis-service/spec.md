@@ -149,15 +149,36 @@ GarmentAnalysisResult ──► 200 OK (GarmentUploadResponse, spec 01 frontend 
 ```
 src/services/garment_analysis/analyzer.py
 src/services/garment_analysis/background_remover.py
-src/services/garment_analysis/clip_classifier.py
 src/services/garment_analysis/resnet_fallback_classifier.py
 src/services/garment_analysis/color_extraction.py
-src/services/garment_analysis/prompts.py
 src/config/vision_thresholds.py
 tests/unit/services/garment_analysis/test_analyzer.py
-tests/unit/services/garment_analysis/test_clip_classifier.py
 tests/unit/services/garment_analysis/test_resnet_fallback.py
 tests/unit/services/garment_analysis/test_color_extraction.py
 tests/integration/services/garment_analysis/test_pipeline_e2e.py
 tests/evaluation/test_f1_score_curated_dataset.py
 ```
+
+### El clasificador CLIP y los prompts ya están, en la librería ML
+
+`clip_classifier.py` y `prompts.py` **no** se crean acá: se escribieron durante el
+cierre de las historias `bccv` y `bcdj` (Sprint 4) y viven en la librería ML.
+
+```
+src/ml/models/prompts.py         <- prompts (TEMPLATES, expandir_prompts)
+src/ml/models/clip_classifier.py  <- derivacion de pares, splits sin fuga, inferencia
+src/ml/metrics/zero_shot.py       <- metricas del eval (IC95, F1 macro, McNemar) y CLI
+```
+
+`src/services/garment_analysis/` los **importa**, no los reimplementa. La razón es
+la separación de capas: esto es codigo ML reutilizable y el servicio no existe
+todavia; meterlo en la capa HTTP lo ata a un endpoint antes de que haya algo que
+servir. Decision registrada en
+[`docs/adr/adr-sprint-4/ADR-401-clip-classifier-location.md`](../../../../docs/adr/adr-sprint-4/ADR-401-clip-classifier-location.md).
+
+Los tests correspondientes ya existen y corren en CI (job `backend`):
+`src/ml/testing/test_clip_classifier.py`, `test_zero_shot.py` y `test_prompts.py`.
+
+**Pendiente para cuando arranque este epic:** el AC de §5 que pide "≥ 90% de
+cobertura en `src/services/garment_analysis/`" hoy es inimputable, porque el
+directorio no existe. Pasa a ser medible cuando se cree.
