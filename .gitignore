@@ -5,7 +5,8 @@ backend/.venv/
 backend/__pycache__/
 .pnp
 .pnp.js
-
+.venv/
+venv/
 # Testing / coverage
 /coverage
 /frontend/coverage
