@@ -30,9 +30,10 @@ RUN --mount=type=cache,target=/root/.cache/uv \
       --index-url https://download.pytorch.org/whl/cpu "torch==2.14.1"; then exit 0; fi; sleep 15; done; exit 1'
 
 # 3) Bake del modelo CLIP (~600MB): la demo no depende de HuggingFace en runtime.
-#    HFHub reanuda descargas desde la caché, así que los reintentos solo bajan lo que falta.
-RUN --mount=type=cache,target=/root/.cache/huggingface \
-    sh -c 'for i in 1 2 3 4; do if /app/.venv/bin/python -c "from transformers import CLIPModel, CLIPProcessor; \
+#    SIN cache mount: el modelo tiene que quedar en la capa de la imagen, no en
+#    el overlay efímero de BuildKit (con eso en runtime HF_HUB_OFFLINE=1 no
+#    encontraría nada). Los reintentos reanudan descargas parciales del hub.
+RUN sh -c 'for i in 1 2 3 4; do if /app/.venv/bin/python -c "from transformers import CLIPModel, CLIPProcessor; \
 CLIPProcessor.from_pretrained('"'"'openai/clip-vit-base-patch32'"'"'); \
 CLIPModel.from_pretrained('"'"'openai/clip-vit-base-patch32'"'"')"; then exit 0; fi; sleep 15; done; exit 1'
 
