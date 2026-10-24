@@ -1,3 +1,14 @@
+# StyleMe — stack completo para la demo: Postgres/pgvector + backend (FastAPI/CLIP)
+# + frontend (Next.js). Todo sale con:
+#
+#   docker compose -f infra/docker-compose.yml up --build
+#
+# VTON:
+#   - Por defecto `mock` (fallback local PIL que SIEMPRE funciona — sin saldo en Replicate).
+#   - Para la VM propia (IDM-VTON servido por HTTP):
+#       VTON_PROVIDER=http VTON_HTTP_URL=http://<mi-vm>:8000/vton docker compose ...
+#   - Para Replicate (requiere saldo): VTON_PROVIDER=replicate
+
 services:
   db:
     image: pgvector/pgvector:pg16
@@ -17,5 +28,45 @@ services:
       timeout: 5s
       retries: 10
 
+  backend:
+    build: ../backend
+    container_name: styleme-backend
+    restart: unless-stopped
+    env_file:
+      - path: ../backend/.env # REPLICATE_API_TOKEN (opcional; no rompe si falta)
+        required: false
+    environment:
+      # Postgres obligatorio en compose (SQLite es solo el default de dev local).
+      DATABASE_URL: postgresql+psycopg://styleme:styleme_mvp@db:5432/styleme
+      # URLs absolutas de /media para el navegador (localhost:8000 publicado).
+      PUBLIC_BASE_URL: http://localhost:8000
+      # Fallback local por defecto; ver comentarios arriba para VM/Replicate.
+      VTON_PROVIDER: ${VTON_PROVIDER:-mock}
+      VTON_HTTP_URL: ${VTON_HTTP_URL:-}
+      VTON_HTTP_TIMEOUT_S: ${VTON_HTTP_TIMEOUT_S:-300}
+      MEDIA_DIR: /app/media
+    ports:
+      - "8000:8000"
+    volumes:
+      - styleme-media:/app/media # imágenes subidas + resultados VTON sobreviven restarts
+    depends_on:
+      db:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ../frontend
+      args:
+        # Inlined en build time; el navegador llama a localhost:8000 (publicado abajo).
+        NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-http://localhost:8000}
+        NEXT_PUBLIC_VTON_POLL_TIMEOUT_MS: ${NEXT_PUBLIC_VTON_POLL_TIMEOUT_MS:-90000}
+    container_name: styleme-frontend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+
 volumes:
   styleme-pgdata:
+  styleme-media:
