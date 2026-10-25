@@ -8,10 +8,11 @@ Un directorio por sprint. Cada carpeta contiene el manifiesto canónico del spri
 | Sprint | Ventana | Estado | Carpeta |
 |---|---|---|---|
 | 0 | 12 – 25 ago 2026 | Cerrado (scaffold) | [`sprint-0/`](./sprint-0/) |
-| 1 | 26 ago – 8 sep 2026 | Cerrado en código; review formal **pendiente de Huascar** (QA — handoff comunicado directamente, fuera del repo) | [`sprint-1/`](./sprint-1/) |
-| 2 | 9 – 22 sep 2026 | Cerrado en código; review formal **pendiente de Huascar** | [`sprint-2/`](./sprint-2/) |
-| 3 | 23 sep – 6 oct 2026 | **En curso** (hoy: 24-sep) — review vivo, Leonardo (QA) | [`sprint-3/`](./sprint-3/) |
-| 4-8 | oct – dic 2026 | Ver `../clickup/team-rotation-plan.md` §3 | — |
+| 1 | 26 ago – 8 sep 2026 | **Cerrado** — review formal de Huascar aprobada y mergeada (PR #34, con auditoría en `sprint-3-review.md` §3.1) | [`sprint-1/`](./sprint-1/) |
+| 2 | 9 – 22 sep 2026 | **Cerrado en código** — QA de sus epics validada por Huascar dentro de `sprint-3-review.md` (intercambio de asiento); no tiene `sprint-2-review.md` propio | [`sprint-2/`](./sprint-2/) |
+| 3 | 23 sep – 6 oct 2026 | **Cerrado en código** — review vivo actualizado al 25-sep; cierre formal del tablero pendiente (ver §6 de la review) | [`sprint-3/`](./sprint-3/) |
+| 4 | 7 – 20 oct 2026 | En revisión de QA — rama `qa/sprint-4-review` en remoto, sin merge a `main` aún | — |
+| 5-8 | 21 oct – dic 2026 | Ventana según `../clickup/clickup_estructura.md` §Scrum (Sprint 5: 21-oct → 3-nov) | — |
 
 **Convención de review:** cada sprint tiene un `sprint-N-review.md` — la validación de QA de
 ese sprint (Asiento C), con estado real de cada epic (código vs. ClickUp vs. specs) y las ADRs

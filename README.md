@@ -4,11 +4,12 @@
 
 ```
 MACHINE-BULLS/
-├── frontend/          # Next.js 16 + React 19 + Tailwind v4 (ver frontend/README.md)
+├── frontend/          # Next.js 16 + React 19 + Tailwind v4
 │   └── src/           # App Router, features/, lib/, schemas/
-├── backend/           # FastAPI + SQLAlchemy + pgvector (ver backend/README.md)
-│   └── src/           # domain/, schemas/, api/, services/, db/
-├── docs/              # plan-base, frontend-plan, clickup, architecture/
+├── backend/           # FastAPI + SQLAlchemy + MLflow (ver backend/README.md)
+│   └── src/           # domain/, schemas/, api/, services/, db/, ml/
+├── notebooks/         # 01 baseline · 02 EDA · 03 CLIP zero-shot (código ML/Data)
+├── docs/              # plan-base, clickup, adr, architecture/
 └── openspec/          # SDD specs (frontend/ + backend/)
 ```
 
@@ -44,11 +45,18 @@ Documentación completa: [`docs/architecture/diagrams/README.md`](docs/architect
 ```bash
 # Frontend
 cd frontend && npm ci && npm run dev   # http://localhost:3000
-npm run verify   # typecheck + lint + test + build
+npm run verify                          # typecheck + lint + test + build
 
-# Backend
-cd backend && pip install -r requirements.txt  # o pyproject.toml
-uvicorn src.main:app --reload
+# Backend (existe repository: no hay requirements.txt, usa pyproject)
+cd backend
+pip install -e ".[dev]"
+uvicorn src.main:app --reload --port 8000
+
+# Notebooks (ML/Data, deps livianas del repo)
+pip install -r requirements.txt
 ```
+
+ClickUp (equipo): reconciliación del tablero con
+`node scripts/clickup/sync-sprint-1.mjs` — credencial local, nunca versionada.
 
 Constitution: `.speckit/constitution.md` — PR required, 1 reviewer, declarar IA.

@@ -18,7 +18,7 @@ backend/src/
 ```bash
 cd backend
 python -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
+pip install -e ".[dev]"        # pyproject.toml (no hay requirements.txt)
 alembic upgrade head
 uvicorn src.main:app --reload --port 8000
 ```

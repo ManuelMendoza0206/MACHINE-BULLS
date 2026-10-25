@@ -1,9 +1,14 @@
 # Estructura y Operativa del Tablero ClickUp
 
-> ⚠️ **Snapshot del 2026-08-26.** El Sprint 1 se reconcilió con la documentación el 31 ago
+> ⚠️ **Snapshot del 2026-08-26, revisado 2026-10-24.** El Sprint 1 se reconcilió con la documentación el 31 ago
 > (scaffold entregado, 5 componentes no 8, sin Storybook, etc.) — ver `docs/sprint-plans/sprint-1/sprint-1-manifest.md`
-> §7 para el checklist de re-sincronización del tablero (dueño: Manuel / Asiento D). Este doc
-> vuelve a ser fiel al tablero cuando ese checklist esté aplicado y `SPRINT-1-MASTER.csv` exportado.
+> §7 para el checklist de re-sincronización del tablero (dueño: Manuel / Asiento D). Ese checklist ahora es
+> **auditado/automatizable con `scripts/clickup/sync-sprint-1.mjs`** (dry-run por defecto; la auditoría
+> del 24-oct-2026 sobre el tablero real reporta 189 tareas / 8 listas, 0 violaciones de gobernanza
+> y drift de retitulado en 3 tareas — los demás IDs del manifiesto ya no existen en el tablero).
+> El contenido y las métricas de este documento corresponden al snapshot previo a la reconciliación
+> del 31-ago; el estado vivo del tablero a partir de Sprint 3 se refleja en
+> `docs/sprint-plans/sprint-3/sprint-3-review.md` §5.
 
 ## Estado del Tablero (snapshot 2026-08-26)
 

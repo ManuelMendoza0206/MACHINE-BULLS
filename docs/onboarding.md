@@ -2,17 +2,17 @@
 
 ## 1. Requisitos
 
-- **Node 20 LTS** — `nvm use` lee `.nvmrc` (o instala 20 a mano). `engines.node >= 18.17.0`.
-- **npm 10+** (viene con Node 20).
+- **Node 22 LTS** (o `>=20.19`) — `engines.node` de `frontend/package.json`; CI corre en Node 22.
+- **npm 10+** (viene con Node 20/22).
 - Git.
 
 ## 2. Clonar e instalar
 
 ```bash
 git clone https://github.com/ManuelMendoza0206/MACHINE-BULLS.git
-cd MACHINE-BULLS
-nvm use            # Node 20
-npm ci             # instala EXACTO lo del lockfile + arma los git hooks (husky)
+cd MACHINE-BULLS/frontend
+nvm use 22           # Node 22 (o >=20.19)
+npm ci               # instala EXACTO lo del lockfile + arma los git hooks (husky)
 cp .env.example .env.local   # y rellená NEXT_PUBLIC_API_BASE_URL
 ```
 
@@ -35,6 +35,7 @@ npm run dev        # http://localhost:3000
 ## 5. Empezar una tarea
 
 ```bash
+cd frontend        # (ya estás acá si seguiste el paso 2)
 git checkout -b feat/tareaN-<slug> main
 # spec (openspec/specs/frontend/...) → test en rojo → código → verde
 npm run verify && npm run test:e2e
@@ -52,9 +53,11 @@ Tailwind, EditorConfig, Vitest, Playwright. `format-on-save` ya está configurad
 
 | Dónde                                      | Qué                                                    |
 | ------------------------------------------ | ------------------------------------------------------ |
-| `CLAUDE.md`                                | fuente operativa (stack, SDD, errores, decisiones §10) |
+| `CLAUDE.md`                                | fuente operativa (§10.1 estado vigente, stack, SDD, errores, decisiones) |
 | `CONTRIBUTING.md`                          | reglas de PR y flujo, resumidas                        |
-| `openspec/specs/frontend/`                 | specs — la verdad de los contratos                     |
-| `docs/sprint-plans/sprint-1/sprint-1-manifest.md`   | estructura canónica del Sprint 1                       |
-| `docs/sprint-plans/sprint-1/sprint-1-init-<vos>.md` | tu lista de tareas                                     |
+| `openspec/specs/frontend/`                 | specs frontend — la verdad de los contratos            |
+| `openspec/specs/backend/`                  | specs backend (FastAPI/ML)                             |
+| `docs/sprint-plans/sprint-3/sprint-3-review.md` | review de QA más reciente con estado real          |
+| `docs/sprint-plans/README.md`              | índice de sprints (qué está cerrado/en curso)          |
+| `docs/clickup/clickup_estructura.md`       | estructura del tablero ClickUp + proceso               |
 | `docs/sprint-plans/sprint-0/sprint-0-review.md`   | estado del scaffold + follow-ups                       |
