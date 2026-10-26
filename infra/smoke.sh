@@ -16,9 +16,11 @@ API="${API:-http://localhost:8000}"
 WEB="${WEB:-http://localhost:3000}"
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 SAMPLES="$ROOT/sample_data"
+# python3 en Windows (git bash) a veces no existe: usar el `python` de la hora.
+PY="$(command -v python3 || command -v python)"
 
 json_get() { # json_get <json> <clave[.subclave]>
-  python3 -c '
+  "$PY" -c '
 import json, sys
 obj = json.loads(sys.argv[1])
 for part in sys.argv[2].split("."):
@@ -50,7 +52,7 @@ echo "camiseta -> $(json_get "$G1" category) | pantalon -> $(json_get "$G2" cate
 step "4/7 recommend"
 REC="$(curl -sf -H 'Content-Type: application/json' \
   -d "{\"user_id\": \"$USER_ID\"}" "$API/api/v1/outfits/recommend")"
-OUTFIT_ID="$(python3 -c 'import json,sys; d=json.load(sys.stdin); o=d["outfits"][0]; print(o["outfit_id"], len(o["garments"]))' <<<"$REC")"
+OUTFIT_ID="$("$PY" -c 'import json,sys; d=json.load(sys.stdin); o=d["outfits"][0]; print(o["outfit_id"], len(o["garments"]))' <<<"$REC")"
 CAPAS="$(echo "$OUTFIT_ID" | awk '{print $2}')"
 OUTFIT_ID="$(echo "$OUTFIT_ID" | awk '{print $1}')"
 echo "outfit: $OUTFIT_ID ($CAPAS capas)"
