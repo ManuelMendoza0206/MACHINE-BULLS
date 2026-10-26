@@ -195,6 +195,55 @@ def test_vton_flujo_completo_mock(client: Any, demo_user_id: str) -> None:
     assert sj["error_message"] is None
 
 
+def test_vton_job_persistido_pending_antes_de_encolar(
+    client: Any, monkeypatch: Any
+) -> None:
+    """El job ya es consultable al momento en que comienza el encolado."""
+    import json
+    import sys
+    from types import ModuleType
+
+    from db.session import SessionLocal
+    from domain.enums import VtonJobStatus
+    from domain.models import VtonJob
+
+    garment_id = _upload(client, nombre="remera")["garment_id"]
+    nombre, buf = _jpg_bytes(color=(200, 180, 160), nombre="persona")
+    observed: list[str] = []
+
+    async def inspect_persisted_job(job_id: str, _human_image_path: str) -> bool:
+        session = SessionLocal()
+        try:
+            job = session.get(VtonJob, job_id)
+            assert job is not None
+            assert job.status == VtonJobStatus.PENDING.value
+            observed.append(job_id)
+        finally:
+            session.close()
+        return True
+
+    queue_module = ModuleType("services.queue")
+    queue_module.enqueue_vton_job = inspect_persisted_job
+    monkeypatch.setitem(sys.modules, "services.queue", queue_module)
+    response = client.post(
+        "/api/v1/vton/try-on",
+        data={
+            "garment_layers": json.dumps(
+                [{"garment_id": garment_id, "position": "top"}]
+            )
+        },
+        files={"user_image": (nombre, buf, "image/jpeg")},
+    )
+
+    assert response.status_code == 200, response.text
+    job_id = response.json()["job_id"]
+    assert observed == [job_id]
+    assert response.json()["status"] == "processing"
+    status = client.get(f"/api/v1/vton/status/{job_id}")
+    assert status.status_code == 200
+    assert status.json()["status"] == VtonJobStatus.PENDING.value
+
+
 def test_vton_status_job_inexistente_da_404(client: Any) -> None:
     r = client.get("/api/v1/vton/status/no-existe")
     assert r.status_code == 404
