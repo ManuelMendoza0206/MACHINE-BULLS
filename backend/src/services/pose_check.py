@@ -8,7 +8,7 @@ valida que:
     2. los landmarks necesarios son visibles (shoulders/hips/elbows/wrists/
        knees/ankles),
     3. el cuerpo esta vertical (shoulders arriba de hips),
-    4. los brazos cuelgan sin pegarse al torso (10-60) y con codo recto,
+    4. los brazos cuelgan sin pegarse al torso (>=8, <=60) y con codo recto,
     5. las piernas estan separadas.
 
 Es una validacion de entrada, no de calidad: rechaza capturas que romperian la
@@ -35,10 +35,11 @@ logger = logging.getLogger(__name__)
 _LANDMARKS_REQUERIDOS = (11, 12, 23, 24, 13, 14, 15, 16, 25, 26, 27, 28)
 
 _MIN_VISIBILIDAD = 0.5
-# El dataset de CatVTON (VITON/DressCode) trae brazos colgados ~10-20 grados:
-# apurar ~45 rechazaria toda la muestra real. Umbral de oclusion: el brazo
-# NO puede quedar pegado al torso (rompe la region de la prenda).
-_ANGULO_BRAZO_MIN = 10.0
+# El dataset de CatVTON calibrado con el landmarker real: la foto canonica
+# (resource/demo/person model_5) mide brazos 9.5-10.8 grados y codos 169-179.
+# MIN=8 deja pasar el standard del dataset pero rechaza el brazo pegado
+# (2-5 grados) que oculta la region de la prenda.
+_ANGULO_BRAZO_MIN = 8.0
 _ANGULO_BRAZO_MAX = 60.0  # en T-pose el protocolo pide volver a capturar
 # Codo casi recto: la mano-en-cadera tipica (foto fallback) mide el mismo
 # angulo de brazo que un A-Pose colgado, pero el codo va doblado ~90-120.
