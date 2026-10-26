@@ -1,16 +1,19 @@
-"""Proveedor de inferencia VTON (B4): Replicate `cuuupid/idm-vton` + mock.
+"""Proveedor de inferencia VTON (B4): Replicate `cuuupid/idm-vton` + HTTP + mock.
 
 `VtonInferenceProvider` es la interfaz swappable que pide el spec de
-vton-pipeline. Dos implementaciones:
+vton-pipeline. Tres implementaciones:
 
 - `ReplicateVtonProvider`: modelo real en Replicate (~$0.02/run, ~17s en
   A100). Recibe URLs o data-URIs, devuelve la URL del resultado.
+- `HttpVtonProvider`: endpoint HTTP propio. Modo `catvton` apuntando al
+  `CatVTON/server.py` local (GPU nAtaN del host) o a una VM con el modelo que
+  sea. Contrato Replicate-compatible + `mask_type` opcional para las capas.
 - `MockVtonProvider`: compone la prenda sobre la persona con PIL. Determinista
   y sin costo; existe para que la demo funcione sin token y para los tests de
   integracion del pipeline (que no deben llamar a la nube).
 
-`build_provider()` elige segun `VTON_PROVIDER` (auto|replicate|mock): en
-`auto` usa Replicate si hay token, si no mock.
+`build_provider()` elige segun `VTON_PROVIDER` (catvton|http|replicate|mock|auto):
+en `auto` usa el endpoint HTTP si hay URL, despues Replicate, si no mock.
 """
 
 from __future__ import annotations
@@ -48,8 +51,17 @@ class VtonInferenceProvider(Protocol):
         garment_image: bytes,
         garment_description: str,
         category: str,
+        mask_type: str | None = None,
     ) -> bytes:
-        """Devuelve los bytes de la imagen resultante."""
+        """Devuelve los bytes de la imagen resultante.
+
+        `mask_type` es la extension multicapa (Layer Manager): el proveedor que
+        use agnostic-masks generativas (CatVTON) la necesita para saber QUE
+        region vestir y que regiones proteger del compuesto que llega
+        (`inner`/`outer`); los proveedores cloud (Replicate) la ignoran.
+        Valores validos: upper|lower|overall|inner|outer. None = se deriva de
+        `category` en el destino.
+        """
         ...
 
 
@@ -68,7 +80,10 @@ class ReplicateVtonProvider:
         garment_image: bytes,
         garment_description: str,
         category: str,
+        mask_type: str | None = None,
     ) -> bytes:
+        """Try-on real contra Replicate. `mask_type` no aplica: el modelo cloud
+        decide con `category`; se acepta y se ignora para compatibilidad."""
         if category not in VTON_CATEGORIES:
             # IDM-VTON solo entiende upper/lower/dresses; footwear y bag no
             # tienen soporte y el caller debe decidir que hacer (hoy: skip).
@@ -167,6 +182,7 @@ class HttpVtonProvider:
         garment_image: bytes,
         garment_description: str,
         category: str,
+        mask_type: str | None = None,
     ) -> bytes:
         if category not in VTON_CATEGORIES:
             raise ValueError(
@@ -179,6 +195,10 @@ class HttpVtonProvider:
             "garment_des": garment_description,
             "category": category,
         }
+        if mask_type:
+            # Extension multicapa del Layer Manager (CatVTON la entiende como
+            # upper|lower|overall|inner|outer). Un server viejo la ignora.
+            payload["mask_type"] = mask_type
         headers = {"Content-Type": "application/json"}
         if self._token:
             headers["Authorization"] = f"Bearer {self._token}"
@@ -221,7 +241,9 @@ class MockVtonProvider:
         garment_image: bytes,
         garment_description: str,
         category: str,
+        mask_type: str | None = None,
     ) -> bytes:
+        """Compone con PIL; mask_type no aplica al mock."""
         persona = Image.open(io.BytesIO(human_image)).convert("RGB")
         prenda = Image.open(io.BytesIO(garment_image)).convert("RGBA")
 
@@ -262,20 +284,26 @@ def build_provider() -> VtonInferenceProvider:
     """Fabrica el proveedor segun configuracion (orden de prioridad).
 
     1. `VTON_PROVIDER=mock`      -> fallback local (PIL), siempre funciona.
-    2. `VTON_PROVIDER=http`      -> `VTON_HTTP_URL` (obligatoria).
-    3. `VTON_PROVIDER=replicate` -> `REPLICATE_API_TOKEN` (obligatoria).
-    4. `VTON_PROVIDER=auto` (default) -> http si hay `VTON_HTTP_URL` (VM propia,
-       la opcion mas barata/descontada), despues Replicate, si no mock.
+    2. `VTON_PROVIDER=catvton`   -> server.py de CatVTON via `VTON_HTTP_URL`
+       (GPU local del host: modo A del MVP).
+    3. `VTON_PROVIDER=http`      -> cualquier endpoint HTTP propio
+       (`VTON_HTTP_URL` obligatoria).
+    4. `VTON_PROVIDER=replicate` -> `REPLICATE_API_TOKEN` (obligatoria).
+    5. `VTON_PROVIDER=auto` (default) -> http/catvton si hay `VTON_HTTP_URL`
+       (la opcion mas barata), despues Replicate, si no mock.
     """
     modo = settings.vton_provider.lower()
     if modo == "mock":
         return MockVtonProvider()
-    if modo == "http":
+    if modo in ("catvton", "http"):
         if not settings.vton_http_url:
-            raise RuntimeError("VTON_PROVIDER=http pero falta VTON_HTTP_URL")
+            raise RuntimeError(
+                f"VTON_PROVIDER={modo} pero falta VTON_HTTP_URL "
+                "(ej. http://127.0.0.1:7861/tryon del server CatVTON local)"
+            )
         return HttpVtonProvider(
             settings.vton_http_url,
-            api_token=settings.replicate_api_token,
+            api_token=None,  # catvton local no pide auth; VM propia la agrega si quiere
             timeout_s=settings.vton_http_timeout_s,
         )
     if modo == "replicate":

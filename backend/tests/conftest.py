@@ -38,6 +38,10 @@ Path(_TEST_DB).unlink(missing_ok=True)
 os.environ.setdefault("DATABASE_URL", f"sqlite:///{_TEST_DB}")
 os.environ.setdefault("VTON_PROVIDER", "mock")
 os.environ.setdefault("MEDIA_DIR", _TEST_MEDIA)
+# Las imagenes de los tests son JPG sinteticos sin cuerpo: la validacion del
+# protocolo A-Pose se apaga aca y se activa explicitamente en el test que la
+# cubre (test_vton_pose_invalida_da_422).
+os.environ.setdefault("POSE_VALIDATION", "off")
 
 
 def _analisis_stub(imagen: Any) -> dict[str, Any]:

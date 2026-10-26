@@ -1,3 +1,12 @@
+# Python virtual environments (never commit)
+.venv/
+venv/
+env/
+ENV/
+
+# Python dependencies and cache
+__pycache__/
+*.py[cod]
 # Dependencies (CRITICAL - never commit)
 node_modules/
 frontend/node_modules/

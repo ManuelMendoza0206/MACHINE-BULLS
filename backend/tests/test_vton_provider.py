@@ -263,3 +263,42 @@ def test_build_provider_seleccion(monkeypatch: pytest.MonkeyPatch) -> None:
     # auto sin nada -> mock (fallback local que siempre funciona)
     _set(replicate_api_token=None)
     assert build_provider().name == "mock"
+
+
+def test_http_provider_reenvia_mask_type_al_payload(monkeypatch: pytest.MonkeyPatch) -> None:
+    """La extension multicapa viaja en el JSON si el caller la provee."""
+    fake = _FakeHttpSession(_FakeHttpResponse(_jpg((1, 2, 3)), "image/jpeg"))
+    monkeypatch.setattr("services.vton.provider.httpx.Client", lambda **kw: fake)
+
+    p = HttpVtonProvider("http://127.0.0.1:7861/tryon")
+    p.try_on(_jpg(), _jpg(), "a red t-shirt", "upper", mask_type="inner")
+
+    assert fake.last is not None
+    assert fake.last["json"]["mask_type"] == "inner"
+
+
+def test_http_provider_sin_mask_no_envia_la_clave(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Callers viejos (outfit de una capa) no ensucian el payload."""
+    fake = _FakeHttpSession(_FakeHttpResponse(_jpg((1, 2, 3)), "image/jpeg"))
+    monkeypatch.setattr("services.vton.provider.httpx.Client", lambda **kw: fake)
+
+    HttpVtonProvider("http://vm:8000/vton").try_on(_jpg(), _jpg(), "x", "lower")
+
+    assert fake.last is not None
+    assert "mask_type" not in fake.last["json"]
+
+
+def test_build_provider_catvton_apunta_a_http(monkeypatch: pytest.MonkeyPatch) -> None:
+    """VTON_PROVIDER=catvton == HttpVtonProvider contra VTON_HTTP_URL del server."""
+    import dataclasses
+
+    from config import settings as base
+
+    actual = dataclasses.replace(
+        base, vton_provider="catvton", vton_http_url="http://127.0.0.1:7861/tryon"
+    )
+    monkeypatch.setattr("services.vton.provider.settings", actual)
+
+    provider = build_provider()
+    assert provider.name == "http"
+

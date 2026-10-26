@@ -207,3 +207,22 @@ def test_vton_sin_outfit_ni_layers_da_400(client: Any) -> None:
         files={"user_image": (nombre, buf, "image/jpeg")},
     )
     assert r.status_code == 400
+
+
+def test_vton_pose_invalida_da_422_con_causa(client: Any, demo_user_id: str, monkeypatch: Any) -> None:
+    """Protocolo 4.1.5: sin A-Pose rechaza 422 con razon actionable en detalle."""
+    monkeypatch.setenv("POSE_VALIDATION", "on")
+
+    _upload(client, nombre="remera")  # azul -> top
+    _upload(client, nombre="pantalon", color=(200, 30, 30))  # rojo -> bottom
+    r = client.post("/api/v1/outfits/recommend", json={"user_id": demo_user_id})
+    outfit_id = r.json()["outfits"][0]["outfit_id"]
+
+    nombre, buf = _jpg_bytes(color=(200, 180, 160), nombre="persona")
+    rv = client.post(
+        "/api/v1/vton/try-on",
+        data={"outfit_id": outfit_id},
+        files={"user_image": (nombre, buf, "image/jpeg")},
+    )
+    assert rv.status_code == 422
+    assert "A-Pose invalida" in rv.json()["detail"]

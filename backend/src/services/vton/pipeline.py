@@ -10,9 +10,10 @@ El flujo del MVP:
 3. `run_job` itera las capas del outfit de abajo hacia arriba, encadenando la
    salida de cada try-on como entrada de la siguiente (asi el resultado final
    trae todas las prendas). Guarda cada resultado en storage y actualiza el
-   job.
+   job. Cada capa ademas pide su `mask_type` CatVTON (inner/outer/lower/
+   overall/upper) para que el masker proteja las capas ya compuestas.
 
-IDM-VTON no soporta footwear ni bag: esas capas se skipean con log. Si el
+IDM-VTON/CatVTON no soportan footwear ni bag: esas capas se skipean con log. Si el
 outfit quedara sin capas soportables, el job falla con mensaje claro.
 """
 
@@ -61,7 +62,7 @@ def _procesar(session, job: VtonJob, human_image_path: str, provider: VtonInfere
     capas = _capas_del_job(session, job)
     if not capas:
         raise ValueError(
-            "el outfit no tiene prendas que IDM-VTON pueda aplicar "
+            "el outfit no tiene prendas que el VTON pueda aplicar "
             "(solo soporta top/bottom/dress/outerwear; footwear y bag se omiten)"
         )
 
@@ -69,17 +70,19 @@ def _procesar(session, job: VtonJob, human_image_path: str, provider: VtonInfere
     resultado = humano
     for i, (garment, posicion) in enumerate(capas):
         categoria = _categoria_vton(posicion)
+        mask_type = _mask_type_para(posicion, capas[i + 1 :])
         prenda_bytes = storage.absolute_path(garment.processed_image_path).read_bytes()
         descripcion = _descripcion(garment)
         logger.info(
-            "VTON job %s: capa %d/%d (%s -> %s) con %s",
-            job.id, i + 1, len(capas), posicion, categoria, provider.name,
+            "VTON job %s: capa %d/%d (%s -> %s, mask=%s) con %s",
+            job.id, i + 1, len(capas), posicion, categoria, mask_type, provider.name,
         )
         resultado = provider.try_on(
             human_image=resultado,
             garment_image=prenda_bytes,
             garment_description=descripcion,
             category=categoria,
+            mask_type=mask_type,
         )
 
     relativo, _url = storage.save_image(resultado, "vton")
@@ -106,6 +109,33 @@ def _categoria_vton(posicion: str) -> str:
     from domain.enums import VTON_CATEGORY
 
     return VTON_CATEGORY.get(posicion, "upper")
+
+
+# Tipos de agnostic-mask que AutoMasker de CatVTON entiende (model/cloth_masker.py):
+#   inner  -> vestir region superior PROTEGIENDO la ropa que ya queda por encima
+#   outer  -> capa exterior: protege lo prenda-vestido del compuesto anterior
+#   lower / overall / upper -> casos de capa unica (idem al flujo clasico)
+_ACTUALIZA_TORSO = ("top", "outerwear")
+
+
+def _mask_type_para(posicion: str, capas_despues: list[tuple[Garment, str]]) -> str:
+    """Mascara CatVTON para esta capa dado lo que viene despues en la cadena.
+
+    El compuesto iterativo exige distinguir la prenda interior de la exterior:
+    una remera bajo una chaqueta NO puede pedir mask `upper` (borraria/reemplazaria
+    la zona) — con `inner` el masker protege lo exterior (aunque todavia no exista
+    en el compuesto, es inofensivo) y con `outer` al reves. Ver docstring del
+    spec vton-pipeline y el comentario del server de CatVTON.
+    """
+    if posicion == "dress":
+        return "overall"
+    if posicion == "bottom":
+        return "lower"
+    if posicion == "outerwear":
+        return "outer"
+    # top: hay capas de torso despues? -> interior; si es el ultimo torso -> upper
+    hay_torso_despues = any(pos in _ACTUALIZA_TORSO for _, pos in capas_despues)
+    return "inner" if hay_torso_despues else "upper"
 
 
 def _descripcion(garment: Garment) -> str:
