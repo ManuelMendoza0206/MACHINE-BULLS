@@ -105,6 +105,10 @@ skills-lock.json
 
 # Fotos de prenda locales (binarios de trabajo, no van al repo)
 sample_data/prenda_*.jpg
+# ... excepto las 3 muestras curadas del smoke multicapa (pequenas, demo)
+!sample_data/prenda_camiseta.jpg
+!sample_data/prenda_pantalon.jpg
+!sample_data/prenda_chaqueta.jpg
 
 # --- Backend runtime artifacts (MVP) ---
 backend/media/
