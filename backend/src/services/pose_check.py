@@ -161,7 +161,14 @@ def _personas_del_resultado(result) -> list[dict[int, dict[str, float]]]:
 
 
 def _default_model_path() -> Path:
-    """Pose landmarker commiteado: backend/src -> backend -> raiz del repo."""
+    """Ruta del pose landmarker (raiz del repo en dev; override env en contenedor).
+
+    En el contenedor el contexto de build es backend/, la raiz del repo queda
+    fuera de la imagen: compose monta el archivo y lo pasa por POSE_MODEL_PATH.
+    """
+    override = os.environ.get("POSE_MODEL_PATH")
+    if override:
+        return Path(override)
     # services -> src -> backend -> raiz del repo
     return Path(__file__).resolve().parents[3] / "pose_landmarker_full.task"
 

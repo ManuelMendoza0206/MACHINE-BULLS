@@ -67,10 +67,14 @@ services:
       VTON_HTTP_URL: ${VTON_HTTP_URL:-}
       VTON_HTTP_TIMEOUT_S: ${VTON_HTTP_TIMEOUT_S:-300}
       MEDIA_DIR: /app/media
+      # Validador A-Pose (4.1.5): el .task vive en la raiz del repo y no entra
+      # en la imagen (contexto de build = backend/) — se monta read-only.
+      POSE_MODEL_PATH: /app/pose_landmarker_full.task
     ports:
       - "8000:8000"
     volumes:
       - styleme-media:/app/media # imágenes subidas + resultados VTON sobreviven restarts
+      - ../pose_landmarker_full.task:/app/pose_landmarker_full.task:ro
     depends_on:
       db:
         condition: service_healthy
@@ -98,8 +102,10 @@ services:
       VTON_HTTP_URL: ${VTON_HTTP_URL:-}
       VTON_HTTP_TIMEOUT_S: ${VTON_HTTP_TIMEOUT_S:-300}
       MEDIA_DIR: /app/media
+      POSE_MODEL_PATH: /app/pose_landmarker_full.task # misma validez que el backend
     volumes:
       - styleme-media:/app/media # comparte el almacen de imagenes con el backend
+      - ../pose_landmarker_full.task:/app/pose_landmarker_full.task:ro
     depends_on:
       db:
         condition: service_healthy

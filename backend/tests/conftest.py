@@ -38,6 +38,10 @@ Path(_TEST_DB).unlink(missing_ok=True)
 os.environ.setdefault("DATABASE_URL", f"sqlite:///{_TEST_DB}")
 os.environ.setdefault("VTON_PROVIDER", "mock")
 os.environ.setdefault("MEDIA_DIR", _TEST_MEDIA)
+# Cola ARQ: puerto muerto para que los tests SIEMPRE ejerzan el fallback a
+# BackgroundTasks (determinista; el enqueue real lo cubre el smoke de compose
+# y test_vton_fallback_sin_redis_completa_igual).
+os.environ.setdefault("REDIS_URL", "redis://localhost:6399/0")
 # Las imagenes de los tests son JPG sinteticos sin cuerpo: la validacion del
 # protocolo A-Pose se apaga aca y se activa explicitamente en el test que la
 # cubre (test_vton_pose_invalida_da_422).
