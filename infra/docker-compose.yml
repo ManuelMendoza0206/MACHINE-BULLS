@@ -5,11 +5,30 @@
 #
 # VTON:
 #   - Por defecto `mock` (fallback local PIL que SIEMPRE funciona — sin saldo en Replicate).
+#   - CatVTON local (modo A del MVP): server nativo en el GPU del host, el backend
+#     en contenedor lo alcanza con host.docker.internal:
+#       VTON_PROVIDER=catvton VTON_HTTP_URL=http://host.docker.internal:7861/tryon
 #   - Para la VM propia (IDM-VTON servido por HTTP):
 #       VTON_PROVIDER=http VTON_HTTP_URL=http://<mi-vm>:8000/vton docker compose ...
 #   - Para Replicate (requiere saldo): VTON_PROVIDER=replicate
+#
+# Cola de jobs (spec 4.1.8): redis + servicio `worker` (ARQ). Si Redis cae, el
+# backend cae a BackgroundTasks (fallback de demo, ver services/queue.py).
 
 services:
+  redis:
+    image: redis:7-alpine
+    container_name: styleme-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379" # expuesto para tools locales (arq CLI en dev contra este redis)
+    volumes:
+      - styleme-redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
   db:
     image: pgvector/pgvector:pg16
     container_name: styleme-db
@@ -70,3 +89,4 @@ services:
 volumes:
   styleme-pgdata:
   styleme-media:
+  styleme-redis-data:
