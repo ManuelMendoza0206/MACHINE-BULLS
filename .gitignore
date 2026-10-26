@@ -42,6 +42,8 @@ next-env.d.ts.timestamp-*
 .env.*.local
 .env.*.private
 .env.production.local
+# excepcion: infra/.env lleva el modo demo del stack, sin secretos
+!infra/.env
 
 # Logs
 *.log
