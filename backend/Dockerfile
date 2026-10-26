@@ -8,6 +8,12 @@
 #   (HF_HUB_OFFLINE=1 lo fuerza a usar la caché local).
 FROM python:3.12-slim
 
+# libGL/glib: opencv (dependencia de mediapipe, pose_check) los necesita en la
+# imagen slim; sin esto el import revienta en runtime, no en build.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libgl1 libglib2.0-0 libegl1 libgles2 \
+    && rm -rf /var/lib/apt/lists/*
+
 COPY --from=ghcr.io/astral-sh/uv:0.12.5 /uv /bin/uv
 ENV UV_PYTHON_DOWNLOADS=never \
     UV_LINK_MODE=copy \

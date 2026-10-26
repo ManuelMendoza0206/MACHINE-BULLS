@@ -28,6 +28,8 @@ dependencies = [
   #   uv pip install torch --index-url https://download.pytorch.org/whl/cpu
   # transformers solo se importa de forma perezosa (ver ml.models.clip_classifier).
   "transformers>=4.44",
+  # Validacion A-Pose del protocolo de entrada (4.1.5): pose_check.
+  "mediapipe>=1.0",
 ]
 
 [tool.ruff]
