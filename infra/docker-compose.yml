@@ -111,6 +111,14 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+    # La imagen comparte el HEALTHCHECK del backend (curl /health de uvicorn,
+    # que acá no existe): override con el health check nativo de arq.
+    healthcheck:
+      test: ["CMD", "arq", "services.vton.worker.WorkerSettings", "--check"]
+      interval: 15s
+      timeout: 5s
+      start_period: 30s
+      retries: 5
 
   frontend:
     build:
