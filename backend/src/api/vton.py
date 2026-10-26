@@ -59,14 +59,6 @@ async def create_try_on(
     except UnidentifiedImageError as exc:
         raise HTTPException(status_code=400, detail="user_image no es imagen") from exc
 
-    # Protocolo de entrada (4.1.5): la foto debe estar en A-Pose ANTES de
-    # gastar GPU. Rechazo temprano con causa en detalle (frontend la muestra).
-    from services.pose_check import validate_apose
-
-    pose = validate_apose(contenido)
-    if not pose.ok:
-        raise HTTPException(status_code=422, detail=f"A-Pose invalida: {pose.reason}")
-
     user = session.query(User).filter(User.email == DEMO_USER_EMAIL).first()
     if user is None:
         raise HTTPException(status_code=400, detail="no hay usuario demo; sube una prenda primero")

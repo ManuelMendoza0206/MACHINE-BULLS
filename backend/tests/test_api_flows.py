@@ -296,9 +296,49 @@ def test_vton_sin_outfit_ni_layers_da_400(client: Any) -> None:
     assert r.status_code == 400
 
 
-def test_vton_pose_invalida_da_422_con_causa(client: Any, demo_user_id: str, monkeypatch: Any) -> None:
-    """Protocolo 4.1.5: sin A-Pose rechaza 422 con razon actionable en detalle."""
-    monkeypatch.setenv("POSE_VALIDATION", "on")
+def test_vton_pose_invalida_persiste_job_fallido_sin_crear_proveedor(
+    client: Any, demo_user_id: str, monkeypatch: Any
+) -> None:
+    """La solicitud persiste y encola antes de validar la pose en el worker."""
+    import sys
+    from types import ModuleType
+
+    from db.session import SessionLocal
+    from domain.enums import VtonJobStatus, VtonStage
+    from domain.models import VtonJob
+    from services.pose_check import PoseCheck
+    from services.vton import pipeline
+
+    job_at_pose_check: list[str] = []
+
+    def reject_pose(_image: bytes) -> PoseCheck:
+        session = SessionLocal()
+        try:
+            jobs = session.query(VtonJob).all()
+            assert len(jobs) == 1
+            assert jobs[0].status == VtonJobStatus.PROCESSING.value
+            assert jobs[0].stage == VtonStage.VALIDATING.value
+            job_at_pose_check.append(jobs[0].id)
+        finally:
+            session.close()
+        return PoseCheck(ok=False, reason="no se detecta persona")
+
+    monkeypatch.setattr("services.pose_check.validate_apose", reject_pose)
+    provider_builds: list[bool] = []
+
+    def build_provider():
+        provider_builds.append(True)
+        raise AssertionError("no debe construirse el proveedor con pose inválida")
+
+    monkeypatch.setattr(pipeline, "build_provider", build_provider)
+
+    queue_module = ModuleType("services.queue")
+
+    async def fallback_to_background(_job_id: str, _image_path: str) -> bool:
+        return False
+
+    queue_module.enqueue_vton_job = fallback_to_background
+    monkeypatch.setitem(sys.modules, "services.queue", queue_module)
 
     _upload(client, nombre="remera")  # azul -> top
     _upload(client, nombre="pantalon", color=(200, 30, 30))  # rojo -> bottom
@@ -311,5 +351,11 @@ def test_vton_pose_invalida_da_422_con_causa(client: Any, demo_user_id: str, mon
         data={"outfit_id": outfit_id},
         files={"user_image": (nombre, buf, "image/jpeg")},
     )
-    assert rv.status_code == 422
-    assert "A-Pose invalida" in rv.json()["detail"]
+    assert rv.status_code == 200, rv.text
+    job_id = rv.json()["job_id"]
+    assert job_at_pose_check == [job_id]
+    status = client.get(f"/api/v1/vton/status/{job_id}")
+    assert status.status_code == 200
+    assert status.json()["status"] == VtonJobStatus.FAILED.value
+    assert status.json()["error_message"] == "A-Pose invalida: no se detecta persona"
+    assert provider_builds == []
