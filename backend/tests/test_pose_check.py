@@ -65,11 +65,22 @@ def test_apose_valida_pasa() -> None:
 
 def test_brazo_pegado_al_torso_rechaza() -> None:
     lms = _apose_valida()
-    lms[15] = _lm(0.36, 0.60)  # muneca pegada al hombro izquierdo (casi vertical)
-    lms[13] = _lm(0.34, 0.42)
+    lms[15] = _lm(0.36, 0.60)  # muneca casi vertical bajo el hombro (<10 grados)
+    lms[13] = _lm(0.35, 0.42)
     check = _chequear_landmarks(lms)
     assert not check.ok
     assert "pegado al torso" in (check.reason or "")
+
+
+def test_mano_en_la_cadera_rechaza_por_codo() -> None:
+    """Angulo de brazo ok (~45) pero codo doblado = ocluye la prenda."""
+    lms = _apose_valida()
+    # hombro (0.35,0.25): codo hacia afuera-arriba, muneca volviendo al torso
+    lms[13] = _lm(0.20, 0.40)
+    lms[15] = _lm(0.26, 0.55)
+    check = _chequear_landmarks(lms)
+    assert not check.ok
+    assert "codo" in (check.reason or "")
 
 
 def test_brazo_en_t_rechaza() -> None:

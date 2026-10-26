@@ -8,7 +8,7 @@ valida que:
     2. los landmarks necesarios son visibles (shoulders/hips/elbows/wrists/
        knees/ankles),
     3. el cuerpo esta vertical (shoulders arriba de hips),
-    4. los brazos estan separados del torso (15-60 del eje vertical),
+    4. los brazos cuelgan sin pegarse al torso (10-60) y con codo recto,
     5. las piernas estan separadas.
 
 Es una validacion de entrada, no de calidad: rechaza capturas que romperian la
@@ -35,8 +35,14 @@ logger = logging.getLogger(__name__)
 _LANDMARKS_REQUERIDOS = (11, 12, 23, 24, 13, 14, 15, 16, 25, 26, 27, 28)
 
 _MIN_VISIBILIDAD = 0.5
-_ANGULO_BRAZO_MIN = 15.0  # pegado al torso = oclusion; menos de esto no es A-Pose
+# El dataset de CatVTON (VITON/DressCode) trae brazos colgados ~10-20 grados:
+# apurar ~45 rechazaria toda la muestra real. Umbral de oclusion: el brazo
+# NO puede quedar pegado al torso (rompe la region de la prenda).
+_ANGULO_BRAZO_MIN = 10.0
 _ANGULO_BRAZO_MAX = 60.0  # en T-pose el protocolo pide volver a capturar
+# Codo casi recto: la mano-en-cadera tipica (foto fallback) mide el mismo
+# angulo de brazo que un A-Pose colgado, pero el codo va doblado ~90-120.
+_CODO_MIN = 130.0  # grados de apertura del codo (180 = recto)
 _MIN_SEPARACION_PIERNAS = 0.04  # fraccion del ancho normalizado entre tobillos
 
 
@@ -55,13 +61,29 @@ class PoseCheck:
 def _angulo_respecto_vertical(dx: float, dy: float) -> float:
     """Angulo (grados, 0-90) de un vector respecto al eje vertical hacia abajo.
 
-# En imagenes, +y es hacia abajo: brazo colgando vertical responde 0,
+    En imagenes, +y es hacia abajo: brazo colgando vertical responde 0,
     brazo horizontal responde 90. A-Pose == ~45.
     """
     norma = math.hypot(dx, dy)
     if norma == 0:
         return 90.0
     coseno = dy / norma
+    return math.degrees(math.acos(max(-1.0, min(1.0, coseno))))
+
+
+def _angulo_en_codo(lms: dict[int, dict[str, float]], hombro: int, codo: int, muneca: int) -> float:
+    """Apertura del codo en grados (180 = brazo recto, ~90 = mano en la cadera).
+
+    Vector codo->hombro vs codo->muneca: angulo interior del codo.
+    """
+    ax = lms[hombro]["x"] - lms[codo]["x"]
+    ay = lms[hombro]["y"] - lms[codo]["y"]
+    bx = lms[muneca]["x"] - lms[codo]["x"]
+    by = lms[muneca]["y"] - lms[codo]["y"]
+    na, nb = math.hypot(ax, ay), math.hypot(bx, by)
+    if na == 0 or nb == 0:
+        return 180.0
+    coseno = (ax * bx + ay * by) / (na * nb)
     return math.degrees(math.acos(max(-1.0, min(1.0, coseno))))
 
 
@@ -90,15 +112,18 @@ def _chequear_landmarks(lms: dict[int, dict[str, float]]) -> PoseCheck:
             reason="el cuerpo no esta en vista frontal vertical (hombros deben estar arriba de las caderas)",
         )
 
-    # 3) brazos separados del torso, NO en T (vector hombro -> muneca)
-    for lado, (hombro_i, muneca_i) in {"izquierdo": (11, 15), "derecho": (12, 16)}.items():
+    # 3) brazos: separados del torso (no pegados, no en T) y codos rectos
+    for lado, (hombro_i, codo_i, muneca_i) in {
+        "izquierdo": (11, 13, 15),
+        "derecho": (12, 14, 16),
+    }.items():
         dx = lms[muneca_i]["x"] - lms[hombro_i]["x"]
         dy = lms[muneca_i]["y"] - lms[hombro_i]["y"]
         ang = _angulo_respecto_vertical(dx, dy)
         if ang < _ANGULO_BRAZO_MIN:
             return PoseCheck(
                 ok=False,
-                reason=f"brazo {lado} pegado al torso (separalo ~45; angulo={ang:.0f})",
+                reason=f"brazo {lado} pegado al torso (separalo un poco; angulo={ang:.0f})",
                 details={"brazo": lado, "angulo": round(ang, 1)},
             )
         if ang > _ANGULO_BRAZO_MAX:
@@ -106,6 +131,14 @@ def _chequear_landmarks(lms: dict[int, dict[str, float]]) -> PoseCheck:
                 ok=False,
                 reason=f"brazo {lado} demasiado elevado (T-pose no es A-Pose; angulo={ang:.0f})",
                 details={"brazo": lado, "angulo": round(ang, 1)},
+            )
+        # codo recto (sin illnesses): mano en la cadera = codo doblado, ocluye prenda
+        codo = _angulo_en_codo(lms, hombro_i, codo_i, muneca_i)
+        if codo < _CODO_MIN:
+            return PoseCheck(
+                ok=False,
+                reason=f"codo {lado} doblado (apoyando la mano? dejalo colgado recto; apertura={codo:.0f})",
+                details={"brazo": lado, "codo": round(codo, 1)},
             )
 
 # 4) piernas levemente separadas
