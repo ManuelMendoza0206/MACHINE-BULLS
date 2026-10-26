@@ -16,8 +16,11 @@ API="${API:-http://localhost:8000}"
 WEB="${WEB:-http://localhost:3000}"
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 SAMPLES="$ROOT/sample_data"
-# python3 en Windows (git bash) a veces no existe: usar el `python` de la hora.
-PY="$(command -v python3 || command -v python)"
+# python3 en Windows (git bash) a veces no existe: fallback python -> py -> venv
+PY="$(command -v python3 || command -v python || true)"
+[ -n "$PY" ] || PY="$(command -v py || true)"
+[ -n "$PY" ] || PY="$ROOT/.venv/Scripts/python.exe"
+[ -x "$PY" ] || { echo "FALLO: sin python disponible para interpolar JSON"; exit 1; }
 
 json_get() { # json_get <json> <clave[.subclave]>
   "$PY" -c '
