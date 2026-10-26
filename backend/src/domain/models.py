@@ -127,6 +127,9 @@ class VtonJob(Base):
     status: Mapped[str] = mapped_column(
         String(20), nullable=False, default=VtonJobStatus.PROCESSING.value
     )
+    # Estado fino del pipeline (spec 4.1.8): queued/validating/.../completed.
+    # El contrato publico (`status`) se deriva via STAGE_TO_STATUS.
+    stage: Mapped[str | None] = mapped_column(String(30), nullable=True)
     result_path: Mapped[str | None] = mapped_column(String(500), nullable=True)
     error_message: Mapped[str | None] = mapped_column(String(1000), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)

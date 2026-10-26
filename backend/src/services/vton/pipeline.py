@@ -23,7 +23,7 @@ import logging
 import traceback
 
 from db.session import SessionLocal
-from domain.enums import VtonJobStatus
+from domain.enums import STAGE_TO_STATUS, VtonJobStatus, VtonStage
 from domain.models import Garment, Outfit, OutfitGarment, VtonJob
 from services import storage
 from services.vton.provider import VtonInferenceProvider, build_provider
@@ -45,12 +45,14 @@ def run_job(job_id: str, human_image_path: str) -> None:
             return
 
         try:
+            _set_stage(session, job, VtonStage.VALIDATING)
             resultado_path = _procesar(session, job, human_image_path, provider)
             job.result_path = resultado_path
-            job.status = VtonJobStatus.COMPLETED.value
+            _set_stage(session, job, VtonStage.COMPLETED)
         except Exception as exc:  # noqa: BLE001 - el fallo va al job, no revienta el server
             logger.error("VTON job %s fallo: %s\n%s", job_id, exc, traceback.format_exc())
             job.status = VtonJobStatus.FAILED.value
+            job.stage = VtonStage.FAILED.value
             job.error_message = str(exc)[:1000]
         session.commit()
     finally:
@@ -68,6 +70,8 @@ def _procesar(session, job: VtonJob, human_image_path: str, provider: VtonInfere
 
     humano = storage.absolute_path(human_image_path).read_bytes()
     resultado = humano
+    # 4.1.8: una sola capa = GENERATING; varias = LAYERING (composicion iterativa).
+    _set_stage(session, job, VtonStage.LAYERING if len(capas) > 1 else VtonStage.GENERATING)
     for i, (garment, posicion) in enumerate(capas):
         categoria = _categoria_vton(posicion)
         mask_type = _mask_type_para(posicion, capas[i + 1 :])
@@ -85,6 +89,8 @@ def _procesar(session, job: VtonJob, human_image_path: str, provider: VtonInfere
             mask_type=mask_type,
         )
 
+    # Guardado del compuesto (subida a la version publicada de la imagen).
+    _set_stage(session, job, VtonStage.UPLOADING)
     relativo, _url = storage.save_image(resultado, "vton")
     return relativo
 
@@ -103,6 +109,13 @@ def _capas_del_job(session, job: VtonJob) -> list[tuple[Garment, str]]:
     filas = [f for f in filas if f[0].position in _SOPORTADAS]
     filas.sort(key=lambda f: orden.get(f[0].position, 9))
     return [(g, og.position) for og, g in filas]
+
+
+def _set_stage(session, job: VtonJob, stage: VtonStage) -> None:
+    """Persiste el estado fino y deriva el status publico del contrato."""
+    job.stage = stage.value
+    job.status = STAGE_TO_STATUS[stage.value]
+    session.commit()
 
 
 def _categoria_vton(posicion: str) -> str:

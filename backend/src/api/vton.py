@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import io
 import json
+import logging
 from typing import Annotated
 
 from fastapi import APIRouter, BackgroundTasks, Depends, Form, HTTPException, UploadFile
@@ -19,7 +20,7 @@ from sqlalchemy.orm import Session
 
 from api.garments import DEMO_USER_EMAIL
 from db.session import get_session
-from domain.enums import VtonJobStatus
+from domain.enums import VtonJobStatus, VtonStage
 from domain.models import Garment, Outfit, OutfitGarment, User, VtonJob, new_uuid
 from domain.schemas import VtonJobCreateResponse, VtonJobStatusResponse
 from services import storage
@@ -29,19 +30,23 @@ router = APIRouter(prefix="/api/v1/vton", tags=["vton"])
 
 SessionDep = Annotated[Session, Depends(get_session)]
 
+logger = logging.getLogger(__name__)
+
 
 @router.post("/try-on", response_model=VtonJobCreateResponse)
-def create_try_on(
+async def create_try_on(
     background_tasks: BackgroundTasks,
     user_image: UploadFile,
     session: SessionDep,
     outfit_id: Annotated[str | None, Form()] = None,
     garment_layers: Annotated[str | None, Form()] = None,
 ) -> VtonJobCreateResponse:
-    """Crea un job de try-on asincrono y lo lanza en background.
+    """Crea un job de try-on, lo encola en Redis (ARQ) y devuelve su id.
 
     Acepta `outfit_id` (outfit ya recomendado) o `garment_layers` (lista JSON
     de {garment_id, position} del flujo multicapa). Si ninguno viene, 400.
+    Redis caido: el job corre igual en BackgroundTasks (fallback de demo,
+    `services/queue.py` explica el orden).
     """
     contenido = user_image.file.read()
     if not contenido:
@@ -79,16 +84,26 @@ def create_try_on(
 
     rel_humano, _ = storage.save_image(contenido, "humans")
 
+    # Job en cola: nace pending (contrato) con stage QUEUED (spec 4.1.8).
     job = VtonJob(
         id=new_uuid(),
         user_id=user.id,
         outfit_id=outfit_id,
-        status=VtonJobStatus.PROCESSING.value,
+        status=VtonJobStatus.PENDING.value,
+        stage=VtonStage.QUEUED.value,
     )
     session.add(job)
     session.commit()
 
-    background_tasks.add_task(pipeline.run_job, job.id, rel_humano)
+    from services.queue import enqueue_vton_job
+
+    enqueued = await enqueue_vton_job(job.id, rel_humano)
+    if not enqueued:
+        # Fallback de demo (Redis caido): el mismo pipeline corre en el server
+        # de FastAPI como siempre. Contrato publico identico.
+        background_tasks.add_task(pipeline.run_job, job.id, rel_humano)
+    else:
+        logger.info("job %s encolado en Redis", job.id)
 
     return VtonJobCreateResponse(
         job_id=job.id,

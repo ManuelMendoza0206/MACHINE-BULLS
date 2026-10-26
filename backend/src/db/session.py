@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from collections.abc import Iterator
 
-from sqlalchemy import create_engine, event
+from sqlalchemy import create_engine, event, text
 from sqlalchemy.orm import Session, sessionmaker
 
 from config import settings
@@ -37,8 +37,20 @@ SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False, futu
 
 
 def init_db() -> None:
-    """Crea las tablas si no existen. En Postgres esto lo reemplaza Alembic."""
+    """Crea las tablas si no existen. En Postgres esto lo reemplaza Alembic.
+
+    Migracion liviana para DBs dev viejas: `create_all` no ALTERa tablas ya
+    creadas, asi que si falta la columna `stage` de VtonJob (agregada con la
+    cola ARQ del spec 4.1.8) se agrega a mano. Cuando exista Alembic real,
+    esta parte se va.
+    """
     Base.metadata.create_all(bind=engine)
+    from sqlalchemy import inspect
+
+    columnas = {c["name"] for c in inspect(engine).get_columns("vton_jobs")}
+    if "stage" not in columnas:
+        with engine.begin() as conn:
+            conn.execute(text("ALTER TABLE vton_jobs ADD COLUMN stage VARCHAR(30)"))
 
 
 def get_session() -> Iterator[Session]:

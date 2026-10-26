@@ -200,6 +200,44 @@ def test_vton_status_job_inexistente_da_404(client: Any) -> None:
     assert r.status_code == 404
 
 
+def test_vton_fallback_sin_redis_completa_igual(
+    client: Any, demo_user_id: str, monkeypatch: Any
+) -> None:
+    """Redis caido: el endpoint cae a BackgroundTasks y el job igual termina."""
+    import dataclasses
+    import time
+
+    import services.queue as queue_module
+    from config import settings as base
+
+    monkeypatch.setattr(
+        queue_module,
+        "settings",
+        dataclasses.replace(base, redis_url="redis://localhost:6399/0"),
+    )
+
+    _upload(client, nombre="remera")
+    _upload(client, nombre="pantalon", color=(200, 30, 30))
+    r = client.post("/api/v1/outfits/recommend", json={"user_id": demo_user_id})
+    outfit_id = r.json()["outfits"][0]["outfit_id"]
+
+    nombre, buf = _jpg_bytes(color=(200, 180, 160), nombre="persona")
+    rv = client.post(
+        "/api/v1/vton/try-on",
+        data={"outfit_id": outfit_id},
+        files={"user_image": (nombre, buf, "image/jpeg")},
+    )
+    assert rv.status_code == 200, rv.text
+
+    for _ in range(40):
+        sj = client.get(f"/api/v1/vton/status/{rv.json()['job_id']}").json()
+        if sj["status"] in {"completed", "failed"}:
+            break
+        time.sleep(0.05)
+    assert sj["status"] == "completed", sj
+    assert sj["result_url"].startswith("http")
+
+
 def test_vton_sin_outfit_ni_layers_da_400(client: Any) -> None:
     nombre, buf = _jpg_bytes(nombre="persona")
     r = client.post(

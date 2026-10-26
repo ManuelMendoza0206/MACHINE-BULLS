@@ -111,3 +111,7 @@ backend/media/
 backend/*.db
 backend/.coverage
 backend/.pytest_cache/
+
+# Runtime junk del try-on y DB dev (se regeneran)
+densepose_/
+styleme.db

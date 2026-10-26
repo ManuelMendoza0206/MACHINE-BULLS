@@ -34,6 +34,39 @@ class VtonJobStatus(str, enum.Enum):
     FAILED = "failed"
 
 
+class VtonStage(str, enum.Enum):
+    """Estados finos del pipeline (4.1.8 del spec de colas).
+
+    NO son el contrato publico: viven en `VtonJob.stage` y el frontend los ve
+    por el mapping de abajo. Contrato (`VtonJobStatus`) queda intacto.
+    """
+
+    QUEUED = "queued"
+    VALIDATING = "validating"
+    PREPROCESSING = "preprocessing"
+    POSE_ESTIMATION = "pose_estimation"
+    GENERATING = "generating"
+    LAYERING = "layering"
+    UPLOADING = "uploading"
+    COMPLETED = "completed"
+    FAILED = "failed"
+
+
+# Mapping stage -> status publico. `pending` == esperando al worker (QUEUED);
+# todo lo intermedio es `processing`; los finales coinden con su stage.
+STAGE_TO_STATUS: dict[str, str] = {
+    VtonStage.QUEUED.value: VtonJobStatus.PENDING.value,
+    VtonStage.VALIDATING.value: VtonJobStatus.PROCESSING.value,
+    VtonStage.PREPROCESSING.value: VtonJobStatus.PROCESSING.value,
+    VtonStage.POSE_ESTIMATION.value: VtonJobStatus.PROCESSING.value,
+    VtonStage.GENERATING.value: VtonJobStatus.PROCESSING.value,
+    VtonStage.LAYERING.value: VtonJobStatus.PROCESSING.value,
+    VtonStage.UPLOADING.value: VtonJobStatus.PROCESSING.value,
+    VtonStage.COMPLETED.value: VtonJobStatus.COMPLETED.value,
+    VtonStage.FAILED.value: VtonJobStatus.FAILED.value,
+}
+
+
 # Categoria CLIP -> posicion para armar capas. CLIP clasifica en las seis
 # clases del dataset (top, bottom, dress, outwear, shoes, bag); dress y bag no
 # tienen posicion en el enum y quedan en None.
