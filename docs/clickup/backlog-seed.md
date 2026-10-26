@@ -185,6 +185,12 @@ Origen: `openspec/specs/backend/*/spec.md`. Las 39 stories siguientes son extrac
 | Suite de evaluación de F1 real (no bloqueante de CI) documentada y ejecutable bajo demanda. | 3 | Medio |
 | Cobertura de tests ≥ 90% en `src/services/garment_analysis/`. | 3 | Bajo |
 
+> **Nota (ADR 401, Sprint 4):** el clasificador CLIP y los prompts ya estan
+> escritos, en `backend/src/ml/models/clip_classifier.py` y `prompts.py`, y el
+> servicio los va a importar en vez de reimplementarlos. La cobertura del AC de
+> arriba sigue sin poder medirse mientras `src/services/garment_analysis/` no
+> exista. Ver `docs/adr/adr-sprint-4/ADR-401-clip-classifier-location.md`.
+
 ### Epic B3 — `backend/recommender-engine` (Sprint 3-4, `role:ml-pipeline`)
 
 | Story | Sprint | Riesgo |
