@@ -57,6 +57,8 @@ services:
     environment:
       # Postgres obligatorio en compose (SQLite es solo el default de dev local).
       DATABASE_URL: postgresql+psycopg://styleme:styleme_mvp@db:5432/styleme
+      # Cola ARQ (el endpoint encola; worker service consume).
+      REDIS_URL: redis://redis:6379/0
       # URLs absolutas de /media para el navegador (localhost:8000 publicado).
       PUBLIC_BASE_URL: http://localhost:8000
       # Fallback local por defecto; ver comentarios arriba para VM/Replicate.
@@ -70,6 +72,8 @@ services:
       - styleme-media:/app/media # imágenes subidas + resultados VTON sobreviven restarts
     depends_on:
       db:
+        condition: service_healthy
+      redis:
         condition: service_healthy
 
   frontend:
