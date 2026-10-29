@@ -9,9 +9,9 @@ export default function Home(): JSX.Element {
   return (
     <div className="flex min-h-screen flex-col bg-background text-foreground">
       {/* Hero Principal */}
-      <section className="relative overflow-hidden border-b border-border px-4 py-14 sm:py-24 text-center sm:px-6 lg:px-8">
+      <section className="hero-glow relative overflow-hidden border-b border-border px-4 py-14 sm:py-24 text-center sm:px-6 lg:px-8">
         <div className="mx-auto max-w-4xl space-y-6">
-          <div className="flex justify-center">
+          <div className="animate-enter flex justify-center">
             <Badge
               variant="outline"
               className="border-accent/30 bg-accent/5 text-accent px-3.5 py-1 text-xs uppercase tracking-widest font-mono"
@@ -20,19 +20,28 @@ export default function Home(): JSX.Element {
             </Badge>
           </div>
 
-          <h1 className="text-3xl font-extrabold tracking-tight sm:text-5xl lg:text-6xl text-balance">
+          <h1
+            className="animate-enter text-3xl font-extrabold tracking-tight sm:text-5xl lg:text-6xl text-balance"
+            style={{ animationDelay: '80ms' }}
+          >
             Tu guardarropa inteligente y probador virtual con{' '}
             <span className="text-accent underline decoration-accent/60 underline-offset-8">
               IA generativa
             </span>
           </h1>
 
-          <p className="mx-auto max-w-2xl text-base sm:text-lg text-muted-foreground text-balance leading-relaxed">
+          <p
+            className="animate-enter mx-auto max-w-2xl text-base sm:text-lg text-muted-foreground text-balance leading-relaxed"
+            style={{ animationDelay: '160ms' }}
+          >
             Digitalizá tus prendas con visión artificial, descubrí combinaciones armónicas basadas
             en teoría del color y probate tus outfits sobre tu propia foto en segundos.
           </p>
 
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-3 sm:gap-4 pt-4 max-w-md mx-auto sm:max-w-none">
+          <div
+            className="animate-enter flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-3 sm:gap-4 pt-4 max-w-md mx-auto sm:max-w-none"
+            style={{ animationDelay: '240ms' }}
+          >
             <LandingCta />
             <Link
               href="/try-on"
@@ -45,7 +54,7 @@ export default function Home(): JSX.Element {
 
         {/* Bento Grid Modular Showcase */}
         <div className="mx-auto mt-12 sm:mt-16 max-w-6xl">
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 sm:gap-6 text-left">
+          <div className="stagger grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 sm:gap-6 text-left">
             {/* Bento 1: Héroe VTON Multicapa (Span 2 cols x 2 rows en desktop) */}
             <BentoCard
               glow

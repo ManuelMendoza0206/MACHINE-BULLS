@@ -28,7 +28,7 @@ export const Progress = forwardRef<HTMLDivElement, ProgressProps>(function Progr
     >
       <div
         className={cn(
-          'h-full bg-accent transition-[width]',
+          'h-full bg-accent transition-[width] duration-700 ease-out',
           indeterminate && 'w-1/3 animate-pulse'
         )}
         style={indeterminate ? undefined : { width: `${clamped}%` }}

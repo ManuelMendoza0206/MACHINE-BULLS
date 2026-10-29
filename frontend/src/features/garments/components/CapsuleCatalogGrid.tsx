@@ -180,7 +180,7 @@ export function CapsuleCatalogGrid(): JSX.Element {
         </Card>
       ) : null}
 
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+      <div className="stagger grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
         {filteredGarments.map(garment => {
           const state = adoptState[garment.id] ?? 'idle';
           return (

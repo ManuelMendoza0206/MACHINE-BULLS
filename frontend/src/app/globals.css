@@ -81,4 +81,102 @@
   main {
     @apply min-h-screen;
   }
+
+  /* Easing shared by the whole app: confident exponential out-arrival. */
+  :root {
+    --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  /* Browser surfaces carry the design too — selection, caret, scrollbar, focus. */
+  ::selection {
+    @apply bg-accent/25 text-foreground;
+  }
+
+  html {
+    scrollbar-color: hsl(var(--border)) transparent;
+    scrollbar-width: thin;
+  }
+
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    border: 3px solid transparent;
+    border-radius: 9999px;
+    background-clip: content-box;
+    background-color: hsl(var(--border));
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background-color: hsl(var(--border) / 0.9);
+  }
+}
+
+/* ---- Motion language ----
+ * One shared entrance (fade + short rise + blurred arrival) for everything that
+ * should feel "unpacked": staggered children via `.stagger`, single elements via
+ * `.animate-enter`. Reduced motion keeps an opacity-only fade. */
+@keyframes enter-up {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+    filter: blur(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+    filter: blur(0);
+  }
+}
+
+@keyframes enter-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@layer utilities {
+  .animate-enter {
+    animation: enter-up 0.55s var(--ease-out-expo) both;
+  }
+
+  .stagger > * {
+    animation: enter-up 0.55s var(--ease-out-expo) both;
+  }
+
+  /* Sibling stagger, capped so late items never wait on a long tail. */
+  .stagger > *:nth-child(2) { animation-delay: 50ms; }
+  .stagger > *:nth-child(3) { animation-delay: 100ms; }
+  .stagger > *:nth-child(4) { animation-delay: 150ms; }
+  .stagger > *:nth-child(5) { animation-delay: 200ms; }
+  .stagger > *:nth-child(6) { animation-delay: 250ms; }
+  .stagger > *:nth-child(7) { animation-delay: 300ms; }
+  .stagger > *:nth-child(8) { animation-delay: 350ms; }
+  .stagger > *:nth-child(n + 9) { animation-delay: 400ms; }
+
+  /* Soft, bounded accent ambience behind the landing hero (static — no cost). */
+  .hero-glow {
+    background:
+      radial-gradient(640px 320px at 18% -10%, hsl(var(--accent) / 0.12), transparent 70%),
+      radial-gradient(560px 300px at 88% 8%, hsl(var(--accent) / 0.07), transparent 70%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-enter,
+  .stagger > * {
+    animation-name: enter-fade;
+    animation-duration: 0.2s;
+    animation-timing-function: ease-out;
+  }
+
+  .stagger > * {
+    /* Keep content arriving promptly; no spatial choreography, no delays. */
+    animation-delay: 0ms !important;
+  }
 }

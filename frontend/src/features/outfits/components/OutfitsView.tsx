@@ -74,6 +74,7 @@ function OutfitCard({ outfit, images, onTryOn }: OutfitCardProps): JSX.Element {
                   <img
                     src={garment.processed_image_url}
                     alt={alt}
+                    loading="lazy"
                     className="h-full w-full object-cover transition-transform duration-300 hover:scale-105"
                   />
                 ) : (
@@ -222,7 +223,7 @@ export function OutfitsView(): JSX.Element {
           {recommend.isFetching ? 'Recomendando…' : 'Recomendar de nuevo'}
         </Button>
       </div>
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="stagger grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {outfits.map(o => (
           <OutfitCard key={o.outfit_id} outfit={o} images={images} onTryOn={goTryOn} />
         ))}

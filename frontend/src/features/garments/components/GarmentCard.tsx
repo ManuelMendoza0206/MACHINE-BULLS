@@ -1,4 +1,4 @@
-import type { JSX, ReactNode } from 'react';
+import { useState, type JSX, type ReactNode } from 'react';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils/cn';
@@ -28,21 +28,31 @@ export function GarmentCard({
   footer,
   className,
 }: GarmentCardProps): JSX.Element {
+  const [loaded, setLoaded] = useState(false);
   const alt = `${category}, estética ${dominantAesthetic}`;
 
   const image = (
-    <div className="relative aspect-square w-full bg-muted">
+    <div className="relative aspect-square w-full overflow-hidden bg-muted">
       {/* eslint-disable-next-line @next/next/no-img-element -- processed_image_url is an
           arbitrary host (schema: z.string().url(), no host constraint) until every image
           provider is confirmed to be Cloudinary; next/image would reject anything else. */}
-      <img src={imageUrl} alt={alt} className="h-full w-full object-cover" />
+      <img
+        src={imageUrl}
+        alt={alt}
+        loading="lazy"
+        onLoad={() => setLoaded(true)}
+        className={cn(
+          'h-full w-full object-cover transition-[opacity,transform] duration-500 group-hover:scale-[1.03]',
+          loaded ? 'opacity-100 duration-300' : 'opacity-0'
+        )}
+      />
     </div>
   );
 
   return (
     <Card
       className={cn(
-        'overflow-hidden rounded-2xl border border-border/80 bg-background/80 shadow-xs transition-all duration-200 hover:border-accent/40 hover:shadow-md',
+        'group overflow-hidden rounded-2xl border border-border/80 bg-background/80 shadow-xs transition-all duration-200 hover:border-accent/40 hover:shadow-md',
         selected && 'ring-2 ring-accent border-accent',
         className
       )}
