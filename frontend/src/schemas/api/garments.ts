@@ -48,3 +48,11 @@ export const CapsuleCatalogResponseSchema = z.object({
   garments: z.array(GarmentSummarySchema),
 });
 export type CapsuleCatalogResponse = z.infer<typeof CapsuleCatalogResponseSchema>;
+
+// GAP G1 (api-contract-gaps/spec.md): listado de prendas del usuario para /wardrobe
+// (wardrobe-flow/spec.md §3.4). Mismo placeholder `GarmentSummary` que el catálogo cápsula,
+// como su propio schema — cada gap se confirma de forma independiente contra el backend.
+export const GarmentsListResponseSchema = z.object({
+  garments: z.array(GarmentSummarySchema),
+});
+export type GarmentsListResponse = z.infer<typeof GarmentsListResponseSchema>;

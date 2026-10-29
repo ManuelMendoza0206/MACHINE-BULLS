@@ -5,6 +5,8 @@ import { cn } from '@/lib/utils/cn';
 import { PhotoConsentGate } from '@/features/garments/components/PhotoConsentGate';
 import { GarmentBatchUploader } from '@/features/garments/components/GarmentBatchUploader';
 import { CapsuleCatalogGrid } from '@/features/garments/components/CapsuleCatalogGrid';
+import { WardrobeEmptyState } from '@/features/garments/components/WardrobeEmptyState';
+import { useGarmentsList } from '@/features/garments/hooks/useGarmentsList';
 
 type Section = 'upload' | 'capsule';
 
@@ -19,6 +21,14 @@ const SECTIONS: { id: Section; label: string }[] = [
  */
 export function WardrobeView(): JSX.Element {
   const [section, setSection] = useState<Section>('upload');
+  const garmentsList = useGarmentsList();
+
+  // GAP G1: mientras el listado no confirme 0 prendas (pending, error, o length > 0) se
+  // mantiene la vista actual — el estado vacío solo reemplaza la vista ante un `length === 0`
+  // ya resuelto, para no ocultar la UI existente detrás de una carga/error del gap.
+  if (garmentsList.isSuccess && garmentsList.data.garments.length === 0) {
+    return <WardrobeEmptyState />;
+  }
 
   return (
     <div className="space-y-6">
