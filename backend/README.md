@@ -17,11 +17,13 @@ backend/src/
 
 ```bash
 cd backend
-python -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
-alembic upgrade head
-uvicorn src.main:app --reload --port 8000
+uv sync                                   # deps reproducibles desde uv.lock
+uvicorn main:app --reload --app-dir src   # http://localhost:8000
 ```
+
+Nota: `source` root del repo también sirve para tests (`backend\tests`); el
+stack completo (db+redis+backend+worker+frontend) sale con
+`docker compose -f infra/docker-compose.yml up -d --build` (raíz del repo).
 
 Contracts: `docs/context/plan-base.md` §11 + `openspec/specs/backend/domain-and-database/spec.md`
 
