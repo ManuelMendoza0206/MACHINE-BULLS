@@ -5,6 +5,7 @@ import type { JSX } from 'react';
 import { createBrowserSupabaseClient, isSupabaseConfigured } from '@/lib/supabase/client';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { AuthUser } from '@/features/auth/api/auth';
+import { useOnboardingStore } from '@/stores/onboardingStore';
 
 export interface AuthContextValue {
   user: AuthUser | null;
@@ -73,6 +74,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }): JSX.E
   }, []);
 
   const signOut = useCallback(async () => {
+    // profile-flow/spec.md: "Cierre de sesión limpia también el estado de onboardingStore
+    // para evitar fugas de estado entre sesiones de usuarios distintos en el mismo
+    // navegador." Cleared unconditionally — this must happen regardless of whether a
+    // Supabase session existed, since it's about *this browser*, not the remote session.
+    useOnboardingStore.getState().reset();
+
     let supabase: SupabaseClient;
     try {
       supabase = createBrowserSupabaseClient();
