@@ -75,6 +75,8 @@ services:
     volumes:
       - styleme-media:/app/media # imágenes subidas + resultados VTON sobreviven restarts
       - ../pose_landmarker_full.task:/app/pose_landmarker_full.task:ro
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     depends_on:
       db:
         condition: service_healthy
@@ -106,6 +108,8 @@ services:
     volumes:
       - styleme-media:/app/media # comparte el almacen de imagenes con el backend
       - ../pose_landmarker_full.task:/app/pose_landmarker_full.task:ro
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     depends_on:
       db:
         condition: service_healthy
