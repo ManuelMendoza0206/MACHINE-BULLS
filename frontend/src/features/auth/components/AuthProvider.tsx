@@ -4,7 +4,7 @@ import { createContext, useCallback, useEffect, useMemo, useState } from 'react'
 import type { JSX } from 'react';
 import { createBrowserSupabaseClient, isSupabaseConfigured } from '@/lib/supabase/client';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import type { AuthUser } from '@/features/auth/api/auth';
+import { toAuthUser, type AuthUser } from '@/features/auth/api/auth';
 import { useOnboardingStore } from '@/stores/onboardingStore';
 
 export interface AuthContextValue {
@@ -18,18 +18,6 @@ export const AuthContext = createContext<AuthContextValue>({
   status: 'loading',
   signOut: async () => {},
 });
-
-function toAuthUser(supabaseUser: {
-  id: string;
-  email?: string | null;
-  user_metadata?: Record<string, unknown>;
-}): AuthUser {
-  return {
-    id: supabaseUser.id,
-    email: supabaseUser.email ?? '',
-    name: (supabaseUser.user_metadata?.['name'] as string | undefined) ?? null,
-  };
-}
 
 export function AuthProvider({ children }: { children: React.ReactNode }): JSX.Element {
   const [user, setUser] = useState<AuthUser | null>(null);

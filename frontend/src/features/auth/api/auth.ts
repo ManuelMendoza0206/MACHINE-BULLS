@@ -6,6 +6,8 @@ export interface AuthUser {
   id: string;
   email: string;
   name: string | null;
+  /** ISO date string — Supabase's `created_at`. Used by profile-flow's `ProfileHeader`. */
+  createdAt: string;
 }
 
 function mapSupabaseError(error: { message: string; code?: string }): never {
@@ -43,15 +45,19 @@ function mapSupabaseError(error: { message: string; code?: string }): never {
   });
 }
 
-function toAuthUser(supabaseUser: {
+/** Shared by `AuthProvider` (session hydration) and the signUp/signIn calls below — the one
+ * place that maps a raw Supabase user to this app's `AuthUser`. */
+export function toAuthUser(supabaseUser: {
   id: string;
   email?: string | null;
   user_metadata?: Record<string, unknown>;
+  created_at?: string;
 }): AuthUser {
   return {
     id: supabaseUser.id,
     email: supabaseUser.email ?? '',
     name: (supabaseUser.user_metadata?.['name'] as string | undefined) ?? null,
+    createdAt: supabaseUser.created_at ?? new Date(0).toISOString(),
   };
 }
 
