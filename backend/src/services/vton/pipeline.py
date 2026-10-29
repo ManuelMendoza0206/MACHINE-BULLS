@@ -36,7 +36,6 @@ _SOPORTADAS = {"top", "bottom", "dress", "outerwear"}
 
 def run_job(job_id: str, human_image_path: str) -> None:
     """Ejecuta el try-on encadenado de todas las capas del job. Corre en background."""
-    provider = build_provider()
     session = SessionLocal()
     try:
         job = session.get(VtonJob, job_id)
@@ -46,7 +45,15 @@ def run_job(job_id: str, human_image_path: str) -> None:
 
         try:
             _set_stage(session, job, VtonStage.VALIDATING)
-            resultado_path = _procesar(session, job, human_image_path, provider)
+            human_image = storage.absolute_path(human_image_path).read_bytes()
+            from services.pose_check import validate_apose
+
+            pose = validate_apose(human_image)
+            if not pose.ok:
+                raise ValueError(f"A-Pose invalida: {pose.reason}")
+
+            provider = build_provider()
+            resultado_path = _procesar(session, job, human_image, provider)
             job.result_path = resultado_path
             _set_stage(session, job, VtonStage.COMPLETED)
         except Exception as exc:  # noqa: BLE001 - el fallo va al job, no revienta el server
@@ -59,7 +66,9 @@ def run_job(job_id: str, human_image_path: str) -> None:
         session.close()
 
 
-def _procesar(session, job: VtonJob, human_image_path: str, provider: VtonInferenceProvider) -> str:
+def _procesar(
+    session, job: VtonJob, human_image: bytes, provider: VtonInferenceProvider
+) -> str:
     """Corre las capas encadenadas y devuelve el path relativo del resultado."""
     capas = _capas_del_job(session, job)
     if not capas:
@@ -68,8 +77,7 @@ def _procesar(session, job: VtonJob, human_image_path: str, provider: VtonInfere
             "(solo soporta top/bottom/dress/outerwear; footwear y bag se omiten)"
         )
 
-    humano = storage.absolute_path(human_image_path).read_bytes()
-    resultado = humano
+    resultado = human_image
     # 4.1.8: una sola capa = GENERATING; varias = LAYERING (composicion iterativa).
     _set_stage(session, job, VtonStage.LAYERING if len(capas) > 1 else VtonStage.GENERATING)
     for i, (garment, posicion) in enumerate(capas):
