@@ -81,10 +81,10 @@ export function ProfileView(): JSX.Element {
   const esteticas = [...new Set(garments.map(g => g.dominant_aesthetic))];
 
   return (
-    <div className="grid gap-4 lg:grid-cols-2">
-      <Card>
+    <div className="grid gap-4 sm:gap-6 lg:grid-cols-2">
+      <Card className="rounded-2xl sm:rounded-3xl border border-border/80 bg-background/80 shadow-xs">
         <CardHeader>
-          <h2 className="text-lg font-semibold">Cuenta</h2>
+          <h2 className="text-lg font-semibold tracking-tight">Cuenta</h2>
         </CardHeader>
         <CardContent className="space-y-3 text-sm">
           <div className="flex items-center justify-between gap-2">
@@ -114,9 +114,9 @@ export function ProfileView(): JSX.Element {
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="rounded-2xl sm:rounded-3xl border border-border/80 bg-background/80 shadow-xs">
         <CardHeader>
-          <h2 className="text-lg font-semibold">Tu armario</h2>
+          <h2 className="text-lg font-semibold tracking-tight">Tu armario</h2>
         </CardHeader>
         <CardContent className="space-y-3 text-sm">
           <div className="flex items-center justify-between">
@@ -149,9 +149,9 @@ export function ProfileView(): JSX.Element {
         </CardContent>
       </Card>
 
-      <Card className="lg:col-span-2">
+      <Card className="lg:col-span-2 rounded-2xl sm:rounded-3xl border border-border/80 bg-background/80 shadow-xs">
         <CardHeader>
-          <h2 className="text-lg font-semibold">Sistema</h2>
+          <h2 className="text-lg font-semibold tracking-tight">Sistema</h2>
         </CardHeader>
         <CardContent className="space-y-2 text-sm">
           <div className="flex items-center justify-between">

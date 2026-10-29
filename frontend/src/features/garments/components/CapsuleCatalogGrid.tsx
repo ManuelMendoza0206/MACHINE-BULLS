@@ -124,7 +124,7 @@ export function CapsuleCatalogGrid(): JSX.Element {
   return (
     <div className="space-y-6">
       {/* Barra de Filtros y Selección Rápida */}
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-card/40 p-3">
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border/80 bg-background/80 backdrop-blur-sm p-3.5 shadow-xs">
         <div className="flex flex-wrap items-center gap-1.5 text-xs">
           <span className="mr-1 text-muted-foreground font-medium">Categoría:</span>
           {[
@@ -138,9 +138,9 @@ export function CapsuleCatalogGrid(): JSX.Element {
               type="button"
               onClick={() => setFilterCategory(f.id)}
               className={cn(
-                'rounded-md px-2.5 py-1 font-medium transition-colors',
+                'rounded-full px-3 py-1 font-medium transition-all active:scale-[0.98]',
                 filterCategory === f.id
-                  ? 'bg-accent text-accent-foreground'
+                  ? 'bg-accent text-accent-foreground shadow-xs'
                   : 'bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground'
               )}
             >
@@ -155,7 +155,7 @@ export function CapsuleCatalogGrid(): JSX.Element {
               type="button"
               variant="secondary"
               size="sm"
-              className="text-xs h-8"
+              className="text-xs h-8 rounded-full"
               onClick={() => setSelectedIds(new Set(garments.map(g => g.id)))}
             >
               Seleccionar todas
@@ -165,7 +165,7 @@ export function CapsuleCatalogGrid(): JSX.Element {
               type="button"
               variant="secondary"
               size="sm"
-              className="text-xs h-8"
+              className="text-xs h-8 rounded-full"
               onClick={() => setSelectedIds(new Set())}
             >
               Deseleccionar
@@ -204,7 +204,7 @@ export function CapsuleCatalogGrid(): JSX.Element {
       </div>
 
       {selectedIds.size > 0 ? (
-        <div className="sticky bottom-4 z-10 flex items-center justify-between rounded-lg border border-border bg-background/95 p-3 shadow-lg backdrop-blur">
+        <div className="sticky bottom-4 z-10 flex items-center justify-between rounded-2xl border border-border/80 bg-background/95 p-3.5 shadow-xl backdrop-blur-md">
           <span className="text-sm font-medium">
             {selectedIds.size} prenda{selectedIds.size === 1 ? '' : 's'} seleccionada
             {selectedIds.size === 1 ? '' : 's'}

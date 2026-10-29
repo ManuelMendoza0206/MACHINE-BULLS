@@ -210,10 +210,15 @@ export function TryOnView(): JSX.Element {
   return (
     <div className="grid gap-6 lg:grid-cols-2">
       {/* Outfit elegido */}
-      <Card>
+      <Card className="rounded-2xl sm:rounded-3xl border border-border/80 bg-background/80 shadow-xs">
         <CardHeader className="flex-row items-center justify-between space-y-0">
-          <h2 className="text-lg font-semibold">Outfit a probar</h2>
-          <Badge className="capitalize">{outfit.data.aesthetic.replace(/_/g, ' ')}</Badge>
+          <h2 className="text-lg font-semibold tracking-tight">Outfit a probar</h2>
+          <Badge
+            variant="outline"
+            className="border-accent/40 text-accent font-mono text-xs capitalize"
+          >
+            {outfit.data.aesthetic.replace(/_/g, ' ')}
+          </Badge>
         </CardHeader>
         <CardContent>
           <ul className="grid grid-cols-4 gap-2" aria-label="Prendas del outfit">
@@ -222,7 +227,7 @@ export function TryOnView(): JSX.Element {
               return (
                 <li
                   key={ref.garment_id}
-                  className="relative aspect-square overflow-hidden bg-muted"
+                  className="relative aspect-square overflow-hidden rounded-xl bg-muted/60 border border-border/50"
                 >
                   {src ? (
                     // eslint-disable-next-line @next/next/no-img-element -- URL arbitraria del backend
@@ -244,9 +249,9 @@ export function TryOnView(): JSX.Element {
       </Card>
 
       {/* Foto + generación */}
-      <Card>
+      <Card className="rounded-2xl sm:rounded-3xl border border-border/80 bg-background/80 shadow-xs">
         <CardHeader>
-          <h2 className="text-lg font-semibold">Tu foto</h2>
+          <h2 className="text-lg font-semibold tracking-tight">Tu foto</h2>
         </CardHeader>
         <CardContent className="space-y-4">
           <PhotoConsentGate>

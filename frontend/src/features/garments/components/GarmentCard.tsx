@@ -40,7 +40,13 @@ export function GarmentCard({
   );
 
   return (
-    <Card className={cn('overflow-hidden', selected && 'ring-2 ring-accent', className)}>
+    <Card
+      className={cn(
+        'overflow-hidden rounded-2xl border border-border/80 bg-background/80 shadow-xs transition-all duration-200 hover:border-accent/40 hover:shadow-md',
+        selected && 'ring-2 ring-accent border-accent',
+        className
+      )}
+    >
       {onToggleSelect ? (
         // 44px+ touch target: the whole image area is the control (frontend-plan.md §8).
         <button

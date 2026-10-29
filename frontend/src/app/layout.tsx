@@ -26,7 +26,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }):
         <SkipToContentLink />
         <AppProviders>
           <TopNav />
-          <main id="main-content" tabIndex={-1} className="pb-16 lg:pb-0">
+          <main id="main-content" tabIndex={-1} className="pb-20 lg:pb-0">
             {children}
           </main>
           <BottomTabBar />

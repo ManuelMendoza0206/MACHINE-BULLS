@@ -48,12 +48,16 @@ function OutfitCard({ outfit, images, onTryOn }: OutfitCardProps): JSX.Element {
   const embPct = Math.round(outfit.embedding_score * 100);
 
   return (
-    <Card className="overflow-hidden">
-      <CardHeader className="flex-row items-center justify-between space-y-0">
-        <h2 className="text-lg font-semibold capitalize">{outfit.aesthetic.replace(/_/g, ' ')}</h2>
-        <Badge>{outfit.garments.length} prendas</Badge>
+    <Card className="overflow-hidden rounded-2xl sm:rounded-3xl border border-border/80 bg-background/80 backdrop-blur-sm shadow-xs transition-all hover:border-accent/40 hover:shadow-md">
+      <CardHeader className="flex-row items-center justify-between space-y-0 p-5 sm:p-6 pb-2">
+        <h2 className="text-lg font-semibold capitalize tracking-tight">
+          {outfit.aesthetic.replace(/_/g, ' ')}
+        </h2>
+        <Badge variant="outline" className="border-accent/30 text-accent font-mono text-xs">
+          {outfit.garments.length} prendas
+        </Badge>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-4 p-5 sm:p-6 pt-2">
         <ul className="grid grid-cols-4 gap-2" aria-label="Prendas del outfit">
           {outfit.garments.map(ref => {
             const garment = images.get(ref.garment_id);
@@ -61,13 +65,16 @@ function OutfitCard({ outfit, images, onTryOn }: OutfitCardProps): JSX.Element {
               ? `${garment.category}, estética ${garment.dominant_aesthetic}`
               : POSITION_LABEL[ref.position];
             return (
-              <li key={ref.garment_id} className="relative aspect-square overflow-hidden bg-muted">
+              <li
+                key={ref.garment_id}
+                className="relative aspect-square overflow-hidden rounded-xl bg-muted/60 border border-border/50"
+              >
                 {garment ? (
                   // eslint-disable-next-line @next/next/no-img-element -- URL arbitraria del backend (schema .url(), sin host restringido)
                   <img
                     src={garment.processed_image_url}
                     alt={alt}
-                    className="h-full w-full object-cover"
+                    className="h-full w-full object-cover transition-transform duration-300 hover:scale-105"
                   />
                 ) : (
                   <span className="flex h-full items-center justify-center p-1 text-center text-xs text-muted-foreground">
@@ -78,25 +85,29 @@ function OutfitCard({ outfit, images, onTryOn }: OutfitCardProps): JSX.Element {
             );
           })}
         </ul>
-        <div className="space-y-3">
+        <div className="space-y-3 pt-1">
           <div>
-            <div className="mb-1 flex justify-between text-xs text-muted-foreground">
+            <div className="mb-1.5 flex justify-between text-xs text-muted-foreground">
               <span>Armonía cromática</span>
-              <span>{chromaPct}%</span>
+              <span className="font-semibold text-accent">{chromaPct}%</span>
             </div>
             <Progress value={chromaPct} aria-label="Armonía cromática" />
           </div>
           <div>
-            <div className="mb-1 flex justify-between text-xs text-muted-foreground">
+            <div className="mb-1.5 flex justify-between text-xs text-muted-foreground">
               <span>Compatibilidad de estilo</span>
-              <span>{embPct}%</span>
+              <span className="font-semibold text-accent">{embPct}%</span>
             </div>
             <Progress value={embPct} aria-label="Compatibilidad de estilo" />
           </div>
         </div>
       </CardContent>
-      <CardFooter>
-        <Button type="button" onClick={() => onTryOn(outfit.outfit_id)} className="w-full">
+      <CardFooter className="p-5 sm:p-6 pt-0">
+        <Button
+          type="button"
+          onClick={() => onTryOn(outfit.outfit_id)}
+          className="w-full min-h-11 rounded-xl shadow-xs"
+        >
           Probar puesto
         </Button>
       </CardFooter>

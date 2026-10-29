@@ -19,8 +19,12 @@ export function TopNav(): JSX.Element {
         aria-label="Navegación principal"
         className="mx-auto flex h-14 max-w-7xl items-center gap-6 px-8"
       >
-        <Link href="/wardrobe" className="text-base font-semibold">
+        <Link
+          href="/wardrobe"
+          className="text-base font-semibold tracking-tight inline-flex items-center gap-1"
+        >
           StyleMe
+          <span className="h-1.5 w-1.5 rounded-full bg-accent inline-block" />
         </Link>
         <ul className="flex items-center gap-1">
           {NAV_ITEMS.map(item => {
@@ -33,8 +37,10 @@ export function TopNav(): JSX.Element {
                   aria-current={active ? 'page' : undefined}
                   className={cn(
                     'inline-flex items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors hover:bg-muted',
-                    // Two non-colour signals for the active item: weight + icon stroke.
-                    active ? 'font-semibold text-foreground' : 'font-normal text-muted-foreground'
+                    // Non-colour signals (weight + stroke) plus Cobalt accent:
+                    active
+                      ? 'font-semibold text-accent bg-accent/5'
+                      : 'font-normal text-muted-foreground hover:text-foreground'
                   )}
                 >
                   <Icon
