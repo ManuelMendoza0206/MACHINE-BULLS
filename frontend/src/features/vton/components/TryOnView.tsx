@@ -11,11 +11,14 @@ import { PhotoConsentGate } from '@/features/garments/components/PhotoConsentGat
 import { GarmentDropzone } from '@/features/garments/components/GarmentDropzone';
 import { listCapsuleGarments } from '@/features/garments/api/listCapsuleGarments';
 import { getOutfit } from '@/features/outfits/api/getOutfit';
+import { recommendOutfits } from '@/features/outfits/api/recommendOutfits';
+import { useMe } from '@/features/auth/hooks/useMe';
 import { createVtonJob } from '@/features/vton/api/createVtonJob';
 import { getVtonJobStatus } from '@/features/vton/api/getVtonJobStatus';
 import { mapStatusToUserMessage } from '@/lib/api/mapStatusToUserMessage';
 import { ApiError } from '@/lib/errors';
 import type { OutfitPosition } from '@/schemas/api/outfits';
+import { CheckCircle2, Layers, RefreshCw, ShieldAlert } from 'lucide-react';
 
 const POSITION_LABEL: Record<OutfitPosition, string> = {
   top: 'Parte superior',
@@ -54,7 +57,21 @@ function describeCreateError(error: unknown): string {
 export function TryOnView(): JSX.Element {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const outfitId = searchParams.get('outfit');
+  const queryOutfitId = searchParams.get('outfit');
+
+  const { data: me } = useMe();
+  const recommendedQuery = useQuery({
+    queryKey: ['outfits', 'recommend', me?.user_id],
+    queryFn: ({ signal }) => {
+      if (!me) throw new Error('sin identidad del backend');
+      return recommendOutfits({ user_id: me.user_id }, signal);
+    },
+    enabled: Boolean(me),
+    staleTime: 60_000,
+  });
+
+  const availableOutfits = recommendedQuery.data?.outfits ?? [];
+  const effectiveOutfitId = queryOutfitId ?? availableOutfits[0]?.outfit_id ?? null;
 
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -64,13 +81,14 @@ export function TryOnView(): JSX.Element {
   const [failure, setFailure] = useState<string | null>(null);
   const [createError, setCreateError] = useState<string | null>(null);
   const [attempt, setAttempt] = useState(0);
+  const [elapsedSec, setElapsedSec] = useState(0);
   const startedAtRef = useRef(0);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const outfit = useQuery({
-    queryKey: ['outfit', outfitId],
-    queryFn: ({ signal }) => getOutfit(outfitId as string, signal),
-    enabled: Boolean(outfitId),
+    queryKey: ['outfit', effectiveOutfitId],
+    queryFn: ({ signal }) => getOutfit(effectiveOutfitId as string, signal),
+    enabled: Boolean(effectiveOutfitId),
   });
 
   const capsule = useQuery({
@@ -81,6 +99,15 @@ export function TryOnView(): JSX.Element {
   const createJob = useMutation({
     mutationFn: (vars: { image: File; id: string }) => createVtonJob(vars.image, vars.id),
   });
+
+  // Contador de tiempo de inferencia
+  useEffect(() => {
+    if (phase !== 'processing') return;
+    const interval = setInterval(() => {
+      setElapsedSec(s => s + 1);
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [phase]);
 
   // Loop de polling: cada re-ejecución de `attempt` agenda la próxima consulta
   // con backoff; el cleanup cancela el timer si la vista se desmonta.
@@ -123,6 +150,7 @@ export function TryOnView(): JSX.Element {
     setCreateError(null);
     setJobId(null);
     setAttempt(0);
+    setElapsedSec(0);
     setPhase('idle');
   };
 
@@ -149,10 +177,11 @@ export function TryOnView(): JSX.Element {
   const submit = (): void => {
     // Doble-submit: no re-entra mientras la creación del job esté en vuelo
     // ni mientras haya un job corriendo.
-    if (!file || !outfitId || createJob.isPending || phase === 'processing') return;
+    if (!file || !effectiveOutfitId || createJob.isPending || phase === 'processing') return;
     setCreateError(null);
+    setElapsedSec(0);
     createJob.mutate(
-      { image: file, id: outfitId },
+      { image: file, id: effectiveOutfitId },
       {
         onSuccess: job => {
           setJobId(job.job_id);
@@ -168,10 +197,11 @@ export function TryOnView(): JSX.Element {
   const resumePolling = (): void => {
     startedAtRef.current = Date.now();
     setAttempt(0);
+    setElapsedSec(0);
     setPhase('processing');
   };
 
-  if (!outfitId) {
+  if (!effectiveOutfitId) {
     return (
       <div className="rounded-lg border border-border p-6 text-center">
         <p className="font-semibold">Elegí un outfit primero</p>
@@ -212,13 +242,31 @@ export function TryOnView(): JSX.Element {
       {/* Outfit elegido */}
       <Card className="rounded-2xl sm:rounded-3xl border border-border/80 bg-background/80 shadow-xs">
         <CardHeader className="flex-row items-center justify-between space-y-0">
-          <h2 className="text-lg font-semibold tracking-tight">Outfit a probar</h2>
-          <Badge
-            variant="outline"
-            className="border-accent/40 text-accent font-mono text-xs capitalize"
-          >
-            {outfit.data.aesthetic.replace(/_/g, ' ')}
-          </Badge>
+          <div>
+            <h2 className="text-lg font-semibold tracking-tight">Outfit a probar</h2>
+            {availableOutfits.length > 1 && (
+              <p className="text-xs text-muted-foreground mt-0.5">
+                {availableOutfits.length} combinaciones disponibles
+              </p>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            <Badge
+              variant="outline"
+              className="border-accent/40 text-accent font-mono text-xs capitalize"
+            >
+              {outfit.data.aesthetic.replace(/_/g, ' ')}
+            </Badge>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground"
+              onClick={() => router.push('/outfits')}
+            >
+              Cambiar
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
           <ul className="grid grid-cols-4 gap-2" aria-label="Prendas del outfit">
@@ -318,16 +366,87 @@ export function TryOnView(): JSX.Element {
                     : 'Generar prueba virtual'}
               </Button>
               {createError && (
-                <p role="alert" className="text-sm text-destructive">
-                  {createError}
-                </p>
+                <div className="space-y-2.5">
+                  {createError.toLowerCase().includes('pose') ||
+                  createError.toLowerCase().includes('codo') ? (
+                    <div className="space-y-2 rounded-xl border border-destructive/40 bg-destructive/10 p-3.5 text-left">
+                      <div className="flex items-center gap-2 text-xs font-semibold text-destructive">
+                        <ShieldAlert className="h-4 w-4 shrink-0" />
+                        <span>Alerta Biomecánica: Postura No Canónica</span>
+                      </div>
+                      <p className="font-mono text-xs text-destructive/90">{createError}</p>
+                      <p className="text-[11px] text-muted-foreground leading-relaxed">
+                        MediaPipe exige una postura frontal A-Pose para proteger el cómputo de GPU y
+                        evitar distorsiones en la prenda.
+                      </p>
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        size="sm"
+                        className="w-full text-xs font-medium h-8"
+                        onClick={() =>
+                          void loadSample('/samples/usuario_canonico.jpg', 'usuario_canonico.jpg')
+                        }
+                      >
+                        ✓ Cambiar a Modelo A-Pose Canónico
+                      </Button>
+                    </div>
+                  ) : null}
+                  <p role="alert" className="text-sm text-destructive">
+                    {createError}
+                  </p>
+                </div>
               )}
             </div>
           </PhotoConsentGate>
 
           {phase === 'processing' && (
-            <div className="space-y-2 rounded-lg border border-border p-4 text-center">
-              <Skeleton className="mx-auto h-6 w-2/3" />
+            <div className="space-y-3.5 rounded-2xl border border-accent/30 bg-accent/5 p-4 text-center">
+              <div className="flex items-center justify-between text-xs font-mono text-muted-foreground">
+                <span className="flex items-center gap-1.5 font-semibold text-accent">
+                  <RefreshCw className="h-3.5 w-3.5 animate-spin" /> Inferencia asíncrona
+                </span>
+                <span>{elapsedSec}s transcurridos</span>
+              </div>
+
+              {/* Pipeline Tracker */}
+              <div className="space-y-2 text-left text-xs">
+                <div className="flex items-center gap-2 rounded-xl border border-border/60 bg-background/90 p-2.5 shadow-2xs">
+                  <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
+                  <div className="flex-1">
+                    <p className="font-medium text-foreground">
+                      1. Validación anatómica (MediaPipe A-Pose)
+                    </p>
+                    <p className="text-[11px] text-muted-foreground">Postura correcta verificada</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 rounded-xl border border-border/60 bg-background/90 p-2.5 shadow-2xs">
+                  <RefreshCw className="h-4 w-4 shrink-0 animate-spin text-accent" />
+                  <div className="flex-1">
+                    <p className="font-medium text-foreground">
+                      2. Segmentación & SCHP Human Parsing
+                    </p>
+                    <p className="text-[11px] text-muted-foreground">
+                      Alineación de prendas y silueta
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 rounded-xl border border-border/40 bg-muted/40 p-2.5 opacity-70">
+                  <Layers className="h-4 w-4 shrink-0 text-muted-foreground" />
+                  <div className="flex-1">
+                    <p className="font-medium text-muted-foreground">
+                      3. Difusión multicapa (CatVTON)
+                    </p>
+                    <p className="text-[11px] text-muted-foreground">
+                      Renderizado y mezcla por capas
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <Skeleton className="mx-auto h-2 w-full rounded-full" />
               <p className="text-sm text-muted-foreground" role="status">
                 La IA está vistiendo tu outfit… ({Math.round(POLL_TIMEOUT_MS / 1000)}s máx.)
               </p>

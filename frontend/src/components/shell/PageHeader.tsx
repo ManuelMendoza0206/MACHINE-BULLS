@@ -1,7 +1,5 @@
 import type { JSX } from 'react';
 
-import { cn } from '@/lib/utils/cn';
-
 export interface PageHeaderProps {
   title: string;
   description?: string;

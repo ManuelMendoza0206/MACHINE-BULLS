@@ -13,7 +13,10 @@ export function LandingCta(): JSX.Element {
 
   return (
     <Button asChild size="lg">
-      <Link href={href}>
+      <Link
+        href={href}
+        aria-label={status === 'authenticated' ? 'Empezar - Abrir mi armario' : 'Empezar gratis'}
+      >
         {status === 'authenticated' ? 'Abrir mi armario' : 'Empezar gratis'}
         <ArrowUpRight className="h-4 w-4" aria-hidden="true" />
       </Link>

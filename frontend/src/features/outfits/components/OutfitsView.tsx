@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Sparkles, ArrowRight } from 'lucide-react';
 import { useMe } from '@/features/auth/hooks/useMe';
 import { listCapsuleGarments } from '@/features/garments/api/listCapsuleGarments';
 import { recommendOutfits } from '@/features/outfits/api/recommendOutfits';
@@ -107,9 +108,11 @@ function OutfitCard({ outfit, images, onTryOn }: OutfitCardProps): JSX.Element {
         <Button
           type="button"
           onClick={() => onTryOn(outfit.outfit_id)}
-          className="w-full min-h-11 rounded-xl shadow-xs"
+          className="w-full min-h-11 rounded-xl shadow-xs inline-flex items-center justify-center gap-2 font-medium"
         >
-          Probar puesto
+          <Sparkles className="h-4 w-4 shrink-0" aria-hidden="true" />
+          <span>Probar puesto en Probador</span>
+          <ArrowRight className="h-4 w-4 shrink-0" aria-hidden="true" />
         </Button>
       </CardFooter>
     </Card>

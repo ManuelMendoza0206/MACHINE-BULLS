@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, type JSX } from 'react';
+import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -11,6 +12,7 @@ import { GarmentCard } from '@/features/garments/components/GarmentCard';
 import { listCapsuleGarments } from '@/features/garments/api/listCapsuleGarments';
 import { adoptCapsuleGarment } from '@/features/garments/api/adoptCapsuleGarment';
 import { describeGarmentError } from '@/features/garments/lib/describeGarmentError';
+import { CheckCircle2 } from 'lucide-react';
 
 type AdoptState = 'idle' | 'adopting' | 'adopted' | 'error';
 
@@ -22,6 +24,7 @@ export function CapsuleCatalogGrid(): JSX.Element {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [adoptState, setAdoptState] = useState<Record<string, AdoptState>>({});
   const [adoptBannerError, setAdoptBannerError] = useState<string | null>(null);
+  const [adoptedSuccessCount, setAdoptedSuccessCount] = useState<number | null>(null);
   const [filterCategory, setFilterCategory] = useState<string>('all');
 
   const query = useQuery({
@@ -62,6 +65,10 @@ export function CapsuleCatalogGrid(): JSX.Element {
     });
 
     const firstFailure = results.find((r): r is PromiseRejectedResult => r.status === 'rejected');
+    const successCount = results.filter(r => r.status === 'fulfilled').length;
+    if (successCount > 0) {
+      setAdoptedSuccessCount(successCount);
+    }
     if (firstFailure) {
       setAdoptBannerError(describeGarmentError(firstFailure.reason));
     } else {
@@ -173,6 +180,33 @@ export function CapsuleCatalogGrid(): JSX.Element {
           )}
         </div>
       </div>
+
+      {adoptedSuccessCount !== null && adoptedSuccessCount > 0 && (
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-emerald-800 dark:text-emerald-300">
+          <div className="flex items-center gap-2.5 text-sm font-medium">
+            <CheckCircle2 className="h-5 w-5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+            <span>
+              ¡{adoptedSuccessCount}{' '}
+              {adoptedSuccessCount === 1 ? 'prenda agregada' : 'prendas agregadas'} a tu armario! Ya
+              podés combinarlas.
+            </span>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <Button asChild size="sm" className="bg-emerald-700 hover:bg-emerald-800 text-white">
+              <Link href="/outfits">Ver Outfits Recomendados ➔</Link>
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-8 text-xs text-muted-foreground hover:text-foreground"
+              onClick={() => setAdoptedSuccessCount(null)}
+            >
+              Cerrar
+            </Button>
+          </div>
+        </div>
+      )}
 
       {adoptBannerError ? (
         <Card>
