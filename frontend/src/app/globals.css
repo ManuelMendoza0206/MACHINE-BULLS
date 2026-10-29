@@ -2,54 +2,87 @@
 @custom-variant dark (&:is(.dark *));
 
 /*
+ * World: muestrario de telas (fabric sample book).
  * Colour variables below are the HSL channel form of `src/config/design-tokens.ts`
  * (hex -> hexToHslChannels). Keep them in sync with that file — the test
- * `tests/unit/config/design-tokens.contrast.test.ts` (Tarea 1) enforces it and also
- * checks the WCAG-AA contrast budget.
+ * `tests/unit/config/design-tokens.contrast.test.ts` enforces it and also checks
+ * the WCAG-AA contrast budget.
  *
- * Tailwind v4 CSS-first configuration: the `@theme inline` block below maps each
- * colour token to its runtime CSS variable, so Tailwind utilities like
- * `bg-background`, `text-muted-foreground` or `border-border` resolve to
- * `hsl(var(--token / <alpha-value>))`-style values driven by `.dark`.
+ * Tailwind v4 CSS-first configuration: the `@theme inline` block maps each colour
+ * token to its runtime CSS variable, so utilities like `bg-ground`, `text-foreground`
+ * or `border-border` resolve through `.dark`.
  */
+
+@font-face {
+  font-family: 'Archivo';
+  font-style: normal;
+  font-weight: 100 900;
+  font-stretch: 62% 125%;
+  font-display: swap;
+  src: url('/fonts/archivo-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304,
+    U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Archivo';
+  font-style: normal;
+  font-weight: 100 900;
+  font-stretch: 62% 125%;
+  font-display: swap;
+  src: url('/fonts/archivo-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308,
+    U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113,
+    U+2C60-2C7F, U+A720-A7FF;
+}
+
 @layer base {
   :root {
-    --background: 60 9% 98%; /* #FAFAF9 */
-    --foreground: 240 6% 10%; /* #18181B */
-    --muted: 40 10% 94%; /* #F1F0EE */
-    --muted-foreground: 240 5% 34%; /* #52525B */
-    --border: 240 6% 90%; /* #E4E4E7 */
-    --input: 240 6% 90%; /* #E4E4E7 */
-    --accent: 224 76% 48%; /* #1D4ED8 */
-    --accent-foreground: 60 9% 98%; /* #FAFAF9 */
-    --success: 142 72% 29%; /* #15803D */
-    --success-foreground: 60 9% 98%; /* #FAFAF9 */
-    --warning: 26 90% 37%; /* #B45309 */
-    --warning-foreground: 60 9% 98%; /* #FAFAF9 */
-    --destructive: 0 74% 42%; /* #B91C1C */
-    --destructive-foreground: 60 9% 98%; /* #FAFAF9 */
+    --background: 0 0% 100%; /* #FFFFFF */
+    --ground: 68.6 17.1% 92%; /* #EDEEE7 */
+    --foreground: 210 13% 9%; /* #14171A */
+    --muted: 66.7 16.4% 89.2%; /* #E7E8DF */
+    --muted-foreground: 205 7.5% 31.4%; /* #4A5156 */
+    --border: 70.9 11.6% 81.4%; /* #D3D5CA */
+    --input: 70.9 11.6% 81.4%; /* #D3D5CA */
+    --accent: 210.9 54.2% 23.1%; /* #1B3A5B */
+    --accent-foreground: 0 0% 100%; /* #FFFFFF */
+    --thread: 10.6 64.4% 39.6%; /* #A63B24 */
+    --thread-foreground: 0 0% 100%; /* #FFFFFF */
+    --success: 142.8 39.7% 28.6%; /* #2C6642 */
+    --success-foreground: 0 0% 100%; /* #FFFFFF */
+    --warning: 36 76.9% 30.6%; /* #8A5A12 */
+    --warning-foreground: 0 0% 100%; /* #FFFFFF */
+    --destructive: 3.9 64.6% 37.6%; /* #9E2A22 */
+    --destructive-foreground: 0 0% 100%; /* #FFFFFF */
   }
 
   .dark {
-    --background: 240 4% 5%; /* #0C0C0D */
-    --foreground: 240 5% 96%; /* #F4F4F5 */
-    --muted: 240 4% 11%; /* #1A1A1C */
-    --muted-foreground: 240 5% 65%; /* #A1A1AA */
-    --border: 240 4% 16%; /* #27272A */
-    --input: 240 4% 16%; /* #27272A */
-    --accent: 213 94% 68%; /* #60A5FA */
-    --accent-foreground: 240 4% 5%; /* #0C0C0D */
-    --success: 142 71% 45%; /* #22C55E */
-    --success-foreground: 240 4% 5%; /* #0C0C0D */
-    --warning: 38 92% 50%; /* #F59E0B */
-    --warning-foreground: 240 4% 5%; /* #0C0C0D */
-    --destructive: 0 84% 60%; /* #EF4444 */
-    --destructive-foreground: 240 4% 5%; /* #0C0C0D */
+    --background: 205.7 14.3% 9.6%; /* #15191C */
+    --ground: 204 16.1% 6.1%; /* #0D1012 */
+    --foreground: 80 15% 92.2%; /* #ECEEE8 */
+    --muted: 204 15.2% 12.9%; /* #1C2226 */
+    --muted-foreground: 153.3 5.5% 68%; /* #A9B2AE */
+    --border: 200 12.5% 18.8%; /* #2A3236 */
+    --input: 200 12.5% 18.8%; /* #2A3236 */
+    --accent: 211.3 46.9% 71.2%; /* #93B4D8 */
+    --accent-foreground: 204 16.1% 6.1%; /* #0D1012 */
+    --thread: 12.2 68.7% 64.9%; /* #E38168 */
+    --thread-foreground: 204 16.1% 6.1%; /* #0D1012 */
+    --success: 139.7 37.6% 60.4%; /* #74C08D */
+    --success-foreground: 204 16.1% 6.1%; /* #0D1012 */
+    --warning: 37.2 68.8% 61%; /* #E0AC57 */
+    --warning-foreground: 204 16.1% 6.1%; /* #0D1012 */
+    --destructive: 4.4 76.3% 68.6%; /* #EC7B72 */
+    --destructive-foreground: 204 16.1% 6.1%; /* #0D1012 */
   }
 }
 
 @theme inline {
+  --font-sans: 'Archivo', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+
   --color-background: hsl(var(--background));
+  --color-ground: hsl(var(--ground));
   --color-foreground: hsl(var(--foreground));
   --color-muted: hsl(var(--muted));
   --color-muted-foreground: hsl(var(--muted-foreground));
@@ -57,12 +90,16 @@
   --color-input: hsl(var(--input));
   --color-accent: hsl(var(--accent));
   --color-accent-foreground: hsl(var(--accent-foreground));
+  --color-thread: hsl(var(--thread));
+  --color-thread-foreground: hsl(var(--thread-foreground));
   --color-success: hsl(var(--success));
   --color-success-foreground: hsl(var(--success-foreground));
   --color-warning: hsl(var(--warning));
   --color-warning-foreground: hsl(var(--warning-foreground));
   --color-destructive: hsl(var(--destructive));
   --color-destructive-foreground: hsl(var(--destructive-foreground));
+
+  --radius-card: 4px;
 }
 
 @layer base {
@@ -72,57 +109,196 @@
 
   html {
     @apply scroll-smooth;
+    scrollbar-color: hsl(var(--border)) transparent;
+    scrollbar-width: thin;
   }
 
   body {
-    @apply bg-background text-foreground;
+    @apply bg-ground font-sans text-foreground antialiased;
+    font-synthesis-weight: none;
   }
 
   main {
     @apply min-h-screen;
   }
 
-  /* Easing shared by the whole app: confident exponential out-arrival. */
   :root {
+    /* Confident exponential out-arrival, shared by the whole app. */
     --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+    --ease-thread: cubic-bezier(0.65, 0, 0.35, 1);
   }
 
-  /* Browser surfaces carry the design too — selection, caret, scrollbar, focus. */
   ::selection {
-    @apply bg-accent/25 text-foreground;
+    background-color: hsl(var(--accent) / 0.22);
+    color: hsl(var(--foreground));
   }
 
-  html {
-    scrollbar-color: hsl(var(--border)) transparent;
-    scrollbar-width: thin;
+  :focus-visible {
+    outline: 2px solid hsl(var(--thread));
+    outline-offset: 2px;
   }
 
   ::-webkit-scrollbar {
-    width: 10px;
-    height: 10px;
+    width: 11px;
+    height: 11px;
   }
 
   ::-webkit-scrollbar-thumb {
     border: 3px solid transparent;
-    border-radius: 9999px;
+    border-radius: 0;
     background-clip: content-box;
     background-color: hsl(var(--border));
   }
 
   ::-webkit-scrollbar-thumb:hover {
-    background-color: hsl(var(--border) / 0.9);
+    background-color: hsl(var(--muted-foreground) / 0.6);
+  }
+
+  input,
+  textarea,
+  select {
+    caret-color: hsl(var(--accent));
   }
 }
 
-/* ---- Motion language ----
- * One shared entrance (fade + short rise + blurred arrival) for everything that
- * should feel "unpacked": staggered children via `.stagger`, single elements via
- * `.animate-enter`. Reduced motion keeps an opacity-only fade. */
+@layer utilities {
+  /* Garment-label type: small, tracked, condensed. Never used for body copy. */
+  .label {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    font-stretch: 88%;
+    line-height: 1.1;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+  }
+
+  /* Display voice: expanded and heavy, the sample-book cover. */
+  .display {
+    font-weight: 800;
+    font-stretch: 112%;
+    letter-spacing: -0.035em;
+    line-height: 0.94;
+    text-wrap: balance;
+  }
+
+  .num {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: 'tnum' 1;
+  }
+
+  /* A ruled card edge: the sample card's hairline. */
+  .paper {
+    background-color: hsl(var(--background));
+    border: 1px solid hsl(var(--border));
+  }
+
+  /* Basting stitch: the one repeated mark of the world. */
+  .stitch {
+    background-image: repeating-linear-gradient(
+      to right,
+      hsl(var(--border)) 0 6px,
+      transparent 6px 12px
+    );
+    height: 1px;
+  }
+
+  .stitch-thread {
+    background-image: repeating-linear-gradient(
+      to right,
+      hsl(var(--thread) / 0.7) 0 5px,
+      transparent 5px 10px
+    );
+    height: 1px;
+  }
+
+  /* Measured gauge background: a ruler, not a soft progress bar. */
+  .tick-rule {
+    background-image: repeating-linear-gradient(
+      to right,
+      hsl(var(--foreground) / 0.28) 0 1px,
+      transparent 1px 10%
+    );
+  }
+
+  /* Very low-frequency woven grain for the page ground. */
+  .grain {
+    background-image:
+      repeating-linear-gradient(
+        0deg,
+        hsl(var(--foreground) / 0.022) 0 1px,
+        transparent 1px 3px
+      ),
+      repeating-linear-gradient(
+        90deg,
+        hsl(var(--foreground) / 0.022) 0 1px,
+        transparent 1px 3px
+      );
+  }
+
+  .card-lift {
+    transition:
+      transform 0.35s var(--ease-out-expo),
+      box-shadow 0.35s var(--ease-out-expo),
+      border-color 0.2s linear;
+  }
+
+  .card-lift:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 24px -14px hsl(var(--foreground) / 0.35);
+  }
+
+  .animate-enter {
+    animation: enter-up 0.5s var(--ease-out-expo) both;
+  }
+
+  .stagger > * {
+    animation: enter-up 0.5s var(--ease-out-expo) both;
+  }
+
+  .stagger > *:nth-child(2) {
+    animation-delay: 45ms;
+  }
+  .stagger > *:nth-child(3) {
+    animation-delay: 90ms;
+  }
+  .stagger > *:nth-child(4) {
+    animation-delay: 135ms;
+  }
+  .stagger > *:nth-child(5) {
+    animation-delay: 180ms;
+  }
+  .stagger > *:nth-child(6) {
+    animation-delay: 225ms;
+  }
+  .stagger > *:nth-child(7) {
+    animation-delay: 270ms;
+  }
+  .stagger > *:nth-child(8) {
+    animation-delay: 315ms;
+  }
+  .stagger > *:nth-child(n + 9) {
+    animation-delay: 360ms;
+  }
+
+  .animate-stamp {
+    animation: stamp-in 0.6s var(--ease-thread) both;
+  }
+
+  .animate-thread {
+    animation: thread-draw 0.7s var(--ease-out-expo) both;
+    transform-origin: left center;
+  }
+
+  .animate-scan {
+    animation: scan 2.4s var(--ease-thread) infinite;
+  }
+}
+
 @keyframes enter-up {
   from {
     opacity: 0;
-    transform: translateY(12px);
-    filter: blur(4px);
+    transform: translateY(10px);
+    filter: blur(3px);
   }
   to {
     opacity: 1;
@@ -140,30 +316,36 @@
   }
 }
 
-@layer utilities {
-  .animate-enter {
-    animation: enter-up 0.55s var(--ease-out-expo) both;
+@keyframes stamp-in {
+  0% {
+    opacity: 0;
+    transform: rotate(-6deg) scale(1.18);
   }
-
-  .stagger > * {
-    animation: enter-up 0.55s var(--ease-out-expo) both;
+  60% {
+    opacity: 1;
+    transform: rotate(-3deg) scale(0.98);
   }
+  100% {
+    opacity: 1;
+    transform: rotate(-3deg) scale(1);
+  }
+}
 
-  /* Sibling stagger, capped so late items never wait on a long tail. */
-  .stagger > *:nth-child(2) { animation-delay: 50ms; }
-  .stagger > *:nth-child(3) { animation-delay: 100ms; }
-  .stagger > *:nth-child(4) { animation-delay: 150ms; }
-  .stagger > *:nth-child(5) { animation-delay: 200ms; }
-  .stagger > *:nth-child(6) { animation-delay: 250ms; }
-  .stagger > *:nth-child(7) { animation-delay: 300ms; }
-  .stagger > *:nth-child(8) { animation-delay: 350ms; }
-  .stagger > *:nth-child(n + 9) { animation-delay: 400ms; }
+@keyframes thread-draw {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
 
-  /* Soft, bounded accent ambience behind the landing hero (static — no cost). */
-  .hero-glow {
-    background:
-      radial-gradient(640px 320px at 18% -10%, hsl(var(--accent) / 0.12), transparent 70%),
-      radial-gradient(560px 300px at 88% 8%, hsl(var(--accent) / 0.07), transparent 70%);
+@keyframes scan {
+  0% {
+    transform: translateY(-100%);
+  }
+  100% {
+    transform: translateY(400%);
   }
 }
 
@@ -176,7 +358,20 @@
   }
 
   .stagger > * {
-    /* Keep content arriving promptly; no spatial choreography, no delays. */
     animation-delay: 0ms !important;
+  }
+
+  .animate-stamp,
+  .animate-thread,
+  .animate-scan {
+    animation: none;
+  }
+
+  .card-lift:hover {
+    transform: none;
+  }
+
+  html {
+    scroll-behavior: auto;
   }
 }

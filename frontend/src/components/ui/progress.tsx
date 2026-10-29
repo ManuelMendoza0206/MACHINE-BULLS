@@ -8,6 +8,10 @@ export interface ProgressProps extends React.HTMLAttributes<HTMLDivElement> {
   indeterminateLabel?: string;
 }
 
+/**
+ * A measured gauge, not a soft progress pill: the track carries a ruler and the fill
+ * is a solid dye block, so a score reads as a measurement.
+ */
 export const Progress = forwardRef<HTMLDivElement, ProgressProps>(function Progress(
   { className, value, indeterminateLabel = 'Procesando', ...props },
   ref
@@ -23,12 +27,19 @@ export const Progress = forwardRef<HTMLDivElement, ProgressProps>(function Progr
       aria-valuemax={100}
       aria-valuenow={clamped}
       aria-valuetext={indeterminate ? indeterminateLabel : `${clamped}%`}
-      className={cn('relative h-2 w-full overflow-hidden rounded-full bg-muted', className)}
+      className={cn(
+        'relative h-2.5 w-full overflow-hidden border border-border bg-muted',
+        className
+      )}
       {...props}
     >
       <div
+        className="tick-rule absolute inset-0 opacity-70"
+        aria-hidden="true"
+      />
+      <div
         className={cn(
-          'h-full bg-accent transition-[width] duration-700 ease-out',
+          'relative h-full bg-accent transition-[width] duration-700 ease-out',
           indeterminate && 'w-1/3 animate-pulse'
         )}
         style={indeterminate ? undefined : { width: `${clamped}%` }}

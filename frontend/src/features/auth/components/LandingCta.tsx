@@ -3,6 +3,8 @@
 import type { JSX } from 'react';
 
 import Link from 'next/link';
+import { ArrowUpRight } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { useAuth } from '@/features/auth/hooks/useAuth';
 
 export function LandingCta(): JSX.Element {
@@ -10,11 +12,11 @@ export function LandingCta(): JSX.Element {
   const href = status === 'authenticated' ? '/wardrobe' : '/signup';
 
   return (
-    <Link
-      href={href}
-      className="inline-flex rounded-md bg-primary px-6 py-3 font-medium text-primary-foreground hover:bg-primary/90"
-    >
-      Empezar
-    </Link>
+    <Button asChild size="lg">
+      <Link href={href}>
+        {status === 'authenticated' ? 'Abrir mi armario' : 'Empezar gratis'}
+        <ArrowUpRight className="h-4 w-4" aria-hidden="true" />
+      </Link>
+    </Button>
   );
 }

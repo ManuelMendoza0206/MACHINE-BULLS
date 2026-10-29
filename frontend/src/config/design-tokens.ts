@@ -1,36 +1,42 @@
 /**
- * Design tokens — single source of truth for color, typography and spacing.
+ * Design tokens — single source of truth for colour, typography and spacing.
  * Authoritative values: this file. `openspec/specs/frontend/design-system/spec.md` §2.1
  * and `docs/context/frontend-plan.md` §5.1 mirror it. Nothing else may hardcode a colour:
  *  - `src/app/globals.css` publishes the HSL channels as CSS variables and maps them
  *    into Tailwind v4 utilities via its `@theme inline` block; the test
- *    `tests/unit/config/design-tokens.contrast.test.ts` (Tarea 1) keeps that file in
- *    sync with `hexToHslChannels(...)` and enforces the WCAG-AA contrast budget.
+ *    `tests/unit/config/design-tokens.contrast.test.ts` keeps that file in sync with
+ *    `hexToHslChannels(...)` and enforces the WCAG-AA contrast budget.
  *
- * WCAG-AA tune (decision, CLAUDE.md §10 — 31 ago 2026): the light-theme
- * `mutedForeground`, `success` and `destructive` were moved one step darker (zinc-600 /
- * green-700 / red-700) and a `warning` pair was added, so every text pair — including
- * light-foreground text on a `success`/`warning`/`destructive` fill — meets 4.5:1.
- * Dark-theme values are unchanged (already compliant).
+ * World: "muestrario de telas" (fabric sample book). The app sits on an unbleached
+ * muslin table (`ground`), work happens on paper cards (`background`), and the shell is
+ * dyed indigo (`accent`). `thread` is tailor's red: attention, the stitch, destructive
+ * confirmation — never decoration.
  */
 
 type ThemeValue = { readonly light: `#${string}`; readonly dark: `#${string}` };
 
 export const colorTokens = {
-  background: { light: '#FAFAF9', dark: '#0C0C0D' },
-  foreground: { light: '#18181B', dark: '#F4F4F5' },
-  muted: { light: '#F1F0EE', dark: '#1A1A1C' },
-  mutedForeground: { light: '#52525B', dark: '#A1A1AA' },
-  border: { light: '#E4E4E7', dark: '#27272A' },
-  input: { light: '#E4E4E7', dark: '#27272A' },
-  accent: { light: '#1D4ED8', dark: '#60A5FA' },
-  accentForeground: { light: '#FAFAF9', dark: '#0C0C0D' },
-  success: { light: '#15803D', dark: '#22C55E' },
-  successForeground: { light: '#FAFAF9', dark: '#0C0C0D' },
-  warning: { light: '#B45309', dark: '#F59E0B' },
-  warningForeground: { light: '#FAFAF9', dark: '#0C0C0D' },
-  destructive: { light: '#B91C1C', dark: '#EF4444' },
-  destructiveForeground: { light: '#FAFAF9', dark: '#0C0C0D' },
+  /** Paper: the card you read and write on. */
+  background: { light: '#FFFFFF', dark: '#15191C' },
+  /** The table the paper sits on. */
+  ground: { light: '#EDEEE7', dark: '#0D1012' },
+  foreground: { light: '#14171A', dark: '#ECEEE8' },
+  muted: { light: '#E7E8DF', dark: '#1C2226' },
+  mutedForeground: { light: '#4A5156', dark: '#A9B2AE' },
+  border: { light: '#D3D5CA', dark: '#2A3236' },
+  input: { light: '#D3D5CA', dark: '#2A3236' },
+  /** Indigo dye: the shell band and primary actions. */
+  accent: { light: '#1B3A5B', dark: '#93B4D8' },
+  accentForeground: { light: '#FFFFFF', dark: '#0D1012' },
+  /** Tailor's thread: attention and destructive confirmation. */
+  thread: { light: '#A63B24', dark: '#E38168' },
+  threadForeground: { light: '#FFFFFF', dark: '#0D1012' },
+  success: { light: '#2C6642', dark: '#74C08D' },
+  successForeground: { light: '#FFFFFF', dark: '#0D1012' },
+  warning: { light: '#8A5A12', dark: '#E0AC57' },
+  warningForeground: { light: '#FFFFFF', dark: '#0D1012' },
+  destructive: { light: '#9E2A22', dark: '#EC7B72' },
+  destructiveForeground: { light: '#FFFFFF', dark: '#0D1012' },
 } as const satisfies Record<string, ThemeValue>;
 
 export const typeScale = {
@@ -42,6 +48,7 @@ export const typeScale = {
   '2xl': 'text-2xl',
   '3xl': 'text-3xl',
   '4xl': 'text-4xl',
+  '5xl': 'text-5xl',
 } as const;
 
 export const spacing = {
@@ -78,37 +85,25 @@ export function hexToHslChannels(hex: string): string {
   const delta = max - min;
   const lightness = (max + min) / 2;
 
-  let hue = 0;
-  let saturation = 0;
+  let h = 0;
+  let s = 0;
 
   if (delta !== 0) {
-    saturation = delta / (1 - Math.abs(2 * lightness - 1));
+    s = delta / (1 - Math.abs(2 * lightness - 1));
     switch (max) {
       case r:
-        hue = ((g - b) / delta) % 6;
+        h = 60 * (((g - b) / delta) % 6);
         break;
       case g:
-        hue = (b - r) / delta + 2;
+        h = 60 * ((b - r) / delta + 2);
         break;
       default:
-        hue = (r - g) / delta + 4;
+        h = 60 * ((r - g) / delta + 4);
     }
-    hue *= 60;
-    if (hue < 0) hue += 360;
   }
 
-  const h = Math.round(hue);
-  const s = Math.round(saturation * 100);
-  const l = Math.round(lightness * 100);
-  return `${h} ${s}% ${l}%`;
-}
+  if (h < 0) h += 360;
 
-/** All token CSS variables for a theme, e.g. `{ '--background': '60 9% 98%', ... }`. */
-export function cssVariablesForTheme(theme: 'light' | 'dark'): Record<string, string> {
-  return Object.fromEntries(
-    (Object.entries(colorTokens) as [ColorToken, ThemeValue][]).map(([name, value]) => [
-      `--${toKebabCase(name)}`,
-      hexToHslChannels(value[theme]),
-    ])
-  );
+  const round = (n: number): number => Math.round(n * 10) / 10;
+  return `${round(h)} ${round(s * 100)}% ${round(lightness * 100)}%`;
 }

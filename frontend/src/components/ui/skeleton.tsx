@@ -17,7 +17,11 @@ export function Skeleton({ className, label = 'Cargando', ...props }: SkeletonPr
       role="status"
       aria-busy="true"
       aria-label={label}
-      className={cn('animate-pulse rounded-md bg-muted', className)}
+      className={cn(
+        'animate-pulse rounded-[2px] bg-muted',
+        'bg-[repeating-linear-gradient(90deg,hsl(var(--muted))_0_12px,hsl(var(--border)/0.45)_12px_13px)]',
+        className
+      )}
       {...props}
     />
   );

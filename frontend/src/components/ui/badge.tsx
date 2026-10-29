@@ -2,15 +2,18 @@ import type { JSX } from 'react';
 import { cva, type VariantProps } from 'class-variance-authority';
 import { cn } from '@/lib/utils/cn';
 
+/** Label-like tags: rectangular, tracked, always carrying their meaning in text. */
 export const badgeVariants = cva(
-  'inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium',
+  'inline-flex items-center rounded-[2px] border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em]',
   {
     variants: {
       variant: {
         default: 'border-transparent bg-accent text-accent-foreground',
         success: 'border-transparent bg-success text-success-foreground',
         warning: 'border-transparent bg-warning text-warning-foreground',
-        outline: 'border-border text-foreground',
+        destructive: 'border-transparent bg-destructive text-destructive-foreground',
+        thread: 'border-transparent bg-thread text-thread-foreground',
+        outline: 'border-border bg-background text-foreground',
       },
     },
     defaultVariants: { variant: 'default' },
