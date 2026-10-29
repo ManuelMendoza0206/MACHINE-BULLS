@@ -126,6 +126,17 @@ export function TryOnView(): JSX.Element {
     setPhase('idle');
   };
 
+  const loadSample = async (url: string, filename: string): Promise<void> => {
+    try {
+      const res = await fetch(url);
+      const blob = await res.blob();
+      const sampleFile = new File([blob], filename, { type: 'image/jpeg' });
+      handleFiles([sampleFile]);
+    } catch {
+      // Entornos de prueba o sin fetch disponible
+    }
+  };
+
   const handleFiles = (files: File[]): void => {
     const first = files[0];
     if (!first) return;
@@ -255,7 +266,38 @@ export function TryOnView(): JSX.Element {
                   </Button>
                 </div>
               ) : (
-                <GarmentDropzone onFilesSelected={handleFiles} multiple={false} />
+                <div className="space-y-3">
+                  <GarmentDropzone onFilesSelected={handleFiles} multiple={false} />
+                  <div className="rounded-lg border border-border/80 bg-muted/30 p-3 space-y-2">
+                    <p className="text-xs font-medium text-muted-foreground">
+                      O usá un modelo rápido para la demo:
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        size="sm"
+                        className="text-xs h-8"
+                        onClick={() =>
+                          void loadSample('/samples/usuario_canonico.jpg', 'usuario_canonico.jpg')
+                        }
+                      >
+                        ✓ Modelo A-Pose (Canónico)
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        size="sm"
+                        className="text-xs h-8 text-amber-600 dark:text-amber-400"
+                        onClick={() =>
+                          void loadSample('/samples/usuario_apose.jpg', 'usuario_apose.jpg')
+                        }
+                      >
+                        ⚠ Probar rechazo A-Pose
+                      </Button>
+                    </div>
+                  </div>
+                </div>
               )}
 
               <Button

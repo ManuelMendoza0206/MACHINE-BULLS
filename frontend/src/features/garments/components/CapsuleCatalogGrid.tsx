@@ -6,6 +6,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils/cn';
 import { GarmentCard } from '@/features/garments/components/GarmentCard';
 import { listCapsuleGarments } from '@/features/garments/api/listCapsuleGarments';
 import { adoptCapsuleGarment } from '@/features/garments/api/adoptCapsuleGarment';
@@ -16,18 +17,12 @@ type AdoptState = 'idle' | 'adopting' | 'adopted' | 'error';
 /**
  * Catálogo "Básicos StyleMe" (wardrobe-flow/spec.md — "Catálogo cápsula con cobertura mínima
  * verificable"). Selección múltiple + adopción por prenda.
- *
- * **GAP G1/G4** (api-contract-gaps/spec.md): `GET /garments/capsule` and
- * `POST /garments/capsule/{id}/adopt` are documented but unconfirmed — at time of writing the
- * backend exposes neither (`backend/src/api/` is an empty scaffold). Against a real deployment
- * this renders the error state below, which explicitly names the gap rather than presenting a
- * broken "select and nothing happens" UI — that *is* the "documented blocked state" the spec
- * asks for. MSW covers the success path in tests.
  */
 export function CapsuleCatalogGrid(): JSX.Element {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [adoptState, setAdoptState] = useState<Record<string, AdoptState>>({});
   const [adoptBannerError, setAdoptBannerError] = useState<string | null>(null);
+  const [filterCategory, setFilterCategory] = useState<string>('all');
 
   const query = useQuery({
     queryKey: ['capsule-catalog'],
@@ -115,8 +110,70 @@ export function CapsuleCatalogGrid(): JSX.Element {
     );
   }
 
+  const filteredGarments =
+    filterCategory === 'all'
+      ? garments
+      : garments.filter(g => {
+          const cat = g.category.toLowerCase();
+          if (filterCategory === 'top') return cat === 'top';
+          if (filterCategory === 'bottom') return cat === 'bottom';
+          if (filterCategory === 'outwear') return cat === 'outwear' || cat === 'outerwear';
+          return cat === filterCategory;
+        });
+
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
+      {/* Barra de Filtros y Selección Rápida */}
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-card/40 p-3">
+        <div className="flex flex-wrap items-center gap-1.5 text-xs">
+          <span className="mr-1 text-muted-foreground font-medium">Categoría:</span>
+          {[
+            { id: 'all', label: `Todas (${garments.length})` },
+            { id: 'top', label: 'Superiores' },
+            { id: 'bottom', label: 'Inferiores' },
+            { id: 'outwear', label: 'Abrigos' },
+          ].map(f => (
+            <button
+              key={f.id}
+              type="button"
+              onClick={() => setFilterCategory(f.id)}
+              className={cn(
+                'rounded-md px-2.5 py-1 font-medium transition-colors',
+                filterCategory === f.id
+                  ? 'bg-accent text-accent-foreground'
+                  : 'bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground'
+              )}
+            >
+              {f.label}
+            </button>
+          ))}
+        </div>
+
+        <div className="flex items-center gap-2">
+          {selectedIds.size < garments.length ? (
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              className="text-xs h-8"
+              onClick={() => setSelectedIds(new Set(garments.map(g => g.id)))}
+            >
+              Seleccionar todas
+            </Button>
+          ) : (
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              className="text-xs h-8"
+              onClick={() => setSelectedIds(new Set())}
+            >
+              Deseleccionar
+            </Button>
+          )}
+        </div>
+      </div>
+
       {adoptBannerError ? (
         <Card>
           <CardContent className="p-3 text-sm text-destructive">{adoptBannerError}</CardContent>
@@ -124,7 +181,7 @@ export function CapsuleCatalogGrid(): JSX.Element {
       ) : null}
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-        {garments.map(garment => {
+        {filteredGarments.map(garment => {
           const state = adoptState[garment.id] ?? 'idle';
           return (
             <GarmentCard
@@ -147,7 +204,7 @@ export function CapsuleCatalogGrid(): JSX.Element {
       </div>
 
       {selectedIds.size > 0 ? (
-        <div className="sticky bottom-4 flex items-center justify-between rounded-lg border border-border bg-background p-3 shadow-md">
+        <div className="sticky bottom-4 z-10 flex items-center justify-between rounded-lg border border-border bg-background/95 p-3 shadow-lg backdrop-blur">
           <span className="text-sm font-medium">
             {selectedIds.size} prenda{selectedIds.size === 1 ? '' : 's'} seleccionada
             {selectedIds.size === 1 ? '' : 's'}
