@@ -24,7 +24,7 @@ function useFileKeys(): (file: File) => number {
 
 function QueuedPlaceholder({ position }: { position: number }): JSX.Element {
   return (
-    <Card>
+    <Card className="rounded-2xl border border-border/80 bg-background/80 shadow-xs">
       <CardContent className="flex h-40 items-center justify-center p-4 text-center text-sm text-muted-foreground">
         En cola — posición {position}
       </CardContent>

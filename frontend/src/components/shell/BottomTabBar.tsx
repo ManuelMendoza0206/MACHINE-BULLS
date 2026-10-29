@@ -15,7 +15,7 @@ export function BottomTabBar(): JSX.Element {
   return (
     <nav
       aria-label="Navegación principal"
-      className="fixed inset-x-0 bottom-0 z-40 flex border-t border-border bg-background lg:hidden"
+      className="fixed inset-x-0 bottom-0 z-40 flex border-t border-border bg-background/95 backdrop-blur-md pb-[env(safe-area-inset-bottom)] lg:hidden"
     >
       {NAV_ITEMS.map(item => {
         const active = isNavItemActive(pathname, item.href);
@@ -26,13 +26,18 @@ export function BottomTabBar(): JSX.Element {
             href={item.href}
             aria-current={active ? 'page' : undefined}
             className={cn(
-              'flex flex-1 flex-col items-center justify-center gap-1 py-2 text-xs',
-              active ? 'font-semibold text-foreground' : 'font-normal text-muted-foreground'
+              'flex flex-1 flex-col items-center justify-center gap-1 py-2 text-xs transition-colors min-h-12',
+              active
+                ? 'font-semibold text-accent'
+                : 'font-normal text-muted-foreground hover:text-foreground'
             )}
           >
             <Icon
               aria-hidden="true"
-              className={cn('h-5 w-5', active ? 'stroke-[2.5]' : 'stroke-2')}
+              className={cn(
+                'h-5 w-5 transition-transform',
+                active ? 'stroke-[2.5] scale-105' : 'stroke-2'
+              )}
             />
             {item.label}
           </Link>
