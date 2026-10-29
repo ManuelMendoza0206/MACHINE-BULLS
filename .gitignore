@@ -83,6 +83,8 @@ dist/
 sample_data/clip_grueso/
 sample_data/clip_fino/
 sample_data/figures/
+# Excepcion: conjunto curado con fotos REALES del repo (1.2MB, eval de README)
+!sample_data/clip_grueso/
 
 # Local tooling
 .opencode/

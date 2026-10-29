@@ -77,4 +77,35 @@ Componente inteligente (clasificador zero-shot CLIP + validación A-Pose + VTON
 diffusion por capas): cómo correr entrenamiento/evaluación en
 [`backend/src/ml/README.md`](backend/src/ml/README.md).
 
+## Resultados experimentales
+
+Evaluación zero-shot de CLIP sobre el conjunto curado de prendas reales,
+con el CLI del repo (`backend/src/ml/metrics/zero_shot.py`) — reproducible:
+
+```bash
+cd backend/src
+python -m ml.metrics.zero_shot --fotos ../../sample_data/clip_grueso \
+  --etiquetas ../../sample_data/clip_labels_curado.csv \
+  --nivel CATEGORIA --salida ../../sample_data/clip_eval_curado.json
+```
+
+| Métrica | Valor | Nota |
+|---|---|---|
+| n / categorías | 9 / {top, dress, bottom} | fotos reales (dataset demo CatVTON + crop de jeans) |
+| accuracy top-1 | **0.889** (8/9) | ensemble de 3 plantillas |
+| IC95% (Wilson) | [0.565, 0.980] | N pequeño → intervalo amplio |
+| F1 macro | 0.630 | una de las confusiones le pega al recall de dress |
+| objetivo (plan-base 9.1) 0.82 | **no confirmable aún** | el IC95% entra bajo el objetivo: con N=9 no se puede afirmar |
+| ensemble vs prompt único | base 9/9, ensemble 8/9 (Δ −0.111) | McNemar p=1.0: sin diferencia significativa; el módulo recomienda el prompt más simple |
+
+Interpretación honesta: el **pipeline de métricas funciona y las etiquetas
+manuales existen**, pero la evaluación estadística contra el objetivo del
+proyecto requiere las imágenes del dataset etiquetado completo (30 pares ya
+catalogados en `sample_data/clip_labels_grueso.csv` — sus fotos viven en el
+dataset PolyVore, no en el repo). Pendiente del sprint de datos: bajarlas y
+re-evaluar; entretanto los números de run del modelo en producción están en
+los logs del worker (duración/capa) y el smoke completo 7/7.
+
+Raw: [`sample_data/clip_eval_curado.json`](sample_data/clip_eval_curado.json).
+
 Constitution: `.speckit/constitution.md` — PR required, 1 reviewer, declarar IA.
