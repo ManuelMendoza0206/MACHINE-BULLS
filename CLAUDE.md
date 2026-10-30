@@ -2,7 +2,7 @@
 
 Memoria persistente del agente para el repositorio **`MACHINE-BULLS`** (frontend de StyleMe/StyleSync IA — proyecto de equipo, Taller de Sistemas Inteligentes). Este documento es la fuente de verdad operativa: toda sesión futura de Claude Code en este repo debe leerlo y respetarlo antes de escribir código.
 
-> **Alcance de este repositorio:** SOLO frontend (Next.js). El backend Python/FastAPI/ML descrito en `docs/context/plan-base.md` (clasificador CLIP, motor de compatibilidad, pipeline VTON) vive en un repositorio/servicio separado y se consume aquí exclusivamente vía HTTP/JSON, según los contratos de la Sección 11 de `docs/context/plan-base.md`.
+> **Alcance (actualizado 24-oct-2026):** monorepo **frontend (Next.js) + backend (FastAPI)**. El backend Python/FastAPI/ML descrito en `docs/context/plan-base.md` (clasificador CLIP, motor de compatibilidad, pipeline VTON) vive en `backend/` de este mismo repo y se consume vía HTTP/JSON (`NEXT_PUBLIC_API_BASE_URL`), según los contratos de la Sección 11 de `docs/context/plan-base.md`.
 >
 > **Decisión de plataforma vigente [registrada retroactivamente]:** el frontend es una **aplicación web Next.js**, no la app móvil React Native descrita en el plan técnico anterior (`.speckit/features/001-probador-virtual/plan.md`, superseded — ver nota en ese archivo). Toda spec en `openspec/specs/` asume web.
 >
@@ -46,9 +46,9 @@ El frontend NO reimplementa lógica de dominio (clasificación, scoring cromáti
 
 ### 2.1 Disciplina de Contratos Frontend↔Backend (crítico)
 
-El backend aún no existe en este momento del proyecto. Para que la integración futura no degrade el estándar:
+El backend vive en `backend/` del mismo monorepo (FastAPI, `openspec/specs/backend/`). Para que la integración no degrade el estándar:
 
-- Todo schema Zod que representa una respuesta del backend debe vivir en `src/schemas/api/` y **espejar exactamente** los modelos Pydantic descritos en la Sección 11 de `docs/context/plan-base.md` (nombres de campo, tipos, enums, nullability).
+- Todo schema Zod que representa una respuesta del backend debe vivir en `frontend/src/schemas/api/` y **espejar exactamente** los modelos Pydantic de `backend/src/schemas/` descritos en la Sección 11 de `docs/context/plan-base.md` (nombres de campo, tipos, enums, nullability).
 - Cuando el backend exponga su OpenAPI schema, evaluar generación automática de tipos/Zod (ej. `openapi-zod-client`) en vez de mantenerlos a mano — dejar esta tarea explícitamente pendiente en un spec futuro, no improvisarla ad-hoc.
 - Ningún componente o hook debe asumir la forma de una respuesta sin pasarla por su schema Zod correspondiente. Un `parse` fallido se traduce siempre en un `ValidationError` tipado (ver §5), nunca en un fallo silencioso.
 - Los `job_id`, `status` enums (`pending|processing|completed|failed`) y demás valores literales deben tipar-se como Zod `enum`/`literal`, nunca como `string` genérico.
@@ -80,50 +80,43 @@ MACHINE-BULLS/
 ├── .speckit/
 │   └── constitution.md           # Gobernanza del equipo (PR, DoD, riesgos) — ver §9 abajo
 ├── docs/
-│   ├── context/
-│   │   ├── plan-base.md          # Documento fuente del proyecto completo (full-stack)
-│   │   └── frontend-plan.md      # Planteamiento UX/flujos/design system del frontend
-│   └── clickup/                  # Team charter, priorización de casos, estructura de tablero
+│   ├── adr/                      # ADRs versionadas (docs/adr/adr-sprint-N/)
+│   ├── architecture/             # Diagramas C4+ interactivos
+│   ├── clickup/                  # Team charter, priorización, estructura de tablero
+│   ├── context/                  # plan-base.md (fuente de verdad full-stack), frontend-plan.md
+│   ├── ml/                       # Documentación del pipeline ML
+│   ├── risks/                    # Registro de riesgos
+│   └── sprint-plans/             # sprint-N/{manifest, init-<persona>, review} — índice en su README.md
 ├── openspec/
 │   ├── config.yaml
-│   ├── specs/                    # Especificaciones SDD (frontend) — fuente de verdad de contratos
-│   └── changes/                  # Propuestas de cambio de spec (proposal/design/tasks, CLI OpenSpec)
-├── src/                          # No existe aún — se crea solo tras spec (openspec/specs/) + test en rojo
-│   ├── app/                      # Next.js App Router: rutas, layouts, pages, route handlers
-│   ├── components/
-│   │   ├── ui/                   # shadcn/ui — primitivos generados
-│   │   └── shared/                # Componentes compuestos reutilizables entre features
-│   ├── features/                 # Arquitectura por dominio (feature-sliced)
-│   │   ├── garments/
-│   │   │   ├── components/
-│   │   │   ├── hooks/            # useUploadGarment, etc. (TanStack Query)
-│   │   │   ├── api/               # funciones de fetch tipadas para este dominio
-│   │   │   └── schemas/           # Zod schemas específicos del dominio
-│   │   ├── outfits/
-│   │   └── vton/
-│   ├── lib/
-│   │   ├── api/                   # cliente HTTP base, manejo de errores, interceptores
-│   │   └── utils/
-│   ├── hooks/                     # hooks genéricos no atados a un dominio
-│   ├── stores/                    # Zustand stores
-│   ├── schemas/
-│   │   └── api/                   # Zod schemas que espejan contratos backend (§2.1)
-│   ├── types/                     # tipos compartidos no derivados de Zod
-│   └── config/                    # constantes, configuración de entorno tipada
-├── tests/
-│   ├── unit/                      # Vitest — funciones puras, schemas, utils
-│   ├── integration/                # Vitest + RTL — componentes/hooks con mocks de red (MSW)
-│   ├── e2e/                        # Playwright — flujos completos
-│   └── fixtures/                   # datos de prueba, mocks de respuestas backend
-├── public/
-├── .env.example
-├── .eslintrc / eslint.config.mjs
-├── .prettierrc
-├── tailwind.config.ts
-├── tsconfig.json                   # strict: true, noUncheckedIndexedAccess: true
-├── vitest.config.ts
-├── playwright.config.ts
-└── package.json
+│   ├── specs/                    # Especificaciones SDD — fuente de verdad de contratos
+│   │   ├── frontend/             # 9 specs (vton-flow, wardrobe-flow, outfits-flow, etc.)
+│   │   └── backend/              # 5 specs (domain-and-database, vton-pipeline, etc.)
+│   └── changes/                  # Propuestas de cambio de spec (proposal/design/tasks)
+├── frontend/                     # Next.js 16 + React 19 + Tailwind v4
+│   ├── src/
+│   │   ├── app/                  # App Router: wardrobe/, outfits/, try-on/, profile/, login/, signup/
+│   │   ├── components/{ui,shared}/
+│   │   ├── features/             # feature-sliced: auth/, garments/, outfits/, vton/
+│   │   │   └── */{api, hooks, components, lib, schemas}
+│   │   ├── lib/                  # api/ (cliente HTTP + errores), utils/
+│   │   ├── stores/               # Zustand
+│   │   ├── config/               # design-tokens.ts (SoT de paleta)
+│   │   ├── schemas/api/          # Zod espejando Pydantic (§2.1)
+│   │   └── proxy.ts              # redirect de rutas protegidas (middleware)
+│   ├── tests/{unit, integration, e2e}/
+│   └── package.json              # `npm run verify` = gate local (§7)
+├── backend/                      # FastAPI + SQLAlchemy + MLflow (ver backend/README.md)
+│   └── src/
+│       ├── api/                  # routers /garments /outfits /vton /capsule
+│       ├── db/                   # Alembic, triggers (Supabase)
+│       ├── domain/               # modelos SQLAlchemy
+│       ├── ml/                   # metrics/training/validation/testing + mlflow
+│       ├── schemas/              # Pydantic (espejado por Zod en frontend)
+│       └── services/             # garment-analysis (CLIP), recommender, vton pipeline
+├── notebooks/                    # 01 baseline, 02 EDA, 03 CLIP zero-shot (ML/Data)
+├── scripts/                      # generate_diagrams.py, clickup/sync-sprint-1.mjs
+└── .github/workflows/ci.yml      # quality · build · e2e (Constitution §8)
 ```
 
 ---
@@ -268,9 +261,11 @@ cada asiento (el manifiesto §4–§6 ya lista qué cambiar).
 
 **P1#4: Conteo de tareas — ClickUp es la fuente única**
 
-- El número y reparto de tareas viven en ClickUp (export `SPRINT-1-MASTER.csv`), no en los `.md`.
+- El número y reparto de tareas viven en ClickUp. El export `SPRINT-1-MASTER.csv`
+  se genera con `scripts/clickup/sync-sprint-1.mjs --export-csv` a `docs/clickup/`.
 - Los docs de sprint describen _qué_ hace cada asiento, no totales a reconciliar a mano.
-- Sincronización del tablero: `scripts/clickup/sync-sprint-1.mjs` (credencial vía env var o archivo local gitignoreado; nunca en el repo).
+- Sincronización del tablero: `scripts/clickup/sync-sprint-1.mjs` (**ya implementado**) — dry-run
+  por defecto, `--apply` para escribir; credencial vía env var o archivo local gitignoreado (`scripts/clickup/.token`); nunca en el repo.
 
 **P1#5: 9 sprints × 18 semanas — fecha fija** (12 ago – 15 dic 2026). Si algo no cabe, se recorta o pasa al siguiente sprint.
 
@@ -279,6 +274,8 @@ cada asiento (el manifiesto §4–§6 ya lista qué cambiar).
 **P1#7: Spec refs** — todas apuntan a `openspec/specs/frontend/…`; secciones citadas verificadas en `sprint-1-init-leonardo.md`.
 
 **P1#8: Cobertura** — Sprint 1 la mide pero **no la usa como gate** (suites nacen en Tarea 1). El gate (≥80%, unit+E2E) entra en Sprint 2 (track de Huascar).
+
+---
 
 ### P2: Gobernanza
 
@@ -292,7 +289,36 @@ de specs de flujo se migran spec-first al empezar su Tarea correspondiente.
 
 ---
 
-## 11. Entrada a Sprint 1
+## 10.1 Estado vigente (24-oct-2026)
+
+Verificación real sobre `main` al día (`e0b4dc6`, PRs hasta #40):
+
+- **Sprints:** 0 cerrado; 1 cerrado con review de Huascar aprobada y mergeada (PR #34);
+  2 cerrado en código (QA de epics validada dentro de `sprint-3-review.md` por el intercambio
+  de asiento); 3 cerrado en código con review vivo actualizado al 25-sep
+  (`docs/sprint-plans/sprint-3/sprint-3-review.md`); 4 en revisión de QA
+  (rama remota `qa/sprint-4-review`, pendiente de merge); Sprint 5 en su ventana
+  (21-oct → 3-nov según `docs/clickup/clickup_estructura.md` §Scrum).
+- **Notebooks:** 01 baseline, 02 EDA y 03 eval zero-shot CLIP mergeados
+  (`feat/notebook-03-clip` → #40).
+- **Backend:** vivo pero parcial — esqueleto ML + evaluator (PR #38) y scripts de MLflow (ADR-302).
+  `domain-and-database` y `api-gateway` siguen en deuda técnica asumida formalmente el 24-sep
+  (ver `sprint-3-review.md` §2). NO citar el backend como completo.
+- **Frontend:** las 5 rutas productivas existen (`wardrobe/`, `outfits/`, `try-on/`,
+  `profile/`, `login|signup/`) con features-sliced (`auth/`, `garments/`, `outfits/`, `vton/`).
+  `PhotoConsentGate` sigue siendo un placeholder designado (ADR-301) hasta que Q5 cierre.
+- **ClickUp:** accesible por API vía `CLICKUP_API_TOKEN` (local, gitignoreado).
+  `scripts/clickup/sync-sprint-1.mjs` ya existe (dry-run por defecto, `--apply` para escribir,
+  `--export-csv` para el master CSV). Auditoría del 24-oct: tablero 189 tareas / 8 listas,
+  0 violaciones de gobernanza, drift pendiente de retitulado en 3 tareas vivas
+  (`86e301dpf`, `86e301dpw`, `86e302a2b` — el resto de IDs del manifiesto ya no existen en el
+  tablero; el Sprint 1 quedó absorbido).
+- Los docs del §10 anterior (D1–D5, P1#4–P1#8) reflejan el estado de **Sprint 1** y se mantienen
+  como registro histórico de decisiones, no como estado actual.
+
+---
+
+## 11. Entrada a Sprint 1 (histórico; el calendario vigente es el de §10.1)
 
 | Hito                        | Fecha                                                     |
 | :-------------------------- | :-------------------------------------------------------- |
@@ -304,10 +330,13 @@ de specs de flujo se migran spec-first al empezar su Tarea correspondiente.
 **Asiento A (Feature Lead) Sprint 1 = Leonardo** — epics `frontend/design-system` +
 `frontend/app-shell-and-navigation`, 6 tareas (Tarea 0–6), detalle en
 `docs/sprint-plans/sprint-1/sprint-1-init-leonardo.md`. Asientos B/C/D (Jaicel / Huascar / Manuel):
-sus `sprint-1-init-*.md`. Reparto y conteo exacto: **ClickUp** (`SPRINT-1-MASTER.csv`), no estos docs.
+sus `sprint-1-init-*.md`. Reparto y conteo exacto: **ClickUp** (export `SPRINT-1-MASTER.csv`
+vía `scripts/clickup/sync-sprint-1.mjs --export-csv`), no estos docs.
 
-**Alcance:** este repo = frontend. Todo ML/Data/CLIP vive en el **repositorio backend** (§1).
+**Alcance (histórico de ese sprint):** frontend. El backend vive en `backend/` del monorepo (§1).
 
-**Next sprint lead:** Jaicel (Asiento A para Sprint 2).
+**Asiento vigente:** ver `docs/clickup/team-rotation-plan.md` §7 — quien ocupe Asiento A
+de cada sprint es el Feature Lead correspondiente (Sprint 2 fue Jaicel; hoy el registro
+de re-parto es ClickUp, no este doc).
 
 **Gobernanza:** todo cambio por PR (cero commits directos a `main`), ≥1 revisor, declaración de uso de IA en el cuerpo del PR.

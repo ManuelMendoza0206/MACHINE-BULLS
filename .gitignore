@@ -11,6 +11,7 @@ __pycache__/
 node_modules/
 frontend/node_modules/
 backend/.venv/
+.venv/
 backend/__pycache__/
 __pycache__/
 .pnp
@@ -89,6 +90,9 @@ sample_data/figures/
 # Local tooling
 .opencode/
 opencode.json
+
+# Credenciales locales del sync de ClickUp (scripts/clickup/README.md)
+scripts/clickup/.token
 
 # Keys
 *.pem

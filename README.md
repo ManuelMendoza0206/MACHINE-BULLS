@@ -6,13 +6,14 @@
 
 ```
 MACHINE-BULLS/
-├── frontend/          # Next.js + React + Tailwind (ver frontend/README.md)
+├── frontend/          # Next.js 16 + React 19 + Tailwind v4 (ver frontend/README.md)
 │   └── src/           # App Router, features/, lib/, schemas/
-├── backend/           # FastAPI + SQLAlchemy + pgvector (ver backend/README.md)
+├── backend/           # FastAPI + SQLAlchemy + pgvector + MLflow (ver backend/README.md)
 │   └── src/           # domain/, api/, services/, db/, ml/
 ├── infra/             # docker-compose.yml + .env (modo demo) + smoke.sh
+├── notebooks/         # 01 baseline · 02 EDA · 03 CLIP zero-shot (código ML/Data)
 ├── sample_data/       # muestras curadas para el smoke y el demo
-├── docs/              # plan-base, context/, architecture/
+├── docs/              # plan-base, clickup, adr, context/, architecture/
 └── openspec/          # SDD specs (frontend/ + backend/)
 ```
 
@@ -71,7 +72,13 @@ uv sync                                   # deps por uv.lock (reproducible)
 uvicorn main:app --reload --app-dir src   # http://localhost:8000
 arq services.vton.worker.WorkerSettings   # worker de la cola (desde backend/src)
 pytest tests/ -q                          # 81 tests (unit + integracion + fallback)
+
+# Notebooks (ML/Data, deps livianas del repo)
+pip install -r requirements.txt
 ```
+
+ClickUp (equipo): reconciliación del tablero con
+`node scripts/clickup/sync-sprint-1.mjs` — credencial local, nunca versionada.
 
 Componente inteligente (clasificador zero-shot CLIP + validación A-Pose + VTON
 diffusion por capas): cómo correr entrenamiento/evaluación en

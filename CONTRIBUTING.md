@@ -1,7 +1,7 @@
-# Contributing — StyleMe Frontend
+# Contributing — StyleMe (monorepo: frontend + backend)
 
-La versión operativa completa vive en `CLAUDE.md`. Esto es el resumen para un humano
-que abre el repo por primera vez. Onboarding paso a paso: `docs/onboarding.md`.
+La versión operativa completa vive en `CLAUDE.md` (§10.1 = estado vigente). Esto es el resumen
+para un humano que abre el repo por primera vez. Onboarding paso a paso: `docs/onboarding.md`.
 
 ## Reglas no negociables (`.speckit/constitution.md` §3)
 
@@ -18,8 +18,9 @@ que abre el repo por primera vez. Onboarding paso a paso: `docs/onboarding.md`.
 SPEC (openspec/specs/)  →  TEST en rojo  →  CÓDIGO mínimo  →  REFACTOR  →  PR
 ```
 
-Ningún archivo en `src/` se implementa sin una Requirement en `openspec/specs/frontend/` que
-lo defina. Cambiar una spec sigue el flujo del CLI de OpenSpec (`openspec/changes/<nombre>/`).
+Ningún archivo en `frontend/src/` o `backend/src/` se implementa sin una Requirement en
+`openspec/specs/frontend/` o `openspec/specs/backend/` que lo defina. Cambiar una spec sigue el
+flujo del CLI de OpenSpec (`openspec/changes/<nombre>/`).
 
 ## Ramas y commits
 

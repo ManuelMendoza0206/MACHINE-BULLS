@@ -19,6 +19,9 @@ backend/src/
 cd backend
 uv sync                                   # deps reproducibles desde uv.lock
 uvicorn main:app --reload --app-dir src   # http://localhost:8000
+
+# Alternativa con pip tradicional:
+# python -m venv .venv && source .venv/bin/activate && pip install -e ".[dev]" && alembic upgrade head
 ```
 
 Nota: `source` root del repo también sirve para tests (`backend\tests`); el
