@@ -7,8 +7,12 @@ import { TopNav } from '@/components/shell/TopNav';
 import { BottomTabBar } from '@/components/shell/BottomTabBar';
 
 export const metadata: Metadata = {
-  title: 'StyleMe',
-  description: 'AI-powered fashion recommendation platform',
+  title: {
+    default: 'StyleMe — probate tu armario',
+    template: '%s · StyleMe',
+  },
+  description:
+    'Digitalizá tus prendas, descubrí combinaciones por armonía cromática y probátelas sobre tu propia foto con difusión multicapa.',
 };
 
 export const viewport: Viewport = {
@@ -16,17 +20,21 @@ export const viewport: Viewport = {
   initialScale: 1,
   userScalable: true,
   viewportFit: 'cover',
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#1B3A5B' },
+    { media: '(prefers-color-scheme: dark)', color: '#0D1012' },
+  ],
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }): JSX.Element {
   return (
     <html lang="es" suppressHydrationWarning>
-      <body>
+      <body className="grain">
         {/* First focusable element of the document. */}
         <SkipToContentLink />
         <AppProviders>
           <TopNav />
-          <main id="main-content" tabIndex={-1} className="pb-16 lg:pb-0">
+          <main id="main-content" tabIndex={-1} className="pb-24 lg:pb-0">
             {children}
           </main>
           <BottomTabBar />

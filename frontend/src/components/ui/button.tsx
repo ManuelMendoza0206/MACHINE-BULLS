@@ -3,21 +3,28 @@ import { Slot } from '@radix-ui/react-slot';
 import { cva, type VariantProps } from 'class-variance-authority';
 import { cn } from '@/lib/utils/cn';
 
+/**
+ * Buttons read like garment-label controls: rectangular, tracked, uppercase.
+ * The label names the action; no icon-only button without an accessible name.
+ */
 export const buttonVariants = cva(
-  'inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-50',
+  'inline-flex select-none items-center justify-center gap-2 whitespace-nowrap rounded-[3px] text-[11px] font-semibold uppercase tracking-[0.12em] transition-[background-color,border-color,color,transform] duration-150 focus-visible:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-thread disabled:pointer-events-none disabled:opacity-45 active:translate-y-px',
   {
     variants: {
       variant: {
         default: 'bg-accent text-accent-foreground hover:bg-accent/90',
-        secondary: 'bg-muted text-foreground hover:bg-muted/80',
+        secondary: 'border border-border bg-background text-foreground hover:bg-muted',
         ghost: 'text-foreground hover:bg-muted',
-        destructive: 'bg-destructive text-destructive-foreground hover:bg-destructive/90',
+        outline: 'border border-foreground/35 bg-transparent text-foreground hover:bg-muted',
+        thread: 'bg-thread text-thread-foreground hover:bg-thread/90',
+        destructive:
+          'bg-destructive text-destructive-foreground shadow-xs hover:bg-destructive/90',
       },
       size: {
-        sm: 'h-8 px-3 text-xs',
-        default: 'h-9 px-4',
-        lg: 'h-10 px-6',
-        icon: 'h-9 w-9',
+        sm: 'h-8 px-3 text-[10px]',
+        default: 'h-10 px-4',
+        lg: 'h-12 px-6 text-xs',
+        icon: 'h-10 w-10 px-0',
       },
     },
     defaultVariants: { variant: 'default', size: 'default' },

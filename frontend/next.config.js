@@ -12,7 +12,12 @@ const csp = [
   "default-src 'self'",
   `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ''}`,
   "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data: blob: https://res.cloudinary.com",
+  // `${apiOrigin}` is required: the backend serves garment/VTON images itself at
+  // `<PUBLIC_BASE_URL>/media/...` (backend/src/services/storage.py) and returns absolute
+  // URLs, so without it the browser silently blocked every backend image.
+  // (Cloudinary entry removed: dead config, no code referenced it. Object storage
+  // plugs back in here when §8 of the constitution lands an actual provider.)
+  `img-src 'self' data: blob: ${apiOrigin}`,
   "font-src 'self' data:",
   `connect-src 'self' ${apiOrigin} https://*.supabase.co`,
   "frame-ancestors 'none'",
@@ -33,12 +38,6 @@ const securityHeaders = [
 const nextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
-  images: {
-    remotePatterns: [
-      // Object storage for garment / VTON images — see .speckit/constitution.md §8.
-      { protocol: 'https', hostname: 'res.cloudinary.com' },
-    ],
-  },
   typedRoutes: true,
   headers: async () => [{ source: '/:path*', headers: securityHeaders }],
 };

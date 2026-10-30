@@ -1,0 +1,68 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 680 430" font-family="Segoe UI, system-ui, sans-serif">
+  <defs>
+    <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 z" fill="#64748b"/>
+    </marker>
+  </defs>
+  <rect width="680" height="430" fill="#f8fafc"/>
+  <text x="340" y="30" text-anchor="middle" font-size="17" font-weight="700" fill="#1f2937">Ciclo de vida del job VTON — VtonStage (real, domain/enums.py)</text>
+
+  <!-- fila 1 -->
+  <rect x="24" y="60" width="120" height="60" rx="10" fill="#ffffff" stroke="#2563eb" stroke-width="1.5"/>
+  <text x="84" y="84" text-anchor="middle" font-size="11.5" font-weight="700" fill="#1f2937">POST try-on</text>
+  <text x="84" y="100" text-anchor="middle" font-size="9.5" fill="#475569">human + garment_layers</text>
+
+  <rect x="164" y="60" width="122" height="60" rx="10" fill="#ffffff" stroke="#f59e0b" stroke-width="1.5"/>
+  <text x="225" y="84" text-anchor="middle" font-size="11.5" font-weight="700" fill="#1f2937">VALIDATING</text>
+  <text x="225" y="100" text-anchor="middle" font-size="9.5" fill="#475569">A-Pose MediaPipe</text>
+
+  <rect x="306" y="60" width="132" height="60" rx="10" fill="#ffffff" stroke="#f59e0b" stroke-width="1.5"/>
+  <text x="372" y="84" text-anchor="middle" font-size="11.5" font-weight="700" fill="#1f2937">PREPROCESSING</text>
+  <text x="372" y="100" text-anchor="middle" font-size="9.5" fill="#475569">auto-masks cloth_masker</text>
+
+  <rect x="458" y="60" width="126" height="60" rx="10" fill="#ffffff" stroke="#f59e0b" stroke-width="1.5"/>
+  <text x="521" y="84" text-anchor="middle" font-size="11.5" font-weight="700" fill="#1f2937">POSE_ESTIMATION</text>
+  <text x="521" y="100" text-anchor="middle" font-size="9.5" fill="#475569">DensePose / SCHP</text>
+
+  <line x1="144" y1="90" x2="162" y2="90" stroke="#64748b" stroke-width="1.6" marker-end="url(#ar)"/>
+  <line x1="286" y1="90" x2="304" y2="90" stroke="#64748b" stroke-width="1.6" marker-end="url(#ar)"/>
+  <line x1="438" y1="90" x2="456" y2="90" stroke="#64748b" stroke-width="1.6" marker-end="url(#ar)"/>
+
+  <!-- fila 2: generacion -->
+  <rect x="180" y="176" width="320" height="86" rx="10" fill="#eff6ff" stroke="#2563eb" stroke-width="1.6"/>
+  <text x="340" y="200" text-anchor="middle" font-size="13" font-weight="700" fill="#1f2937">GENERATING / LAYERING</text>
+  <text x="340" y="220" text-anchor="middle" font-size="10.5" fill="#1f2937">capa i:   I&#8320; → CatVTON(I&#8320;&#8321;&#8321;_&#8321;, p&#8321;) → I&#8321; → CatVTON(I&#8321;, p&#8322;) → I&#8322;</text>
+  <text x="340" y="238" text-anchor="middle" font-size="10" fill="#475569">generacion secuencial real (no compositado grafico)</text>
+  <text x="340" y="254" text-anchor="middle" font-size="9.5" fill="#64748b">orden: inferior → superior → exterior · max 6 capas</text>
+
+  <line x1="521" y1="120" x2="440" y2="174" stroke="#64748b" stroke-width="1.6" marker-end="url(#ar)"/>
+
+  <!-- fila 3 -->
+  <rect x="160" y="300" width="130" height="54" rx="10" fill="#ffffff" stroke="#f59e0b" stroke-width="1.5"/>
+  <text x="225" y="322" text-anchor="middle" font-size="11.5" font-weight="700" fill="#1f2937">UPLOADING</text>
+  <text x="225" y="338" text-anchor="middle" font-size="9.5" fill="#475569">resultado a /media</text>
+
+  <rect x="330" y="300" width="140" height="54" rx="10" fill="#ecfdf5" stroke="#059669" stroke-width="1.8"/>
+  <text x="400" y="322" text-anchor="middle" font-size="12.5" font-weight="700" fill="#065f46">COMPLETED</text>
+  <text x="400" y="338" text-anchor="middle" font-size="9.5" fill="#065f46">result_url absoluta</text>
+
+  <rect x="500" y="300" width="130" height="54" rx="10" fill="#fef2f2" stroke="#ef4444" stroke-width="1.5"/>
+  <text x="565" y="322" text-anchor="middle" font-size="12.5" font-weight="700" fill="#991b1b">FAILED</text>
+  <text x="565" y="338" text-anchor="middle" font-size="9.5" fill="#991b1b">error_message</text>
+
+  <line x1="340" y1="262" x2="240" y2="298" stroke="#64748b" stroke-width="1.6" marker-end="url(#ar)"/>
+  <line x1="290" y1="327" x2="328" y2="327" stroke="#64748b" stroke-width="1.6" marker-end="url(#ar)"/>
+  <line x1="450" y1="335" x2="496" y2="340" stroke="#64748b" stroke-width="1.4" stroke-dasharray="4 4" marker-end="url(#ar)"/>
+
+  <!-- contratos publicos -->
+  <rect x="24" y="300" width="116" height="110" rx="10" fill="#f1f5f9" stroke="#94a3b8"/>
+  <text x="82" y="320" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1f2937">Contrato publico</text>
+  <text x="82" y="336" text-anchor="middle" font-size="9.5" fill="#475569">(STAGE_TO_STATUS)</text>
+  <text x="82" y="358" text-anchor="middle" font-size="9.5" fill="#475569">queued/… → pending</text>
+  <text x="82" y="374" text-anchor="middle" font-size="9.5" fill="#475569">generating → processing</text>
+  <text x="82" y="390" text-anchor="middle" font-size="9.5" fill="#475569">completed → completed</text>
+  <text x="82" y="406" text-anchor="middle" font-size="9.5" fill="#475569">failed → failed</text>
+
+  <rect x="160" y="378" width="470" height="34" rx="8" fill="#fffbeb" stroke="#f59e0b" stroke-width="1.2"/>
+  <text x="395" y="399" text-anchor="middle" font-size="10.5" fill="#92400e">Si Redis no responde: el endpoint encola con timeout 3s y CAE A BackgroundTasks — mismo contrato</text>
+</svg>

@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 680 430" font-family="Segoe UI, system-ui, sans-serif">
+  <defs>
+    <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 z" fill="#64748b"/>
+    </marker>
+  </defs>
+  <rect width="680" height="430" fill="#f8fafc"/>
+  <text x="340" y="30" text-anchor="middle" font-size="17" font-weight="700" fill="#1f2937">Despliegue — 4 modos de provider (config, no código)</text>
+  <text x="340" y="50" text-anchor="middle" font-size="10.5" fill="#64748b">el mismo binario/imagen cambia solo con variables de entorno (backend/.env, infra/.env)</text>
+
+  <!-- modo A (destacado) -->
+  <rect x="24" y="70" width="300" height="126" rx="12" fill="#fffbeb" stroke="#f59e0b" stroke-width="2"/>
+  <text x="174" y="96" text-anchor="middle" font-size="13" font-weight="700" fill="#b45309">A · catvton (MODO DEMO — en uso)</text>
+  <text x="40" y="120" font-size="10.5" fill="#475569">VTON_PROVIDER=catvton</text>
+  <text x="40" y="136" font-size="10.5" fill="#475569">VTON_HTTP_URL=http://host.docker.internal:7861/tryon</text>
+  <text x="40" y="156" font-size="10" fill="#92400e">server CatVTON nativo en el GPU del host (4070);</text>
+  <text x="40" y="170" font-size="10" fill="#92400e">los contenedores lo alcanzan por host.docker.internal.</text>
+  <text x="40" y="184" font-size="10" fill="#92400e">~50s por capa, bucle de inferencia serial (worker)</text>
+
+  <!-- modo B -->
+  <rect x="356" y="70" width="300" height="126" rx="12" fill="#ffffff" stroke="#059669" stroke-width="1.6"/>
+  <text x="506" y="96" text-anchor="middle" font-size="13" font-weight="700" fill="#065f46">B · http (VM propia)</text>
+  <text x="372" y="120" font-size="10.5" fill="#475569">VTON_PROVIDER=http  VTON_HTTP_URL=http://&lt;vm&gt;:8000/vton</text>
+  <text x="372" y="140" font-size="10" fill="#065f46">contrato unico HttpVtonProvider (data-URI garm/human,</text>
+  <text x="372" y="154" font-size="10" fill="#065f46">mask_type por capa). Escalable sin tocar la API.</text>
+
+  <!-- modo C -->
+  <rect x="24" y="216" width="300" height="112" rx="12" fill="#ffffff" stroke="#2563eb" stroke-width="1.6"/>
+  <text x="174" y="242" text-anchor="middle" font-size="13" font-weight="700" fill="#1d4ed8">C · mock (default del compose)</text>
+  <text x="40" y="266" font-size="10.5" fill="#475569">VTON_PROVIDER=mock → PIL local, SIEMPRE funciona</text>
+  <text x="40" y="286" font-size="10" fill="#1e40af">dev sin GPU, demos sin red y CI: el sistema sigue</text>
+  <text x="40" y="300" font-size="10" fill="#1e40af">entero (cola, estados, subida de resultados) sin saldo</text>
+
+  <!-- modo D -->
+  <rect x="356" y="216" width="300" height="112" rx="12" fill="#ffffff" stroke="#94a3b8" stroke-width="1.6"/>
+  <text x="506" y="242" text-anchor="middle" font-size="13" font-weight="700" fill="#334155">D · replicate (API paga)</text>
+  <text x="372" y="266" font-size="10.5" fill="#475569">VTON_PROVIDER=replicate  REPLICATE_API_TOKEN=…</text>
+  <text x="372" y="286" font-size="10" fill="#334155">token en .env (nunca en el repo); sin saldo como</text>
+  <text x="372" y="300" font-size="10" fill="#334155">hoy, sin reemplazo por A/B</text>
+
+  <!-- fallback -->
+  <rect x="120" y="352" width="440" height="52" rx="10" fill="#f1f5f9" stroke="#64748b" stroke-width="1.3"/>
+  <text x="340" y="374" text-anchor="middle" font-size="11.5" font-weight="700" fill="#1f2937">Resiliencia de demo: Redis no responde → timeout 3s → BackgroundTasks</text>
+  <text x="340" y="392" text-anchor="middle" font-size="10" fill="#475569">mismo contrato publico (pending|processing|completed|failed) — services/queue.py</text>
+</svg>

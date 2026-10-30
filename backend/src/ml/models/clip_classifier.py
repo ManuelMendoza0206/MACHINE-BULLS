@@ -326,6 +326,16 @@ class ClipClassifier:
         self.device = device or ("cuda" if torch.cuda.is_available() else "cpu")
         self.model = CLIPModel.from_pretrained(MODEL_NAME).to(self.device).eval()
 
+    @property
+    def processor(self) -> Any:
+        """Accessor publico del processor.
+
+        El servicio (`services/garment_analysis`) arma la inferencia con
+        `probs_imagen`, que recibe el processor como argumento; sin este getter
+        tendria que romper el encapsulamiento (`_processor`) desde afuera.
+        """
+        return self._processor
+
     @staticmethod
     def candidates(clases: Sequence[str], nivel: str = "CATEGORIA") -> list[str]:
         """Lista plana de prompts para pasar al modelo. Delega en prompts.py."""

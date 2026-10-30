@@ -13,7 +13,7 @@ export default function SignupPage(): JSX.Element {
       <h1 className="text-2xl font-bold">Crear cuenta</h1>
       <p className="mt-2 text-sm text-muted-foreground">Registrate para empezar a usar StyleMe.</p>
       <div className="mt-6">
-        <AuthForm mode="signup" onSuccess={() => router.push('/onboarding')} />
+        <AuthForm mode="signup" onSuccess={() => router.push('/wardrobe')} />
       </div>
     </div>
   );

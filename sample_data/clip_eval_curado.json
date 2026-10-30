@@ -1,0 +1,27 @@
+{
+  "n": 9,
+  "n_categorias": 3,
+  "top1": 0.8888888888888888,
+  "ic95": [
+    0.5649937852319399,
+    0.9801096286728695
+  ],
+  "f1_macro": 0.6296296296296297,
+  "objetivo": 0.82,
+  "ic95_supera_objetivo": false,
+  "nivel": "CATEGORIA",
+  "titulo": "Categoria funcional",
+  "modelo": "openai/clip-vit-base-patch32",
+  "device": "cuda",
+  "categorias": [
+    "bottom",
+    "dress",
+    "top"
+  ],
+  "top1_base": 1.0,
+  "delta_top1": -0.11111111111111116,
+  "arreglo": 0,
+  "rompio": 1,
+  "mcnemar_p": 1.0,
+  "fotos_sin_etiqueta": 0
+}

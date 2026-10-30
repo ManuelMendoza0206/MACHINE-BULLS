@@ -11,6 +11,13 @@ import garmentsListResponse from '../api/garmentsListResponse.json';
  * test file sets (each sets its own, following the existing `client.test.ts` convention).
  */
 export const handlers = [
+  http.get('*/api/v1/me', () =>
+    HttpResponse.json({
+      user_id: 'aaaaaaaa-4567-4891-8901-abcdef123456',
+      email: 'demo@styleme.test',
+    })
+  ),
+
   http.post('*/api/v1/garments/upload', () => HttpResponse.json(garmentUploadResponse)),
 
   http.get('*/api/v1/garments/capsule', () => HttpResponse.json(capsuleCatalogResponse)),

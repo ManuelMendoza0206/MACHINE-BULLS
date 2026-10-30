@@ -1,138 +1,71 @@
 {
   "project": "StyleSync IA",
-  "generatedBy": "scripts/generate_diagrams.py",
+  "note": "Diagramas del sistema INTEGRADO actual (verificados en codigo/config del repo). El roadmap aspiracional vive en docs/context/plan-base.md.",
   "diagrams": [
     {
-      "id": "mlops",
-      "title": "Arquitectura MLOps",
-      "tabLabel": "MLOps",
-      "svg": "../svgs/mlops.svg",
-      "description": "Pipeline de versionado end-to-end que garantiza reproducibilidad total: cada commit de código (Git) está vinculado a una versión exacta de datos y modelos (DVC), empaquetada en una imagen de contenedor (Docker) y publicada en un catálogo versionado (Model Registry). Cualquier experimento pasado puede rehacerse desde cero con un solo comando.",
+      "id": "stack",
+      "title": "Stack del MVP",
+      "tabLabel": "Stack",
+      "svg": "../svgs/stack.svg",
+      "description": "5 contenedores (db, redis, backend, worker, frontend) orquestados con healthchecks; server CatVTON nativo en el GPU del host alcanzado por los contenedores via host.docker.internal; volumen media compartido backend/worker; fallback a BackgroundTasks si Redis cae.",
       "metrics": [
-        {
-          "label": "Reproducibilidad",
-          "value": "100%"
-        },
-        {
-          "label": "Setup de entorno",
-          "value": "5 min"
-        },
-        {
-          "label": "Experimentos trackeados",
-          "value": "50+"
-        }
+        { "label": "Contenedores", "value": "5" },
+        { "label": "GPU host", "value": "RTX 4070 8GB" },
+        { "label": "Latencia capa", "value": "~50s" }
       ],
-      "anchor": "viewer.html#mlops"
+      "anchor": "viewer.html#stack"
     },
     {
-      "id": "hybrid",
-      "title": "Infraestructura Híbrida",
-      "tabLabel": "Infra Híbrida",
-      "svg": "../svgs/hybrid.svg",
-      "description": "Desarrollo iterativo en una RTX 4070 local (8GB VRAM, costo marginal $0) para prototipar rápido, y entrenamiento/inferencia a escala en GPUs cloud H100/A100 (40+ GB VRAM) cuando el experimento está listo para correr en serio. Git, DVC y S3 mantienen ambos entornos sincronizados sin duplicar trabajo manual.",
+      "id": "pipeline",
+      "title": "Pipeline del job VTON",
+      "tabLabel": "Pipeline",
+      "svg": "../svgs/pipeline.svg",
+      "description": "Maquina de estados real de VtonJob.stage (encolado -> validacion A-Pose -> preprocessing -> pose estimation -> generacion secuencial de capas -> upload -> completed|failed) y su mapeo al contrato publico via STAGE_TO_STATUS.",
       "metrics": [
-        {
-          "label": "VRAM local",
-          "value": "8 GB"
-        },
-        {
-          "label": "VRAM cloud",
-          "value": "40+ GB"
-        },
-        {
-          "label": "Costo de desarrollo",
-          "value": "$0"
-        }
+        { "label": "Estados finos", "value": "7" },
+        { "label": "Max capas", "value": "6" },
+        { "label": "Fallback Redis caido", "value": "BackgroundTasks" }
       ],
-      "anchor": "viewer.html#hybrid"
-    },
-    {
-      "id": "quality",
-      "title": "Monitoreo de Calidad",
-      "tabLabel": "Calidad",
-      "svg": "../svgs/quality.svg",
-      "description": "Toda imagen generada se evalúa automáticamente en tres dimensiones — calidad visual (identity, fidelidad de prenda, geometría, coherencia de capas), performance (latencia, uso de GPU, throughput, tasa de error) y artefactos (issues visuales, anomalías anatómicas, drift del modelo) — y cualquier desviación dispara una alerta por email, Slack o dashboard. Nunca falla en silencio.",
-      "metrics": [
-        {
-          "label": "Identity score",
-          "value": "85%"
-        },
-        {
-          "label": "Latencia",
-          "value": "<60s"
-        },
-        {
-          "label": "Error rate",
-          "value": "<1%"
-        }
-      ],
-      "anchor": "viewer.html#quality"
-    },
-    {
-      "id": "frontend",
-      "title": "Componentes de Frontend",
-      "tabLabel": "Frontend",
-      "svg": "../svgs/frontend.svg",
-      "description": "Arquitectura en tres capas sobre Next.js App Router: páginas que orquestan la navegación, componentes de UI reutilizables sin lógica de negocio, y features de dominio que encapsulan estado y llamadas a la API. TanStack Query cachea datos de servidor, Zustand maneja estado de cliente puro, y WebSocket entrega actualizaciones en tiempo real durante la generación.",
-      "metrics": [
-        {
-          "label": "Páginas",
-          "value": "5"
-        },
-        {
-          "label": "Componentes base",
-          "value": "8"
-        },
-        {
-          "label": "Tiempo real",
-          "value": "WebSocket"
-        }
-      ],
-      "anchor": "viewer.html#frontend"
+      "anchor": "viewer.html#pipeline"
     },
     {
       "id": "protocol",
-      "title": "Protocolo de Entrada de Imágenes",
-      "tabLabel": "Protocolo de Entrada",
+      "title": "Protocolo de entrada",
+      "tabLabel": "Protocolo",
       "svg": "../svgs/protocol.svg",
-      "description": "Cada solicitud de try-on virtual requiere dos fotos que cumplen requisitos estrictos y verificables: una foto de cuerpo en A-Pose sobre fondo neutro, y una foto de la prenda extendida sobre fondo liso, ambas en 512×512px como mínimo. La validación corre primero en el cliente (feedback inmediato) y luego en el servidor (garantía real); un rechazo siempre viene con una razón específica y accionable, nunca un error genérico.",
+      "description": "Checks reales: blur (varianza laplaciana) en el cliente antes de subir; A-Pose MediaPipe en el servidor (brazos 8-60 grados calibrados contra la foto canonica del dataset, codo >=130, piernas >=0.04). Rechazo 422 con motivo accionable. Guia no automatizada: fondo liso / resolucion minima.",
       "metrics": [
-        {
-          "label": "Pose requerida",
-          "value": "A-Pose"
-        },
-        {
-          "label": "Resolución mínima",
-          "value": "512×512px"
-        },
-        {
-          "label": "Validación",
-          "value": "Automática"
-        }
+        { "label": "Brazos", "value": "8°-60°" },
+        { "label": "Codo", "value": "≥130°" },
+        { "label": "Piernas", "value": "≥0.04" }
       ],
       "anchor": "viewer.html#protocol"
     },
     {
-      "id": "lifecycle",
-      "title": "Ciclo de Vida del Modelo",
-      "tabLabel": "Ciclo de Vida",
-      "svg": "../svgs/lifecycle.svg",
-      "description": "Todo modelo recorre cinco fases antes de servir tráfico real: desarrollo (código + datos + modelo base), entrenamiento (con tracking de experimentos), evaluación (métricas de calidad objetivas), un gate de decisión que aprueba o rechaza, y solo entonces producción (registro de modelos → despliegue). Un rechazo no es un callejón sin salida: alimenta un bucle de reentrenamiento con el feedback del evaluador.",
+      "id": "testing",
+      "title": "Pirámide de pruebas",
+      "tabLabel": "Pruebas",
+      "svg": "../svgs/testing.svg",
+      "description": "Unitarias+integracion pytest 81/81 (incl. fallback Redis-caido, validador A-Pose, pipeline de capas), E2E browser Playwright (API mockeada, contratos de UI), y smoke.sh de 7 pasos contra el stack real con job multicapa en GPU.",
       "metrics": [
-        {
-          "label": "Fases",
-          "value": "5"
-        },
-        {
-          "label": "Gate de calidad",
-          "value": "Obligatorio"
-        },
-        {
-          "label": "Monitoreo",
-          "value": "Continuo en producción"
-        }
+        { "label": "Backend pytest", "value": "81/81" },
+        { "label": "Browser e2e", "value": "7 pass / 8 skip" },
+        { "label": "Smoke pasos", "value": "7/7 · 3 capas" }
       ],
-      "anchor": "viewer.html#lifecycle"
+      "anchor": "viewer.html#testing"
+    },
+    {
+      "id": "deployment",
+      "title": "Despliegue",
+      "tabLabel": "Despliegue",
+      "svg": "../svgs/deployment.svg",
+      "description": "4 modos de provider por variables de entorno (mock PIL, catvton GPU host, http VM propia, replicate API paga) sin bifurcar codigo; modo demo fijado en infra/.env commiteada; secretos fuera del repo; fallback BackgroundTasks ante Redis caido.",
+      "metrics": [
+        { "label": "Modos provider", "value": "4" },
+        { "label": "Timeout enqueue", "value": "3s" },
+        { "label": "Secretos en repo", "value": "0" }
+      ],
+      "anchor": "viewer.html#deployment"
     }
   ]
 }

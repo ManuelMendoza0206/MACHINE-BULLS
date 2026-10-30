@@ -1,33 +1,31 @@
 'use client';
 
 import { useState, type JSX } from 'react';
+import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils/cn';
 import { GarmentCard } from '@/features/garments/components/GarmentCard';
 import { listCapsuleGarments } from '@/features/garments/api/listCapsuleGarments';
 import { adoptCapsuleGarment } from '@/features/garments/api/adoptCapsuleGarment';
 import { describeGarmentError } from '@/features/garments/lib/describeGarmentError';
+import { CheckCircle2 } from 'lucide-react';
 
 type AdoptState = 'idle' | 'adopting' | 'adopted' | 'error';
 
 /**
  * Catálogo "Básicos StyleMe" (wardrobe-flow/spec.md — "Catálogo cápsula con cobertura mínima
  * verificable"). Selección múltiple + adopción por prenda.
- *
- * **GAP G1/G4** (api-contract-gaps/spec.md): `GET /garments/capsule` and
- * `POST /garments/capsule/{id}/adopt` are documented but unconfirmed — at time of writing the
- * backend exposes neither (`backend/src/api/` is an empty scaffold). Against a real deployment
- * this renders the error state below, which explicitly names the gap rather than presenting a
- * broken "select and nothing happens" UI — that *is* the "documented blocked state" the spec
- * asks for. MSW covers the success path in tests.
  */
 export function CapsuleCatalogGrid(): JSX.Element {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [adoptState, setAdoptState] = useState<Record<string, AdoptState>>({});
   const [adoptBannerError, setAdoptBannerError] = useState<string | null>(null);
+  const [adoptedSuccessCount, setAdoptedSuccessCount] = useState<number | null>(null);
+  const [filterCategory, setFilterCategory] = useState<string>('all');
 
   const query = useQuery({
     queryKey: ['capsule-catalog'],
@@ -67,6 +65,10 @@ export function CapsuleCatalogGrid(): JSX.Element {
     });
 
     const firstFailure = results.find((r): r is PromiseRejectedResult => r.status === 'rejected');
+    const successCount = results.filter(r => r.status === 'fulfilled').length;
+    if (successCount > 0) {
+      setAdoptedSuccessCount(successCount);
+    }
     if (firstFailure) {
       setAdoptBannerError(describeGarmentError(firstFailure.reason));
     } else {
@@ -115,16 +117,105 @@ export function CapsuleCatalogGrid(): JSX.Element {
     );
   }
 
+  const filteredGarments =
+    filterCategory === 'all'
+      ? garments
+      : garments.filter(g => {
+          const cat = g.category.toLowerCase();
+          if (filterCategory === 'top') return cat === 'top';
+          if (filterCategory === 'bottom') return cat === 'bottom';
+          if (filterCategory === 'outwear') return cat === 'outwear' || cat === 'outerwear';
+          return cat === filterCategory;
+        });
+
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
+      {/* Barra de Filtros y Selección Rápida */}
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border/80 bg-background/80 backdrop-blur-sm p-3.5 shadow-xs">
+        <div className="flex flex-wrap items-center gap-1.5 text-xs">
+          <span className="mr-1 text-muted-foreground font-medium">Categoría:</span>
+          {[
+            { id: 'all', label: `Todas (${garments.length})` },
+            { id: 'top', label: 'Superiores' },
+            { id: 'bottom', label: 'Inferiores' },
+            { id: 'outwear', label: 'Abrigos' },
+          ].map(f => (
+            <button
+              key={f.id}
+              type="button"
+              onClick={() => setFilterCategory(f.id)}
+              className={cn(
+                'rounded-full px-3 py-1 font-medium transition-all active:scale-[0.98]',
+                filterCategory === f.id
+                  ? 'bg-accent text-accent-foreground shadow-xs'
+                  : 'bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground'
+              )}
+            >
+              {f.label}
+            </button>
+          ))}
+        </div>
+
+        <div className="flex items-center gap-2">
+          {selectedIds.size < garments.length ? (
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              className="text-xs h-8 rounded-full"
+              onClick={() => setSelectedIds(new Set(garments.map(g => g.id)))}
+            >
+              Seleccionar todas
+            </Button>
+          ) : (
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              className="text-xs h-8 rounded-full"
+              onClick={() => setSelectedIds(new Set())}
+            >
+              Deseleccionar
+            </Button>
+          )}
+        </div>
+      </div>
+
+      {adoptedSuccessCount !== null && adoptedSuccessCount > 0 && (
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-emerald-800 dark:text-emerald-300">
+          <div className="flex items-center gap-2.5 text-sm font-medium">
+            <CheckCircle2 className="h-5 w-5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+            <span>
+              ¡{adoptedSuccessCount}{' '}
+              {adoptedSuccessCount === 1 ? 'prenda agregada' : 'prendas agregadas'} a tu armario! Ya
+              podés combinarlas.
+            </span>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <Button asChild size="sm" className="bg-emerald-700 hover:bg-emerald-800 text-white">
+              <Link href="/outfits">Ver Outfits Recomendados ➔</Link>
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-8 text-xs text-muted-foreground hover:text-foreground"
+              onClick={() => setAdoptedSuccessCount(null)}
+            >
+              Cerrar
+            </Button>
+          </div>
+        </div>
+      )}
+
       {adoptBannerError ? (
         <Card>
           <CardContent className="p-3 text-sm text-destructive">{adoptBannerError}</CardContent>
         </Card>
       ) : null}
 
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-        {garments.map(garment => {
+      <div className="stagger grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+        {filteredGarments.map(garment => {
           const state = adoptState[garment.id] ?? 'idle';
           return (
             <GarmentCard
@@ -147,7 +238,7 @@ export function CapsuleCatalogGrid(): JSX.Element {
       </div>
 
       {selectedIds.size > 0 ? (
-        <div className="sticky bottom-4 flex items-center justify-between rounded-lg border border-border bg-background p-3 shadow-md">
+        <div className="sticky bottom-4 z-10 flex items-center justify-between rounded-2xl border border-border/80 bg-background/95 p-3.5 shadow-xl backdrop-blur-md">
           <span className="text-sm font-medium">
             {selectedIds.size} prenda{selectedIds.size === 1 ? '' : 's'} seleccionada
             {selectedIds.size === 1 ? '' : 's'}

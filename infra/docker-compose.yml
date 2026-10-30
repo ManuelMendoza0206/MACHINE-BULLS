@@ -1,0 +1,144 @@
+# StyleMe — stack completo para la demo: Postgres/pgvector + backend (FastAPI/CLIP)
+# + frontend (Next.js). Todo sale con:
+#
+#   docker compose -f infra/docker-compose.yml up --build
+#
+# VTON:
+#   - Por defecto `mock` (fallback local PIL que SIEMPRE funciona — sin saldo en Replicate).
+#   - CatVTON local (modo A del MVP): server nativo en el GPU del host, el backend
+#     en contenedor lo alcanza con host.docker.internal:
+#       VTON_PROVIDER=catvton VTON_HTTP_URL=http://host.docker.internal:7861/tryon
+#   - Para la VM propia (IDM-VTON servido por HTTP):
+#       VTON_PROVIDER=http VTON_HTTP_URL=http://<mi-vm>:8000/vton docker compose ...
+#   - Para Replicate (requiere saldo): VTON_PROVIDER=replicate
+#
+# Cola de jobs (spec 4.1.8): redis + servicio `worker` (ARQ). Si Redis cae, el
+# backend cae a BackgroundTasks (fallback de demo, ver services/queue.py).
+
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: styleme-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379" # expuesto para tools locales (arq CLI en dev contra este redis)
+    volumes:
+      - styleme-redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+  db:
+    image: pgvector/pgvector:pg16
+    container_name: styleme-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: styleme
+      POSTGRES_USER: styleme
+      POSTGRES_PASSWORD: styleme_mvp
+    ports:
+      - "5432:5432"
+    volumes:
+      - styleme-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U styleme -d styleme"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build: ../backend
+    image: styleme-backend # tag reutilizado por el servicio worker (misma imagen)
+    container_name: styleme-backend
+    restart: unless-stopped
+    env_file:
+      - path: ../backend/.env # REPLICATE_API_TOKEN (opcional; no rompe si falta)
+        required: false
+    environment:
+      # Postgres obligatorio en compose (SQLite es solo el default de dev local).
+      DATABASE_URL: postgresql+psycopg://styleme:styleme_mvp@db:5432/styleme
+      # Cola ARQ (el endpoint encola; worker service consume).
+      REDIS_URL: redis://redis:6379/0
+      # URLs absolutas de /media para el navegador (localhost:8000 publicado).
+      PUBLIC_BASE_URL: http://localhost:8000
+      # Fallback local por defecto; ver comentarios arriba para VM/Replicate.
+      VTON_PROVIDER: ${VTON_PROVIDER:-mock}
+      VTON_HTTP_URL: ${VTON_HTTP_URL:-}
+      VTON_HTTP_TIMEOUT_S: ${VTON_HTTP_TIMEOUT_S:-300}
+      MEDIA_DIR: /app/media
+      # Validador A-Pose (4.1.5): el .task vive en la raiz del repo y no entra
+      # en la imagen (contexto de build = backend/) — se monta read-only.
+      POSE_MODEL_PATH: /app/pose_landmarker_full.task
+    ports:
+      - "8000:8000"
+    volumes:
+      - styleme-media:/app/media # imágenes subidas + resultados VTON sobreviven restarts
+      - ../pose_landmarker_full.task:/app/pose_landmarker_full.task:ro
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  # Worker ARQ: consume la cola de Redis y corre el pipeline VTON (mock,
+  # catvton http o Replicate segun env). Misma imagen que el backend (tiene
+  # los deps); solo cambia el comando. max_jobs=1 -> GPU serial dentro del
+  # worker; la serialidad entre modos (nativo/compose) depende de un solo
+  # worker en el stack.
+  worker:
+    image: styleme-backend
+    container_name: styleme-worker
+    restart: unless-stopped
+    command: ["arq", "services.vton.worker.WorkerSettings"]
+    env_file:
+      - path: ../backend/.env
+        required: false
+    environment:
+      DATABASE_URL: postgresql+psycopg://styleme:styleme_mvp@db:5432/styleme
+      REDIS_URL: redis://redis:6379/0
+      PUBLIC_BASE_URL: http://localhost:8000
+      VTON_PROVIDER: ${VTON_PROVIDER:-mock}
+      VTON_HTTP_URL: ${VTON_HTTP_URL:-}
+      VTON_HTTP_TIMEOUT_S: ${VTON_HTTP_TIMEOUT_S:-300}
+      MEDIA_DIR: /app/media
+      POSE_MODEL_PATH: /app/pose_landmarker_full.task # misma validez que el backend
+    volumes:
+      - styleme-media:/app/media # comparte el almacen de imagenes con el backend
+      - ../pose_landmarker_full.task:/app/pose_landmarker_full.task:ro
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    # La imagen comparte el HEALTHCHECK del backend (curl /health de uvicorn,
+    # que acá no existe): override con el health check nativo de arq.
+    healthcheck:
+      test: ["CMD", "arq", "services.vton.worker.WorkerSettings", "--check"]
+      interval: 15s
+      timeout: 5s
+      start_period: 30s
+      retries: 5
+
+  frontend:
+    build:
+      context: ../frontend
+      args:
+        # Inlined en build time; el navegador llama a localhost:8000 (publicado abajo).
+        NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-http://localhost:8000}
+        NEXT_PUBLIC_VTON_POLL_TIMEOUT_MS: ${NEXT_PUBLIC_VTON_POLL_TIMEOUT_MS:-90000}
+    container_name: styleme-frontend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+
+volumes:
+  styleme-pgdata:
+  styleme-media:
+  styleme-redis-data:

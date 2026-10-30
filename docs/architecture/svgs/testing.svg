@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 680 430" font-family="Segoe UI, system-ui, sans-serif">
+  <rect width="680" height="430" fill="#f8fafc"/>
+  <text x="340" y="30" text-anchor="middle" font-size="17" font-weight="700" fill="#1f2937">Pirámide de pruebas — cobertura REAL de hoy</text>
+
+  <!-- base -->
+  <polygon points="40,398 640,398 520,296 160,296" fill="#eff6ff" stroke="#2563eb" stroke-width="1.5"/>
+  <text x="340" y="330" text-anchor="middle" font-size="12.5" font-weight="700" fill="#1f2937">Unitarias + integración</text>
+  <text x="340" y="350" text-anchor="middle" font-size="10.5" fill="#475569">pytest backend: 81/81 (incl. fallback a BackgroundTasks con Redis caído,</text>
+  <text x="340" y="366" text-anchor="middle" font-size="10.5" fill="#475569">validador A-Pose, provider catvton, pipeline de capas)</text>
+  <text x="340" y="386" text-anchor="middle" font-size="10.5" fill="#64748b">+ suites de src/ml (evaluator, zero-shot, prompts)</text>
+
+  <!-- medio -->
+  <polygon points="160,296 520,296 450,200 230,200" fill="#f5f3ff" stroke="#7c3aed" stroke-width="1.5"/>
+  <text x="340" y="228" text-anchor="middle" font-size="12.5" font-weight="700" fill="#1f2937">E2E de browser</text>
+  <text x="340" y="250" text-anchor="middle" font-size="10.5" fill="#475569">Playwright: 7 passed / 8 skipped (mockean la API: contratos de</text>
+  <text x="340" y="266" text-anchor="middle" font-size="10.5" fill="#475569">subida por lote, cola de concurrencia, rechazo por blur)</text>
+  <text x="340" y="284" text-anchor="middle" font-size="10.5" fill="#64748b">npm run test:e2e</text>
+
+  <!-- cuspide -->
+  <polygon points="230,200 450,200 400,110 280,110" fill="#ecfdf5" stroke="#059669" stroke-width="1.5"/>
+  <text x="340" y="138" text-anchor="middle" font-size="12.5" font-weight="700" fill="#065f46">E2E real completo</text>
+  <text x="340" y="158" text-anchor="middle" font-size="10.5" fill="#065f46">infra/smoke.sh — 7 pasos contra el stack</text>
+  <text x="340" y="174" text-anchor="middle" font-size="10.5" fill="#065f46">compose y el GPU del host: SMOKE OK, 3 capas</text>
+  <text x="340" y="190" text-anchor="middle" font-size="10.5" fill="#065f46">incluye rechazo A-Pose 422 y job → completed</text>
+
+  <text x="340" y="418" text-anchor="middle" font-size="10" fill="#64748b">verificacion de frontend: npm run verify (typecheck + eslint + vitest) — todo en cero margen</text>
+</svg>

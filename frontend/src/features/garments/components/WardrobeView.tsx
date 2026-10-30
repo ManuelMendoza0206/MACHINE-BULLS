@@ -40,9 +40,9 @@ export function WardrobeView(): JSX.Element {
             onClick={() => setSection(s.id)}
             aria-pressed={section === s.id}
             className={cn(
-              'min-h-11 rounded-full border border-border px-4 text-sm font-medium transition-colors',
+              'min-h-11 rounded-full border border-border px-5 text-sm font-medium transition-all active:scale-[0.98]',
               section === s.id
-                ? 'bg-accent text-accent-foreground'
+                ? 'bg-accent text-accent-foreground shadow-xs'
                 : 'bg-background text-foreground hover:bg-muted'
             )}
           >
