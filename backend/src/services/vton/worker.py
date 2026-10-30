@@ -43,7 +43,7 @@ async def startup(ctx: dict) -> None:  # pragma: no cover - solo logging
 class WorkerSettings:
     """Config del worker ARQ (convencion de la libreria)."""
 
-    functions = [run_vton_job]
+    functions = [run_vton_job]  # noqa: RUF012
     on_startup = startup
     redis_settings = RedisSettings.from_dsn(settings.redis_url)
 

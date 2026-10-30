@@ -163,7 +163,6 @@ def _landmarker(model_path: Path):
     """PoseLandmarker singleton (carga el .task una sola vez por proceso)."""
     if _landmarker_cache:
         return _landmarker_cache[0]
-    import mediapipe as mp
     from mediapipe.tasks import python as mp_python
     from mediapipe.tasks.python import vision
 
