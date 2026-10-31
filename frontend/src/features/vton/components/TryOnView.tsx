@@ -404,7 +404,8 @@ export function TryOnView(): JSX.Element {
             <div className="space-y-3.5 rounded-2xl border border-accent/30 bg-accent/5 p-4 text-center">
               <div className="flex items-center justify-between text-xs font-mono text-muted-foreground">
                 <span className="flex items-center gap-1.5 font-semibold text-accent">
-                  <RefreshCw className="h-3.5 w-3.5 animate-spin" /> Inferencia asíncrona
+                  <RefreshCw className="h-3.5 w-3.5 animate-spin motion-reduce:animate-none" />{' '}
+                  Inferencia asíncrona
                 </span>
                 <span>{elapsedSec}s transcurridos</span>
               </div>
@@ -422,7 +423,7 @@ export function TryOnView(): JSX.Element {
                 </div>
 
                 <div className="flex items-center gap-2 rounded-xl border border-border/60 bg-background/90 p-2.5 shadow-2xs">
-                  <RefreshCw className="h-4 w-4 shrink-0 animate-spin text-accent" />
+                  <RefreshCw className="h-4 w-4 shrink-0 animate-spin motion-reduce:animate-none text-accent" />
                   <div className="flex-1">
                     <p className="font-medium text-foreground">
                       2. Segmentación & SCHP Human Parsing
@@ -466,14 +467,34 @@ export function TryOnView(): JSX.Element {
           )}
 
           {phase === 'completed' && resultUrl && (
-            <div className="space-y-3">
-              {/* eslint-disable-next-line @next/next/no-img-element -- URL arbitraria del backend */}
-              <img
-                src={resultUrl}
-                alt="Resultado de la prueba virtual del outfit"
-                className="w-full rounded-lg border border-border object-contain"
-              />
-              <div className="flex flex-wrap gap-2">
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                {previewUrl && (
+                  <div className="space-y-1.5">
+                    <p className="text-xs font-medium text-muted-foreground">Foto original</p>
+                    {/* eslint-disable-next-line @next/next/no-img-element -- blob preview URL */}
+                    <img
+                      src={previewUrl}
+                      alt="Foto original del usuario para prueba virtual"
+                      className="aspect-3/4 w-full rounded-xl border border-border object-cover"
+                    />
+                  </div>
+                )}
+                <div className="space-y-1.5">
+                  <p className="text-xs font-medium text-muted-foreground">Resultado con outfit</p>
+                  {/* eslint-disable-next-line @next/next/no-img-element -- URL arbitraria del backend */}
+                  <img
+                    src={resultUrl}
+                    alt={
+                      outfit.data?.aesthetic
+                        ? `Resultado de la prueba virtual con el outfit estética ${outfit.data.aesthetic.replace(/_/g, ' ')}`
+                        : 'Resultado de la prueba virtual con el outfit aplicado'
+                    }
+                    className="aspect-3/4 w-full rounded-xl border border-border object-cover"
+                  />
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-2 pt-2">
                 <Button type="button" size="sm" asChild>
                   <a href={resultUrl} download>
                     Guardar imagen
