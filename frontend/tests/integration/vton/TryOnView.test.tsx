@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { http, HttpResponse } from 'msw';
-import { screen } from '@testing-library/react';
+import { screen, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { renderWithProviders } from '../../utils/renderWithProviders';
 import { server } from '../../fixtures/msw/server';
@@ -25,6 +25,7 @@ const originalEnv = process.env['NEXT_PUBLIC_API_BASE_URL'];
 function happyHandlers(): void {
   server.use(
     http.get('*/api/v1/outfits/:id', () => HttpResponse.json(recommendFixture.outfits[0])),
+    http.post('*/api/v1/outfits/recommend', () => HttpResponse.json(recommendFixture)),
     http.get('*/api/v1/garments/capsule', () => HttpResponse.json(capsuleFixture)),
     http.post('*/api/v1/vton/try-on', () =>
       HttpResponse.json({ job_id: JOB_UUID, status: 'processing', estimated_time_seconds: 1 })
@@ -129,5 +130,55 @@ describe('TryOnView', () => {
       )
     ).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /probar con otra foto/i })).toBeInTheDocument();
+  });
+
+  it('pausa el polling cuando document.visibilityState no es visible y lo reanuda al volver', async () => {
+    let statusCalls = 0;
+    server.use(
+      http.get('*/api/v1/vton/status/:id', () => {
+        statusCalls += 1;
+        return HttpResponse.json({
+          job_id: JOB_UUID,
+          status: 'processing',
+        });
+      })
+    );
+
+    renderWithProviders(<TryOnView />);
+    await uploadPhoto();
+    await userEvent.click(await screen.findByRole('button', { name: /generar prueba virtual/i }));
+
+    expect(await screen.findByText(/inferencia asíncrona/i)).toBeInTheDocument();
+
+    // Pestaña pasa a segundo plano
+    await act(async () => {
+      Object.defineProperty(document, 'visibilityState', {
+        value: 'hidden',
+        writable: true,
+        configurable: true,
+      });
+      document.dispatchEvent(new Event('visibilitychange'));
+    });
+
+    const callsWhileHidden = statusCalls;
+    await new Promise(r => setTimeout(r, 600));
+
+    // No se ejecutan llamadas adicionales mientras está en background
+    expect(statusCalls).toBe(callsWhileHidden);
+
+    // Pestaña vuelve a primer plano
+    await act(async () => {
+      Object.defineProperty(document, 'visibilityState', {
+        value: 'visible',
+        writable: true,
+        configurable: true,
+      });
+      document.dispatchEvent(new Event('visibilitychange'));
+    });
+
+    // Al volver, se reanuda el polling
+    await vi.waitFor(() => {
+      expect(statusCalls).toBeGreaterThan(callsWhileHidden);
+    });
   });
 });
