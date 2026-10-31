@@ -22,7 +22,12 @@ from api.garments import DEMO_USER_EMAIL
 from db.session import get_session
 from domain.enums import VtonJobStatus, VtonStage
 from domain.models import Garment, Outfit, OutfitGarment, User, VtonJob, new_uuid
-from domain.schemas import VtonJobCreateResponse, VtonJobStatusResponse
+from domain.schemas import (
+    VtonJobCreateResponse,
+    VtonJobListItem,
+    VtonJobListResponse,
+    VtonJobStatusResponse,
+)
 from services import storage
 from services.vton import pipeline
 
@@ -129,6 +134,44 @@ def job_status(job_id: str, session: SessionDep) -> VtonJobStatusResponse:
         result_url=result_url,
         error_message=job.error_message,
     )
+
+
+@router.get("/jobs", response_model=VtonJobListResponse)
+def list_vton_jobs(session: SessionDep, limit: int = 50) -> VtonJobListResponse:
+    """Historial de jobs VTON del usuario demo (G3).
+
+    Ordenados por fecha de creación desc (más recientes primero).
+    """
+    user = session.query(User).filter(User.email == DEMO_USER_EMAIL).first()
+    if user is None:
+        return VtonJobListResponse(jobs=[], total=0)
+
+    query = (
+        session.query(VtonJob)
+        .filter(VtonJob.user_id == user.id)
+        .order_by(VtonJob.created_at.desc())
+    )
+    total = query.count()
+    db_jobs = query.limit(limit).all()
+
+    items = []
+    for j in db_jobs:
+        result_url = None
+        if j.status == VtonJobStatus.COMPLETED.value and j.result_path:
+            result_url = storage.url_for(j.result_path)
+        items.append(
+            VtonJobListItem(
+                job_id=j.id,
+                outfit_id=j.outfit_id,
+                status=VtonJobStatus(j.status),
+                stage=j.stage,
+                result_url=result_url,
+                error_message=j.error_message,
+                created_at=j.created_at,
+            )
+        )
+
+    return VtonJobListResponse(jobs=items, total=total)
 
 
 def _outfit_desde_layers(session: Session, user_id: str, garment_layers_json: str) -> str:
