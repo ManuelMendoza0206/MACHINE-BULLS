@@ -15,6 +15,10 @@ import { recommendOutfits } from '@/features/outfits/api/recommendOutfits';
 import { useMe } from '@/features/auth/hooks/useMe';
 import { createVtonJob } from '@/features/vton/api/createVtonJob';
 import { getVtonJobStatus } from '@/features/vton/api/getVtonJobStatus';
+import {
+  checkCachedVtonResult,
+  setCachedVtonResult,
+} from '@/features/vton/lib/checkCachedVtonResult';
 import { mapStatusToUserMessage } from '@/lib/api/mapStatusToUserMessage';
 import { ApiError } from '@/lib/errors';
 import type { OutfitPosition } from '@/schemas/api/outfits';
@@ -124,8 +128,12 @@ export function TryOnView(): JSX.Element {
       void getVtonJobStatus(jobId)
         .then(status => {
           if (status.status === 'completed') {
-            setResultUrl(status.result_url ?? null);
+            const completedUrl = status.result_url ?? null;
+            setResultUrl(completedUrl);
             setPhase('completed');
+            if (completedUrl && file && effectiveOutfitId) {
+              setCachedVtonResult(effectiveOutfitId, file, completedUrl, jobId);
+            }
           } else if (status.status === 'failed') {
             setFailure(status.error_message ?? 'No pudimos generar la prueba virtual.');
             setPhase('failed');
@@ -139,7 +147,7 @@ export function TryOnView(): JSX.Element {
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current);
     };
-  }, [phase, jobId, attempt]);
+  }, [phase, jobId, attempt, effectiveOutfitId, file]);
 
   const resetPhoto = (): void => {
     if (previewUrl) URL.revokeObjectURL(previewUrl);
@@ -178,6 +186,19 @@ export function TryOnView(): JSX.Element {
     // Doble-submit: no re-entra mientras la creación del job esté en vuelo
     // ni mientras haya un job corriendo.
     if (!file || !effectiveOutfitId || createJob.isPending || phase === 'processing') return;
+
+    // Reuso de cache: si ya existe un resultado en la sesión para el par (outfit, foto),
+    // se muestra directo sin disparar un nuevo POST /vton/try-on ni gastar GPU.
+    const cached = checkCachedVtonResult(effectiveOutfitId, file);
+    if (cached) {
+      setJobId(cached.jobId);
+      setResultUrl(cached.resultUrl);
+      setFailure(null);
+      setCreateError(null);
+      setPhase('completed');
+      return;
+    }
+
     setCreateError(null);
     setElapsedSec(0);
     createJob.mutate(
