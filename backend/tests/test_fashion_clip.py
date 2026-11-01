@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import sys
 from typing import Any
 from unittest.mock import MagicMock
 
@@ -21,14 +22,20 @@ def test_clip_classifier_recibe_model_name(monkeypatch: Any) -> None:
     mock_model = MagicMock()
     mock_model.to.return_value.eval.return_value = mock_model
 
-    import transformers
+    mock_torch = MagicMock()
+    mock_torch.cuda.is_available.return_value = False
+    monkeypatch.setitem(sys.modules, "torch", mock_torch)
 
-    monkeypatch.setattr(transformers.CLIPProcessor, "from_pretrained", lambda name: mock_processor)
-    monkeypatch.setattr(transformers.CLIPModel, "from_pretrained", lambda name: mock_model)
+    mock_transformers = MagicMock()
+    mock_transformers.CLIPProcessor.from_pretrained.return_value = mock_processor
+    mock_transformers.CLIPModel.from_pretrained.return_value = mock_model
+    monkeypatch.setitem(sys.modules, "transformers", mock_transformers)
 
     clf = ClipClassifier(model_name="patrickjohncyh/fashion-clip", device="cpu")
     assert clf.model_name == "patrickjohncyh/fashion-clip"
     assert clf.processor is mock_processor
+    mock_transformers.CLIPProcessor.from_pretrained.assert_called_with("patrickjohncyh/fashion-clip")
+    mock_transformers.CLIPModel.from_pretrained.assert_called_with("patrickjohncyh/fashion-clip")
 
 
 def test_clip_classifier_fallback_openai(monkeypatch: Any) -> None:
@@ -37,14 +44,9 @@ def test_clip_classifier_fallback_openai(monkeypatch: Any) -> None:
     mock_model = MagicMock()
     mock_model.to.return_value.eval.return_value = mock_model
 
-    def _failing_from_pretrained(name: str) -> Any:
-        if name == "unexistent/model-error":
-            raise RuntimeError("Model download error")
-        if "processor" in str(_failing_from_pretrained):
-            return mock_processor
-        return mock_model
-
-    import transformers
+    mock_torch = MagicMock()
+    mock_torch.cuda.is_available.return_value = False
+    monkeypatch.setitem(sys.modules, "torch", mock_torch)
 
     def _mock_proc(name: str) -> Any:
         if name == "unexistent/model-error":
@@ -56,8 +58,10 @@ def test_clip_classifier_fallback_openai(monkeypatch: Any) -> None:
             raise RuntimeError("Download failed")
         return mock_model
 
-    monkeypatch.setattr(transformers.CLIPProcessor, "from_pretrained", _mock_proc)
-    monkeypatch.setattr(transformers.CLIPModel, "from_pretrained", _mock_mod)
+    mock_transformers = MagicMock()
+    mock_transformers.CLIPProcessor.from_pretrained.side_effect = _mock_proc
+    mock_transformers.CLIPModel.from_pretrained.side_effect = _mock_mod
+    monkeypatch.setitem(sys.modules, "transformers", mock_transformers)
 
     clf = ClipClassifier(model_name="unexistent/model-error", device="cpu")
     assert clf.model_name == FALLBACK_MODEL_NAME
