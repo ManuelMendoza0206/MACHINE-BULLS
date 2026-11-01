@@ -302,3 +302,72 @@ def test_build_provider_catvton_apunta_a_http(monkeypatch: pytest.MonkeyPatch) -
     provider = build_provider()
     assert provider.name == "http"
 
+
+def test_resolve_catvton_url_defaults(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Verifica resolucion automatica de URL local vs contenedor Docker."""
+    from services.vton import provider
+    from services.vton.provider import resolve_catvton_url
+
+    # Fuera de docker -> 127.0.0.1:7861/tryon
+    monkeypatch.setattr(provider, "is_running_in_docker", lambda: False)
+    assert resolve_catvton_url() == "http://127.0.0.1:7861/tryon"
+    assert resolve_catvton_url(None) == "http://127.0.0.1:7861/tryon"
+    assert resolve_catvton_url("") == "http://127.0.0.1:7861/tryon"
+
+    # En docker -> host.docker.internal:7861/tryon
+    monkeypatch.setattr(provider, "is_running_in_docker", lambda: True)
+    assert resolve_catvton_url() == "http://host.docker.internal:7861/tryon"
+
+    # URL base sin /tryon se normaliza agregando /tryon
+    assert resolve_catvton_url("http://127.0.0.1:7861") == "http://127.0.0.1:7861/tryon"
+    assert resolve_catvton_url("http://localhost:7861/") == "http://localhost:7861/tryon"
+    assert resolve_catvton_url("http://my-gpu:7861/custom") == "http://my-gpu:7861/custom"
+
+
+def test_build_provider_catvton_sin_url_resuelve_default(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Si VTON_PROVIDER=catvton y no hay VTON_HTTP_URL, no rompe y resuelve por defecto."""
+    import dataclasses
+
+    from config import settings as base
+
+    actual = dataclasses.replace(base, vton_provider="catvton", vton_http_url=None)
+    monkeypatch.setattr("services.vton.provider.settings", actual)
+
+    p = build_provider()
+    assert p.name == "http"
+    assert isinstance(p, HttpVtonProvider)
+    assert "7861/tryon" in p._endpoint
+
+
+def test_build_provider_auto_detecta_catvton_server(monkeypatch: pytest.MonkeyPatch) -> None:
+    """En modo auto sin URL configurada, si el server local 7861 responde, lo usa prioritariamente."""
+    import dataclasses
+
+    from config import settings as base
+    from services.vton import provider
+
+    actual = dataclasses.replace(
+        base, vton_provider="auto", vton_http_url=None, replicate_api_token="tok-replicate"
+    )
+    monkeypatch.setattr("services.vton.provider.settings", actual)
+    monkeypatch.setattr(provider, "is_catvton_server_reachable", lambda url: True)
+
+    p = build_provider()
+    assert p.name == "http"
+    assert "7861/tryon" in p._endpoint
+
+
+def test_http_provider_connect_error_mensaje_claro(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Si falla la conexion al puerto 7861, lanza mensaje explicativo sobre server.py."""
+    import httpx
+
+    def _mock_post(*args: Any, **kwargs: Any) -> Any:
+        raise httpx.ConnectError("Connection refused")
+
+    monkeypatch.setattr(httpx.Client, "post", _mock_post)
+
+    p = HttpVtonProvider("http://127.0.0.1:7861/tryon")
+    with pytest.raises(RuntimeError, match="server.py"):
+        p.try_on(_jpg(), _jpg(), "shirt", "upper")
+
+
