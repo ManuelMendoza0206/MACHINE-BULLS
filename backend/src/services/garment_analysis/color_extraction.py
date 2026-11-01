@@ -48,12 +48,25 @@ def dominant_colors(image: Image.Image, max_colors: int = 3) -> list[dict[str, A
     Cuantiza cada canal a 16 bins y cuenta pixeles por celda combinada
     (bin_h, bin_s, bin_v). Es mas barato que k-means y determinista, que para
     el score de armonia importa mas que la precision fina.
+
+    Si la imagen contiene un canal alfa (RGBA, por ejemplo tras remocion de
+    fondo con rembg), ignora los pixeles transparentes (alpha < 0.5) para que
+    el fondo recortado no contamine la paleta.
     """
-    img = image.convert("RGB")
+    es_rgba = image.mode == "RGBA"
+    img = image.copy()
     # Bajar resolucion: 128px por lado alcanza para proporciones de color y
     # baja el costo de la cuenta de pixeles de ~10M a ~16k celdas.
     img.thumbnail((128, 128))
-    arr = np.asarray(img, dtype=np.float32) / 255.0
+
+    if es_rgba:
+        arr_rgba = np.asarray(img.convert("RGBA"), dtype=np.float32) / 255.0
+        arr = arr_rgba[:, :, :3]
+        alpha = arr_rgba[:, :, 3]
+    else:
+        img_rgb = img.convert("RGB")
+        arr = np.asarray(img_rgb, dtype=np.float32) / 255.0
+        alpha = np.ones((arr.shape[0], arr.shape[1]), dtype=np.float32)
 
     hsv = np.asarray(
         [colorsys.rgb_to_hsv(*pixel) for pixel in arr.reshape(-1, 3)],
@@ -64,12 +77,18 @@ def dominant_colors(image: Image.Image, max_colors: int = 3) -> list[dict[str, A
     # indexar el mismo eje plano que `arr.reshape(-1, 3)`.
     pixeles = arr.reshape(-1, 3)
     hsv_pix = hsv.reshape(-1, 3)
+    alpha_pix = alpha.reshape(-1)
+
     ss, vs = hsv_pix[:, 1], hsv_pix[:, 2]
-    filtro = ~((ss < 0.08) & (vs > 0.95)) & (vs >= 0.05)
+    filtro = (alpha_pix >= 0.5) & ~((ss < 0.08) & (vs > 0.95)) & (vs >= 0.05)
     if not filtro.any():
-        # Imagen completamente neutra (todo blanco/negro): devolvemos el color
-        # promedio crudo en vez de una lista vacia (el Zod exige min 1).
-        rgb_prom = (pixeles.mean(axis=0) * 255).astype(np.uint8)
+        # Imagen sin pixeles cromaticos validos: usamos el promedio de los opacos
+        # (o de todos si no hay opacos) para no violar el contrato Zod (min 1).
+        opacos = alpha_pix >= 0.5
+        if opacos.any():
+            rgb_prom = (pixeles[opacos].mean(axis=0) * 255).astype(np.uint8)
+        else:
+            rgb_prom = (pixeles.mean(axis=0) * 255).astype(np.uint8)
         return [_a_color(rgb_prom, 1.0)]
 
     pixeles = pixeles[filtro]

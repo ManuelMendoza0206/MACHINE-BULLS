@@ -26,6 +26,7 @@ from domain.schemas import (
 )
 from services import storage
 from services.garment_analysis.analyzer import analyze_garment
+from services.garment_analysis.background_remover import remove_background
 
 router = APIRouter(prefix="/api/v1/garments", tags=["garments"])
 
@@ -66,10 +67,17 @@ def upload_garment(
         raise HTTPException(status_code=400, detail="archivo no es una imagen") from exc
 
     user = get_demo_user(session)
-    analisis = analyze_garment(imagen)
+
+    # Remocion de fondo textil (u2net_cloth_seg)
+    imagen_procesada = remove_background(imagen)
+    buf_proc = io.BytesIO()
+    imagen_procesada.save(buf_proc, format="PNG")
+    proc_bytes = buf_proc.getvalue()
+
+    analisis = analyze_garment(imagen_procesada)
 
     rel_orig, _ = storage.save_image(contenido, "garments")
-    rel_proc, _ = storage.save_image(contenido, "garments")
+    rel_proc, _ = storage.save_image(proc_bytes, "garments")
 
     garment = Garment(
         id=new_uuid(),
