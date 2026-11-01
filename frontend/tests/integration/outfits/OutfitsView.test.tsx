@@ -18,6 +18,7 @@ const originalEnv = process.env['NEXT_PUBLIC_API_BASE_URL'];
 beforeEach(() => {
   process.env['NEXT_PUBLIC_API_BASE_URL'] = 'https://api.example.com';
   push.mockClear();
+  window.localStorage.clear();
   server.use(
     http.get('*/api/v1/me', () =>
       HttpResponse.json({ user_id: ME_UUID, email: 'demo@styleme.test' })
@@ -28,6 +29,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  window.localStorage.clear();
   if (originalEnv === undefined) {
     delete process.env['NEXT_PUBLIC_API_BASE_URL'];
   } else {
@@ -75,5 +77,28 @@ describe('OutfitsView', () => {
 
     expect(await screen.findByText('Tu armario está vacío')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /subir prendas/i })).toBeInTheDocument();
+  });
+
+  it('permite descartar un outfit, lo retira de la superficie y persiste en localStorage (PRODUCT.md)', async () => {
+    renderWithProviders(<OutfitsView />);
+
+    const dismissBtn = await screen.findByRole('button', { name: /descartar outfit/i });
+    expect(dismissBtn).toBeInTheDocument();
+
+    await userEvent.click(dismissBtn);
+
+    // Al descartar el único outfit del fixture, muestra el estado de todas descartadas
+    expect(await screen.findByText('Descartaste todas las combinaciones')).toBeInTheDocument();
+
+    // Verifica persistencia en localStorage
+    const stored = window.localStorage.getItem(`styleme:dismissed-outfits:${ME_UUID}`);
+    expect(stored).toContain('8c7f8b1a-1234-4567-8901-abcdef123456');
+
+    // Botón para restablecer combinaciones
+    const resetBtn = screen.getByRole('button', { name: /restablecer combinaciones/i });
+    await userEvent.click(resetBtn);
+
+    // Vuelve a mostrar el outfit
+    expect(await screen.findByRole('button', { name: /probar puesto/i })).toBeInTheDocument();
   });
 });
