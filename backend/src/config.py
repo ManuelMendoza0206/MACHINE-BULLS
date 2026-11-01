@@ -56,6 +56,8 @@ class Settings:
     public_base_url: str
     cors_origins: list[str]
     media_dir: Path
+    # Modelo CLIP para clasificacion y embedding de prendas
+    clip_model_name: str
 
     @property
     def media_url_base(self) -> str:
@@ -84,6 +86,7 @@ def load_settings() -> Settings:
         public_base_url=os.environ.get("PUBLIC_BASE_URL", "http://localhost:8000"),
         cors_origins=origins,
         media_dir=Path(os.environ.get("MEDIA_DIR", str(MEDIA_DIR))),
+        clip_model_name=os.environ.get("CLIP_MODEL_NAME", "patrickjohncyh/fashion-clip"),
     )
 
 
