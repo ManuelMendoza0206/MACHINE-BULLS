@@ -21,10 +21,12 @@ vi.mock('next/navigation', () => ({
 }));
 
 const originalEnv = process.env['NEXT_PUBLIC_API_BASE_URL'];
+const originalTimeoutEnv = process.env['NEXT_PUBLIC_VTON_POLL_TIMEOUT_MS'];
 
 function happyHandlers(): void {
   server.use(
     http.get('*/api/v1/outfits/:id', () => HttpResponse.json(recommendFixture.outfits[0])),
+    http.post('*/api/v1/outfits/recommend', () => HttpResponse.json(recommendFixture)),
     http.get('*/api/v1/garments/capsule', () => HttpResponse.json(capsuleFixture)),
     http.post('*/api/v1/vton/try-on', () =>
       HttpResponse.json({ job_id: JOB_UUID, status: 'processing', estimated_time_seconds: 1 })
@@ -57,6 +59,11 @@ afterEach(() => {
     delete process.env['NEXT_PUBLIC_API_BASE_URL'];
   } else {
     process.env['NEXT_PUBLIC_API_BASE_URL'] = originalEnv;
+  }
+  if (originalTimeoutEnv === undefined) {
+    delete process.env['NEXT_PUBLIC_VTON_POLL_TIMEOUT_MS'];
+  } else {
+    process.env['NEXT_PUBLIC_VTON_POLL_TIMEOUT_MS'] = originalTimeoutEnv;
   }
 });
 
@@ -130,4 +137,72 @@ describe('TryOnView', () => {
     ).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /probar con otra foto/i })).toBeInTheDocument();
   });
+
+  it('un job fallido con error_message null muestra copy de fallback limpio', async () => {
+    server.use(
+      http.get('*/api/v1/vton/status/:id', () =>
+        HttpResponse.json({
+          job_id: JOB_UUID,
+          status: 'failed',
+          error_message: null,
+        })
+      )
+    );
+
+    renderWithProviders(<TryOnView />);
+    await uploadPhoto();
+    await userEvent.click(await screen.findByRole('button', { name: /generar prueba virtual/i }));
+
+    expect(
+      await screen.findByText(
+        'No pudimos generar la prueba virtual. Intentá con otra foto o prenda.',
+        {},
+        { timeout: 4_000 }
+      )
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/null/i)).not.toBeInTheDocument();
+  });
+
+  it('en timeout ofrece verificar de nuevo y resuelve a completed tras comprobación manual', async () => {
+    let checkCount = 0;
+    server.use(
+      http.get('*/api/v1/vton/status/:id', () => {
+        checkCount += 1;
+        if (checkCount <= 1) {
+          return HttpResponse.json({
+            job_id: JOB_UUID,
+            status: 'processing',
+          });
+        }
+        return HttpResponse.json({
+          job_id: JOB_UUID,
+          status: 'completed',
+          result_url: 'https://cdn.example.com/result-manual.jpg',
+        });
+      })
+    );
+
+    // Timeout ultracorto para disparar phase === 'timeout'
+    process.env['NEXT_PUBLIC_VTON_POLL_TIMEOUT_MS'] = '50';
+
+    renderWithProviders(<TryOnView />);
+    await uploadPhoto();
+    await userEvent.click(await screen.findByRole('button', { name: /generar prueba virtual/i }));
+
+    const manualBtn = await screen.findByRole(
+      'button',
+      { name: /verificar de nuevo/i },
+      { timeout: 4_000 }
+    );
+    expect(manualBtn).toBeInTheDocument();
+
+    await userEvent.click(manualBtn);
+
+    const resultado = await screen.findByAltText(
+      /resultado de la prueba virtual/i,
+      {},
+      { timeout: 4_000 }
+    );
+    expect(resultado).toBeInTheDocument();
+  }, 10_000);
 });

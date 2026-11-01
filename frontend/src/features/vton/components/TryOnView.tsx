@@ -27,8 +27,10 @@ const POSITION_LABEL: Record<OutfitPosition, string> = {
   outerwear: 'Abrigo',
 };
 
-/** Techo de polling configurable por build (ms). El job NUNCA se cancela al alcanzarlo. */
-const POLL_TIMEOUT_MS = Number(process.env['NEXT_PUBLIC_VTON_POLL_TIMEOUT_MS'] ?? 90_000);
+/** Techo de polling configurable por entorno (ms). El job NUNCA se cancela al alcanzarlo. */
+function getPollTimeoutMs(): number {
+  return Number(process.env['NEXT_PUBLIC_VTON_POLL_TIMEOUT_MS'] ?? 90_000);
+}
 /** Backoff: 1s, 1.5s, 2.25s… techo 5s. */
 const POLL_BASE_MS = 1_000;
 const POLL_MAX_MS = 5_000;
@@ -80,6 +82,8 @@ export function TryOnView(): JSX.Element {
   const [resultUrl, setResultUrl] = useState<string | null>(null);
   const [failure, setFailure] = useState<string | null>(null);
   const [createError, setCreateError] = useState<string | null>(null);
+  const [isCheckingManual, setIsCheckingManual] = useState(false);
+  const [manualCheckMsg, setManualCheckMsg] = useState<string | null>(null);
   const [attempt, setAttempt] = useState(0);
   const [elapsedSec, setElapsedSec] = useState(0);
   const startedAtRef = useRef(0);
@@ -114,7 +118,7 @@ export function TryOnView(): JSX.Element {
   useEffect(() => {
     if (phase !== 'processing' || !jobId) return;
 
-    if (Date.now() - startedAtRef.current > POLL_TIMEOUT_MS) {
+    if (Date.now() - startedAtRef.current > getPollTimeoutMs()) {
       setPhase('timeout');
       return;
     }
@@ -127,7 +131,11 @@ export function TryOnView(): JSX.Element {
             setResultUrl(status.result_url ?? null);
             setPhase('completed');
           } else if (status.status === 'failed') {
-            setFailure(status.error_message ?? 'No pudimos generar la prueba virtual.');
+            const msg =
+              status.error_message && status.error_message.trim().length > 0
+                ? status.error_message
+                : 'No pudimos generar la prueba virtual. Intentá con otra foto o prenda.';
+            setFailure(msg);
             setPhase('failed');
           } else {
             setAttempt(a => a + 1);
@@ -151,6 +159,7 @@ export function TryOnView(): JSX.Element {
     setJobId(null);
     setAttempt(0);
     setElapsedSec(0);
+    setManualCheckMsg(null);
     setPhase('idle');
   };
 
@@ -198,7 +207,36 @@ export function TryOnView(): JSX.Element {
     startedAtRef.current = Date.now();
     setAttempt(0);
     setElapsedSec(0);
+    setManualCheckMsg(null);
     setPhase('processing');
+  };
+
+  const handleManualCheck = async (): Promise<void> => {
+    if (!jobId) return;
+    setIsCheckingManual(true);
+    setManualCheckMsg(null);
+    try {
+      const status = await getVtonJobStatus(jobId);
+      if (status.status === 'completed') {
+        setResultUrl(status.result_url ?? null);
+        setPhase('completed');
+      } else if (status.status === 'failed') {
+        const msg =
+          status.error_message && status.error_message.trim().length > 0
+            ? status.error_message
+            : 'No pudimos generar la prueba virtual. Intentá con otra foto o prenda.';
+        setFailure(msg);
+        setPhase('failed');
+      } else {
+        setManualCheckMsg(
+          'El servidor aún está procesando la prueba virtual. Podés esperar o consultar tu historial más tarde.'
+        );
+      }
+    } catch {
+      setManualCheckMsg('No pudimos conectar con el servidor para comprobar el estado.');
+    } finally {
+      setIsCheckingManual(false);
+    }
   };
 
   if (!effectiveOutfitId) {
@@ -448,20 +486,46 @@ export function TryOnView(): JSX.Element {
 
               <Skeleton className="mx-auto h-2 w-full rounded-full" />
               <p className="text-sm text-muted-foreground" role="status">
-                La IA está vistiendo tu outfit… ({Math.round(POLL_TIMEOUT_MS / 1000)}s máx.)
+                La IA está vistiendo tu outfit… ({Math.round(getPollTimeoutMs() / 1000)}s máx.)
               </p>
             </div>
           )}
 
           {phase === 'timeout' && (
-            <div className="space-y-3 rounded-lg border border-border p-4 text-center">
-              <p className="font-semibold">Está tardando más de lo normal</p>
-              <p className="text-sm text-muted-foreground">
-                El job sigue procesándose en el servidor — podemos seguir esperando.
+            <div className="space-y-3 rounded-2xl border border-amber-500/30 bg-amber-500/5 p-5 text-center">
+              <p className="font-semibold text-amber-900 dark:text-amber-200">
+                Está tardando más de lo normal
               </p>
-              <Button type="button" variant="secondary" size="sm" onClick={resumePolling}>
-                Seguir esperando
-              </Button>
+              <p className="text-sm text-muted-foreground">
+                El job sigue procesándose en el servidor — la inferencia no se ha cancelado.
+              </p>
+              {manualCheckMsg && (
+                <p className="rounded-xl border border-border bg-background p-2.5 text-xs font-medium text-foreground">
+                  {manualCheckMsg}
+                </p>
+              )}
+              <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleManualCheck}
+                  disabled={isCheckingManual}
+                >
+                  {isCheckingManual ? 'Comprobando…' : 'Verificar de nuevo'}
+                </Button>
+                <Button type="button" variant="secondary" size="sm" onClick={resumePolling}>
+                  Reanudar espera automática
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => router.push('/try-on/history')}
+                >
+                  Ver en historial
+                </Button>
+              </div>
             </div>
           )}
 
@@ -495,11 +559,17 @@ export function TryOnView(): JSX.Element {
           )}
 
           {phase === 'failed' && (
-            <div className="space-y-3 rounded-lg border border-destructive/40 p-4">
-              <p role="alert" className="font-semibold text-destructive">
-                {failure}
+            <div className="space-y-3 rounded-2xl border border-destructive/40 bg-destructive/5 p-5">
+              <p className="text-xs font-semibold uppercase tracking-wider text-destructive">
+                No pudimos completar la prueba virtual
               </p>
-              <div className="flex gap-2">
+              <p role="alert" className="text-sm font-medium text-foreground">
+                {failure || 'No pudimos generar la prueba virtual. Intentá con otra foto o prenda.'}
+              </p>
+              <div className="flex flex-wrap gap-2 pt-1">
+                <Button type="button" size="sm" onClick={submit}>
+                  Reintentar
+                </Button>
                 <Button type="button" variant="secondary" size="sm" onClick={resetPhoto}>
                   Probar con otra foto
                 </Button>
