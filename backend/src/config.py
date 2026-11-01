@@ -56,6 +56,7 @@ class Settings:
     public_base_url: str
     cors_origins: list[str]
     media_dir: Path
+    supabase_jwt_secret: str | None
 
     @property
     def media_url_base(self) -> str:
@@ -84,6 +85,7 @@ def load_settings() -> Settings:
         public_base_url=os.environ.get("PUBLIC_BASE_URL", "http://localhost:8000"),
         cors_origins=origins,
         media_dir=Path(os.environ.get("MEDIA_DIR", str(MEDIA_DIR))),
+        supabase_jwt_secret=os.environ.get("SUPABASE_JWT_SECRET") or None,
     )
 
 

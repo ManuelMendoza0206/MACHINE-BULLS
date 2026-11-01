@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 import { ApiError, NetworkError, ValidationError } from '@/lib/errors';
+import { createBrowserSupabaseClient, isSupabaseConfigured } from '@/lib/supabase/client';
 
 export interface RequestConfig {
   path: string;
@@ -37,7 +38,20 @@ export async function apiRequest<T>(config: RequestConfig, schema: z.ZodType<T>)
     }
   }
 
-  let headers: Record<string, string> | undefined;
+  const authHeaders: Record<string, string> = {};
+  if (typeof window !== 'undefined' && isSupabaseConfigured()) {
+    try {
+      const supabase = createBrowserSupabaseClient();
+      const { data } = await supabase.auth.getSession();
+      if (data?.session?.access_token) {
+        authHeaders['Authorization'] = `Bearer ${data.session.access_token}`;
+      }
+    } catch {
+      // Ignora errores si Supabase no responde o esta offline (fallback a demo)
+    }
+  }
+
+  const headers: Record<string, string> = { ...authHeaders };
   let body: BodyInit | undefined;
 
   if (config.body !== undefined) {
@@ -45,7 +59,7 @@ export async function apiRequest<T>(config: RequestConfig, schema: z.ZodType<T>)
       // Let browser set Content-Type with boundary
       body = config.body;
     } else {
-      headers = { 'Content-Type': 'application/json' };
+      headers['Content-Type'] = 'application/json';
       body = JSON.stringify(config.body);
     }
   }
