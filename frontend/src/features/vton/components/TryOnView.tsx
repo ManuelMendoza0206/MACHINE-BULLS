@@ -450,6 +450,29 @@ export function TryOnView(): JSX.Element {
               <p className="text-sm text-muted-foreground" role="status">
                 La IA está vistiendo tu outfit… ({Math.round(POLL_TIMEOUT_MS / 1000)}s máx.)
               </p>
+              <div className="pt-2 border-t border-border/40">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="w-full text-xs font-medium"
+                  onClick={() => router.push('/wardrobe')}
+                >
+                  Seguir usando la app
+                </Button>
+                <p className="mt-1.5 text-[11px] text-muted-foreground">
+                  La prueba virtual continuará procesándose en el servidor. Podrás revisar el
+                  resultado en tu{' '}
+                  <button
+                    type="button"
+                    onClick={() => router.push('/try-on/history')}
+                    className="underline hover:text-foreground inline-flex items-center"
+                  >
+                    historial
+                  </button>
+                  .
+                </p>
+              </div>
             </div>
           )}
 
