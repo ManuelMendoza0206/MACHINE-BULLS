@@ -56,6 +56,10 @@ class Settings:
     public_base_url: str
     cors_origins: list[str]
     media_dir: Path
+    # Almacenamiento en la nube (Azure Blob Storage)
+    azure_storage_connection_string: str | None
+    azure_storage_container_name: str
+    azure_storage_public_url_base: str | None
 
     @property
     def media_url_base(self) -> str:
@@ -84,6 +88,9 @@ def load_settings() -> Settings:
         public_base_url=os.environ.get("PUBLIC_BASE_URL", "http://localhost:8000"),
         cors_origins=origins,
         media_dir=Path(os.environ.get("MEDIA_DIR", str(MEDIA_DIR))),
+        azure_storage_connection_string=os.environ.get("AZURE_STORAGE_CONNECTION_STRING") or None,
+        azure_storage_container_name=os.environ.get("AZURE_STORAGE_CONTAINER_NAME", "styleme"),
+        azure_storage_public_url_base=os.environ.get("AZURE_STORAGE_PUBLIC_URL_BASE") or None,
     )
 
 
