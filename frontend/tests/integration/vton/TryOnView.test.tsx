@@ -222,4 +222,33 @@ describe('TryOnView', () => {
     ).toBeInTheDocument();
     expect(tryOnPostCount).toBe(1);
   });
+
+  it('respeta prefers-reduced-motion y expone alt distinguibles en foto original y resultado', async () => {
+    renderWithProviders(<TryOnView />);
+    await uploadPhoto();
+
+    await userEvent.click(await screen.findByRole('button', { name: /generar prueba virtual/i }));
+
+    // Durante la fase de procesamiento, los spinners contienen la clase de adaptación a reduced motion
+    const tracker = await screen.findByText(/inferencia asíncrona/i);
+    expect(tracker).toBeInTheDocument();
+    const spinningIcon = tracker.querySelector('svg');
+    expect(spinningIcon).toHaveClass('motion-reduce:animate-none');
+
+    // Al completarse, ambas imágenes tienen alt descriptivo y distinguible
+    const originalImg = await screen.findByAltText(
+      /foto original del usuario/i,
+      {},
+      { timeout: 4_000 }
+    );
+    const resultImg = await screen.findByAltText(
+      /resultado de la prueba virtual con el outfit/i,
+      {},
+      { timeout: 4_000 }
+    );
+
+    expect(originalImg).toBeInTheDocument();
+    expect(resultImg).toBeInTheDocument();
+    expect(originalImg.getAttribute('alt')).not.toEqual(resultImg.getAttribute('alt'));
+  });
 });
