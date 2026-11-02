@@ -82,7 +82,11 @@ export function TryOnView(): JSX.Element {
   const [createError, setCreateError] = useState<string | null>(null);
   const [attempt, setAttempt] = useState(0);
   const [elapsedSec, setElapsedSec] = useState(0);
+  const [isVisible, setIsVisible] = useState(() =>
+    typeof document !== 'undefined' ? document.visibilityState === 'visible' : true
+  );
   const startedAtRef = useRef(0);
+  const pausedAtRef = useRef<number | null>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const outfit = useQuery({
@@ -100,19 +104,59 @@ export function TryOnView(): JSX.Element {
     mutationFn: (vars: { image: File; id: string }) => createVtonJob(vars.image, vars.id),
   });
 
-  // Contador de tiempo de inferencia
+  // Detector de visibilidad de pestaña (visibilityState)
   useEffect(() => {
-    if (phase !== 'processing') return;
+    const handleVisibility = (): void => {
+      const visible = typeof document !== 'undefined' && document.visibilityState === 'visible';
+      setIsVisible(visible);
+
+      if (visible) {
+        if (pausedAtRef.current !== null) {
+          const pausedDuration = Date.now() - pausedAtRef.current;
+          startedAtRef.current += pausedDuration;
+          pausedAtRef.current = null;
+        }
+        if (phase === 'processing' && jobId) {
+          void getVtonJobStatus(jobId)
+            .then(status => {
+              if (status.status === 'completed') {
+                setResultUrl(status.result_url ?? null);
+                setPhase('completed');
+              } else if (status.status === 'failed') {
+                setFailure(status.error_message ?? 'No pudimos generar la prueba virtual.');
+                setPhase('failed');
+              } else {
+                setAttempt(a => a + 1);
+              }
+            })
+            .catch(() => setAttempt(a => a + 1));
+        }
+      } else {
+        pausedAtRef.current = Date.now();
+        if (timerRef.current) {
+          clearTimeout(timerRef.current);
+          timerRef.current = null;
+        }
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => document.removeEventListener('visibilitychange', handleVisibility);
+  }, [phase, jobId]);
+
+  // Contador de tiempo de inferencia (solo corre mientras la pestaña está visible)
+  useEffect(() => {
+    if (phase !== 'processing' || !isVisible) return;
     const interval = setInterval(() => {
       setElapsedSec(s => s + 1);
     }, 1000);
     return () => clearInterval(interval);
-  }, [phase]);
+  }, [phase, isVisible]);
 
   // Loop de polling: cada re-ejecución de `attempt` agenda la próxima consulta
-  // con backoff; el cleanup cancela el timer si la vista se desmonta.
+  // con backoff; se pausa si la pestaña está oculta (document.visibilityState !== 'visible').
   useEffect(() => {
-    if (phase !== 'processing' || !jobId) return;
+    if (phase !== 'processing' || !jobId || !isVisible) return;
 
     if (Date.now() - startedAtRef.current > POLL_TIMEOUT_MS) {
       setPhase('timeout');
@@ -121,6 +165,9 @@ export function TryOnView(): JSX.Element {
 
     const delay = Math.min(POLL_BASE_MS * 1.5 ** attempt, POLL_MAX_MS);
     timerRef.current = setTimeout(() => {
+      if (typeof document !== 'undefined' && document.visibilityState !== 'visible') {
+        return;
+      }
       void getVtonJobStatus(jobId)
         .then(status => {
           if (status.status === 'completed') {
@@ -139,7 +186,7 @@ export function TryOnView(): JSX.Element {
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current);
     };
-  }, [phase, jobId, attempt]);
+  }, [phase, jobId, attempt, isVisible]);
 
   const resetPhoto = (): void => {
     if (previewUrl) URL.revokeObjectURL(previewUrl);
@@ -151,6 +198,7 @@ export function TryOnView(): JSX.Element {
     setJobId(null);
     setAttempt(0);
     setElapsedSec(0);
+    pausedAtRef.current = null;
     setPhase('idle');
   };
 
@@ -196,6 +244,7 @@ export function TryOnView(): JSX.Element {
 
   const resumePolling = (): void => {
     startedAtRef.current = Date.now();
+    pausedAtRef.current = null;
     setAttempt(0);
     setElapsedSec(0);
     setPhase('processing');
