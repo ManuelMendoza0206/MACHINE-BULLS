@@ -1,6 +1,6 @@
 'use client';
 
-import { type JSX } from 'react';
+import { useCallback, useState, type JSX } from 'react';
 import { useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { Badge } from '@/components/ui/badge';
@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Sparkles, ArrowRight } from 'lucide-react';
+import { Sparkles, ArrowRight, X, RotateCcw } from 'lucide-react';
 import { useMe } from '@/features/auth/hooks/useMe';
 import { listCapsuleGarments } from '@/features/garments/api/listCapsuleGarments';
 import { recommendOutfits } from '@/features/outfits/api/recommendOutfits';
@@ -38,13 +38,30 @@ function describeFailure(error: unknown): string {
   return 'No pudimos cargar los outfits. Revisá tu conexión e intentá de nuevo.';
 }
 
+function getDismissedKey(userId?: string): string {
+  return userId ? `styleme:dismissed-outfits:${userId}` : 'styleme:dismissed-outfits:anon';
+}
+
+function getStoredDismissed(userId?: string): string[] {
+  if (typeof window === 'undefined') return [];
+  try {
+    const stored = window.localStorage.getItem(getDismissedKey(userId));
+    if (!stored) return [];
+    const parsed = JSON.parse(stored);
+    return Array.isArray(parsed) ? (parsed as string[]) : [];
+  } catch {
+    return [];
+  }
+}
+
 interface OutfitCardProps {
   outfit: Outfit;
   images: Map<string, GarmentSummary>;
   onTryOn: (outfitId: string) => void;
+  onDismiss: (outfitId: string) => void;
 }
 
-function OutfitCard({ outfit, images, onTryOn }: OutfitCardProps): JSX.Element {
+function OutfitCard({ outfit, images, onTryOn, onDismiss }: OutfitCardProps): JSX.Element {
   const chromaPct = Math.round(outfit.chromatic_score * 100);
   const embPct = Math.round(outfit.embedding_score * 100);
 
@@ -54,9 +71,21 @@ function OutfitCard({ outfit, images, onTryOn }: OutfitCardProps): JSX.Element {
         <h2 className="text-lg font-semibold capitalize tracking-tight">
           {outfit.aesthetic.replace(/_/g, ' ')}
         </h2>
-        <Badge variant="outline" className="border-accent/30 text-accent font-mono text-xs">
-          {outfit.garments.length} prendas
-        </Badge>
+        <div className="flex items-center gap-2">
+          <Badge variant="outline" className="border-accent/30 text-accent font-mono text-xs">
+            {outfit.garments.length} prendas
+          </Badge>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => onDismiss(outfit.outfit_id)}
+            className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive transition-colors"
+            aria-label={`Descartar outfit ${outfit.aesthetic.replace(/_/g, ' ')}`}
+          >
+            <X className="h-4 w-4" aria-hidden="true" />
+          </Button>
+        </div>
       </CardHeader>
       <CardContent className="space-y-4 p-5 sm:p-6 pt-2">
         <ul className="grid grid-cols-4 gap-2" aria-label="Prendas del outfit">
@@ -124,10 +153,40 @@ function OutfitCard({ outfit, images, onTryOn }: OutfitCardProps): JSX.Element {
  * outfits con el recomendador cromático y los pinta con las fotos reales del
  * catálogo. Recomendar es un POST que persiste, así que con `staleTime: Infinity`
  * no se repite en cada montaje; "Recomendar de nuevo" lo dispara a mano.
+ *
+ * Cumple con PRODUCT.md: los outfits descartados abandonan la superficie y su
+ * descarte sobrevive a la recarga de página (aislado por usuario).
  */
 export function OutfitsView(): JSX.Element {
   const router = useRouter();
   const { data: me, isLoading: meLoading, error: meError } = useMe();
+  const userId = me?.user_id;
+
+  const [dismissed, setDismissed] = useState<string[]>(() => getStoredDismissed(userId));
+
+  const dismissOutfit = useCallback(
+    (id: string) => {
+      setDismissed(prev => {
+        const next = prev.includes(id) ? prev : [...prev, id];
+        try {
+          window.localStorage.setItem(getDismissedKey(userId), JSON.stringify(next));
+        } catch {
+          // ignore storage error
+        }
+        return next;
+      });
+    },
+    [userId]
+  );
+
+  const resetDismissed = useCallback(() => {
+    setDismissed([]);
+    try {
+      window.localStorage.removeItem(getDismissedKey(userId));
+    } catch {
+      // ignore storage error
+    }
+  }, [userId]);
 
   const capsule = useQuery({
     queryKey: ['capsule'],
@@ -196,9 +255,10 @@ export function OutfitsView(): JSX.Element {
     );
   }
 
-  const outfits = recommend.data?.outfits ?? [];
+  const allOutfits = recommend.data?.outfits ?? [];
+  const activeOutfits = allOutfits.filter(o => !dismissed.includes(o.outfit_id));
 
-  if (outfits.length === 0) {
+  if (allOutfits.length === 0) {
     return (
       <div className="rounded-lg border border-border p-6 text-center">
         <p className="font-semibold">Todavía no hay combinaciones</p>
@@ -212,23 +272,64 @@ export function OutfitsView(): JSX.Element {
     );
   }
 
+  if (activeOutfits.length === 0) {
+    return (
+      <div className="rounded-lg border border-border p-6 text-center">
+        <p className="font-semibold">Descartaste todas las combinaciones</p>
+        <p className="mt-2 text-sm text-muted-foreground">
+          Podés restablecer las combinaciones descartadas para volver a verlas.
+        </p>
+        <Button
+          type="button"
+          className="mt-4 inline-flex items-center gap-2"
+          onClick={resetDismissed}
+        >
+          <RotateCcw className="h-4 w-4" aria-hidden="true" />
+          <span>Restablecer combinaciones</span>
+        </Button>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <p className="text-sm text-muted-foreground">{outfits.length} combinaciones para vos</p>
-        <Button
-          type="button"
-          variant="secondary"
-          size="sm"
-          onClick={() => recommend.refetch()}
-          disabled={recommend.isFetching}
-        >
-          {recommend.isFetching ? 'Recomendando…' : 'Recomendar de nuevo'}
-        </Button>
+        <p className="text-sm text-muted-foreground">
+          {activeOutfits.length} combinaciones para vos
+        </p>
+        <div className="flex items-center gap-2">
+          {dismissed.length > 0 && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={resetDismissed}
+              className="text-xs inline-flex items-center gap-1.5"
+            >
+              <RotateCcw className="h-3.5 w-3.5" aria-hidden="true" />
+              <span>Restablecer ({dismissed.length})</span>
+            </Button>
+          )}
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            onClick={() => recommend.refetch()}
+            disabled={recommend.isFetching}
+          >
+            {recommend.isFetching ? 'Recomendando…' : 'Recomendar de nuevo'}
+          </Button>
+        </div>
       </div>
       <div className="stagger grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {outfits.map(o => (
-          <OutfitCard key={o.outfit_id} outfit={o} images={images} onTryOn={goTryOn} />
+        {activeOutfits.map(o => (
+          <OutfitCard
+            key={o.outfit_id}
+            outfit={o}
+            images={images}
+            onTryOn={goTryOn}
+            onDismiss={dismissOutfit}
+          />
         ))}
       </div>
     </div>
