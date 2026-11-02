@@ -68,14 +68,14 @@ def _procesar(session, job: VtonJob, human_image_path: str, provider: VtonInfere
             "(solo soporta top/bottom/dress/outerwear; footwear y bag se omiten)"
         )
 
-    humano = storage.absolute_path(human_image_path).read_bytes()
+    humano = storage.read_bytes(human_image_path)
     resultado = humano
     # 4.1.8: una sola capa = GENERATING; varias = LAYERING (composicion iterativa).
     _set_stage(session, job, VtonStage.LAYERING if len(capas) > 1 else VtonStage.GENERATING)
     for i, (garment, posicion) in enumerate(capas):
         categoria = _categoria_vton(posicion)
         mask_type = _mask_type_para(posicion, capas[i + 1 :])
-        prenda_bytes = storage.absolute_path(garment.processed_image_path).read_bytes()
+        prenda_bytes = storage.read_bytes(garment.processed_image_path)
         descripcion = _descripcion(garment)
         logger.info(
             "VTON job %s: capa %d/%d (%s -> %s, mask=%s) con %s",
