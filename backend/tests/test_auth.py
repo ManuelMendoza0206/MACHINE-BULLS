@@ -18,9 +18,8 @@ from services.auth import decode_supabase_token, get_current_user
 
 
 def _generar_token(payload: dict[str, Any], secret: str | None = None) -> str:
-    if secret:
-        return jwt.encode(payload, secret, algorithm="HS256")
-    return jwt.encode(payload, "unverified-secret", algorithm="HS256")
+    key = secret or settings.supabase_jwt_secret or "unverified-secret"
+    return jwt.encode(payload, key, algorithm="HS256")
 
 
 def test_get_current_user_fallback_demo() -> None:
@@ -44,6 +43,7 @@ def test_get_current_user_con_token_valido() -> None:
             "sub": "user-supabase-1234",
             "email": "jaicel@styleme.test",
             "role": "authenticated",
+            "aud": "authenticated",
             "exp": time.time() + 3600,
         })
         user = get_current_user(authorization=f"Bearer {token}", session=session)
@@ -84,6 +84,7 @@ def test_api_me_devuelve_usuario_autenticado(client: TestClient) -> None:
         "sub": "real-user-id-5555",
         "email": "jaicel.real@ucb.edu.bo",
         "role": "authenticated",
+        "aud": "authenticated",
         "exp": time.time() + 3600,
     })
     resp = client.get("/api/v1/me", headers={"Authorization": f"Bearer {token}"})
