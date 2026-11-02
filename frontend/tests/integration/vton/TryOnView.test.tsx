@@ -251,4 +251,27 @@ describe('TryOnView', () => {
     expect(resultImg).toBeInTheDocument();
     expect(originalImg.getAttribute('alt')).not.toEqual(resultImg.getAttribute('alt'));
   });
+
+  it('durante el procesamiento ofrece el botón "seguir usando la app" y navega a /wardrobe (86e301dm7)', async () => {
+    server.use(
+      http.get('*/api/v1/vton/status/:id', () =>
+        HttpResponse.json({
+          job_id: JOB_UUID,
+          status: 'processing',
+        })
+      )
+    );
+
+    renderWithProviders(<TryOnView />);
+    await uploadPhoto();
+    await userEvent.click(await screen.findByRole('button', { name: /generar prueba virtual/i }));
+
+    const continueBtn = await screen.findByRole('button', {
+      name: /seguir usando la app/i,
+    });
+    expect(continueBtn).toBeInTheDocument();
+
+    await userEvent.click(continueBtn);
+    expect(push).toHaveBeenCalledWith('/wardrobe');
+  });
 });
