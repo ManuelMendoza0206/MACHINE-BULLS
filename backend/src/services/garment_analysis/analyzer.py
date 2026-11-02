@@ -68,7 +68,9 @@ def get_classifier() -> ClipClassifier:
     if _classifier is None:
         with _lock:
             if _classifier is None:
-                _classifier = ClipClassifier()
+                from config import settings
+
+                _classifier = ClipClassifier(model_name=settings.clip_model_name)
     return _classifier
 
 
