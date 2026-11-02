@@ -18,7 +18,6 @@ from typing import Annotated
 from fastapi import APIRouter, BackgroundTasks, Depends, Form, HTTPException, UploadFile
 from sqlalchemy.orm import Session
 
-from api.garments import DEMO_USER_EMAIL
 from db.session import get_session
 from domain.enums import VtonJobStatus, VtonStage
 from domain.models import Garment, Outfit, OutfitGarment, User, VtonJob, new_uuid
@@ -29,6 +28,7 @@ from domain.schemas import (
     VtonJobStatusResponse,
 )
 from services import storage
+from services.auth import DEMO_USER_EMAIL
 from services.vton import pipeline
 
 router = APIRouter(prefix="/api/v1/vton", tags=["vton"])

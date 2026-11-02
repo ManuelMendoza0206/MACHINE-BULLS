@@ -60,6 +60,7 @@ class Settings:
     azure_storage_connection_string: str | None
     azure_storage_container_name: str
     azure_storage_public_url_base: str | None
+    supabase_jwt_secret: str | None
 
     @property
     def media_url_base(self) -> str:
@@ -91,6 +92,7 @@ def load_settings() -> Settings:
         azure_storage_connection_string=os.environ.get("AZURE_STORAGE_CONNECTION_STRING") or None,
         azure_storage_container_name=os.environ.get("AZURE_STORAGE_CONTAINER_NAME", "styleme"),
         azure_storage_public_url_base=os.environ.get("AZURE_STORAGE_PUBLIC_URL_BASE") or None,
+        supabase_jwt_secret=os.environ.get("SUPABASE_JWT_SECRET") or None,
     )
 
 

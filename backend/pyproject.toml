@@ -32,6 +32,7 @@ dependencies = [
   "mediapipe>=1.0",
   "rembg[cpu]>=2.0",
   "azure-storage-blob>=12.19",
+  "pyjwt>=2.8",
 ]
 
 [tool.ruff]
