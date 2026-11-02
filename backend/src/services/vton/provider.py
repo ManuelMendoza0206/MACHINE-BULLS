@@ -21,7 +21,10 @@ from __future__ import annotations
 import base64
 import io
 import logging
+import os
+from pathlib import Path
 from typing import Any, Protocol
+from urllib.parse import urlparse, urlunparse
 
 import httpx
 from PIL import Image
@@ -32,6 +35,55 @@ logger = logging.getLogger(__name__)
 
 REPLICATE_API = "https://api.replicate.com/v1"
 IDM_VTON_VERSION = "0513734a452173b8173e907e3a59d19a36266e55b48528559432bd21c7d7e985"
+
+DEFAULT_CATVTON_PORT = 7861
+DEFAULT_CATVTON_LOCAL_URL = f"http://127.0.0.1:{DEFAULT_CATVTON_PORT}/tryon"
+DEFAULT_CATVTON_DOCKER_URL = f"http://host.docker.internal:{DEFAULT_CATVTON_PORT}/tryon"
+
+
+def is_running_in_docker() -> bool:
+    """Detecta si el proceso actual corre dentro de un contenedor Docker."""
+    return Path("/.dockerenv").exists() or os.environ.get("RUNNING_IN_DOCKER") == "1"
+
+
+def resolve_catvton_url(configured_url: str | None = None) -> str:
+    """Resuelve la URL del server CatVTON para ejecucion local o en contenedor.
+
+    Si no hay URL configurada explicitamente:
+    - En contenedor Docker (backend/worker): http://host.docker.internal:7861/tryon
+    - En host nativo (laptop/workstation con GPU): http://127.0.0.1:7861/tryon
+
+    Si viene configurada solo con base (ej. http://127.0.0.1:7861 o http://localhost:7861),
+    asegura que incluya la ruta `/tryon`.
+    """
+    if not configured_url or not configured_url.strip():
+        if is_running_in_docker():
+            return DEFAULT_CATVTON_DOCKER_URL
+        return DEFAULT_CATVTON_LOCAL_URL
+
+    url = configured_url.strip()
+    parsed = urlparse(url)
+    if not parsed.path or parsed.path == "/":
+        return urlunparse(parsed._replace(path="/tryon"))
+    return url
+
+
+def is_catvton_server_reachable(url: str, timeout_s: float = 0.8) -> bool:
+    """Verifica si el servidor CatVTON esta escuchando en el host/puerto especificado."""
+    try:
+        parsed = urlparse(url)
+        if not parsed.scheme or not parsed.netloc:
+            return False
+        base = f"{parsed.scheme}://{parsed.netloc}"
+        with httpx.Client(timeout=timeout_s) as client:
+            try:
+                resp = client.get(f"{base}/health")
+                return resp.status_code < 500
+            except (httpx.HTTPError, OSError):
+                resp = client.get(f"{base}/")
+                return resp.status_code < 500
+    except (httpx.HTTPError, OSError):
+        return False
 
 # El modelo acepta estas categorias; el mapping desde CLIP vive en domain.enums.
 VTON_CATEGORIES = ("upper", "lower", "dresses")
@@ -204,8 +256,14 @@ class HttpVtonProvider:
             headers["Authorization"] = f"Bearer {self._token}"
 
         with httpx.Client(timeout=self._timeout) as client:
-            resp = client.post(self._endpoint, json=payload, headers=headers)
-            resp.raise_for_status()
+            try:
+                resp = client.post(self._endpoint, json=payload, headers=headers)
+                resp.raise_for_status()
+            except httpx.ConnectError as exc:
+                raise RuntimeError(
+                    f"No se pudo conectar con el servidor VTON en {self._endpoint}. "
+                    f"Si usas CatVTON nativo en el host, verifica que 'server.py' esté corriendo en el puerto 7861."
+                ) from exc
             content_type = resp.headers.get("content-type", "")
             if content_type.startswith("image/"):
                 return resp.content
@@ -284,26 +342,38 @@ def build_provider() -> VtonInferenceProvider:
     """Fabrica el proveedor segun configuracion (orden de prioridad).
 
     1. `VTON_PROVIDER=mock`      -> fallback local (PIL), siempre funciona.
-    2. `VTON_PROVIDER=catvton`   -> server.py de CatVTON via `VTON_HTTP_URL`
-       (GPU local del host: modo A del MVP).
+    2. `VTON_PROVIDER=catvton`   -> server.py de CatVTON (GPU local del host).
+       Si falta `VTON_HTTP_URL`, resuelve automaticamente http://127.0.0.1:7861/tryon
+       (o http://host.docker.internal:7861/tryon en Docker).
     3. `VTON_PROVIDER=http`      -> cualquier endpoint HTTP propio
        (`VTON_HTTP_URL` obligatoria).
     4. `VTON_PROVIDER=replicate` -> `REPLICATE_API_TOKEN` (obligatoria).
-    5. `VTON_PROVIDER=auto` (default) -> http/catvton si hay `VTON_HTTP_URL`
-       (la opcion mas barata), despues Replicate, si no mock.
+    5. `VTON_PROVIDER=auto` (default) ->
+       - Si hay `VTON_HTTP_URL`: usa HttpVtonProvider con esa URL.
+       - Si no hay `VTON_HTTP_URL` pero el server CatVTON responde en el puerto 7861:
+         usa automaticamente HttpVtonProvider (la opcion con GPU mas barata y local).
+       - Despues Replicate si hay token.
+       - Si no: fallback a MockVtonProvider.
     """
     modo = settings.vton_provider.lower()
     if modo == "mock":
         return MockVtonProvider()
-    if modo in ("catvton", "http"):
+    if modo == "catvton":
+        catvton_url = resolve_catvton_url(settings.vton_http_url)
+        return HttpVtonProvider(
+            catvton_url,
+            api_token=None,  # catvton local no pide auth; VM propia la agrega si quiere
+            timeout_s=settings.vton_http_timeout_s,
+        )
+    if modo == "http":
         if not settings.vton_http_url:
             raise RuntimeError(
                 f"VTON_PROVIDER={modo} pero falta VTON_HTTP_URL "
-                "(ej. http://127.0.0.1:7861/tryon del server CatVTON local)"
+                "(ej. http://127.0.0.1:7861/tryon del server CatVTON local o URL de VM)"
             )
         return HttpVtonProvider(
             settings.vton_http_url,
-            api_token=None,  # catvton local no pide auth; VM propia la agrega si quiere
+            api_token=settings.replicate_api_token,
             timeout_s=settings.vton_http_timeout_s,
         )
     if modo == "replicate":
@@ -317,6 +387,19 @@ def build_provider() -> VtonInferenceProvider:
             api_token=settings.replicate_api_token,
             timeout_s=settings.vton_http_timeout_s,
         )
+    # Autodeteccion del server CatVTON nativo en el puerto 7861
+    candidate_catvton = resolve_catvton_url(None)
+    if is_catvton_server_reachable(candidate_catvton):
+        logger.info(
+            "Server CatVTON detectado activo en %s: usando HttpVtonProvider",
+            candidate_catvton,
+        )
+        return HttpVtonProvider(
+            candidate_catvton,
+            api_token=None,
+            timeout_s=settings.vton_http_timeout_s,
+        )
+
     if settings.replicate_api_token:
         return ReplicateVtonProvider(settings.replicate_api_token)
     logger.warning("VTON en modo auto sin VTON_HTTP_URL ni token: usando MockVtonProvider")
