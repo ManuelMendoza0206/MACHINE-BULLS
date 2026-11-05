@@ -5,7 +5,7 @@ import type { JSX } from 'react';
 import { ThemeProvider } from 'next-themes';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { TooltipProvider } from '@radix-ui/react-tooltip';
-import { Toaster } from 'sonner';
+import { Toaster } from '@/components/ui/sonner';
 import { AuthProvider } from '@/features/auth/components/AuthProvider';
 import { defaultQueryClientConfig } from '@/lib/api/queryClient';
 

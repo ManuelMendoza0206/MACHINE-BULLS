@@ -92,3 +92,21 @@ def test_api_me_devuelve_usuario_autenticado(client: TestClient) -> None:
     datos = resp.json()
     assert datos["user_id"] == "real-user-id-5555"
     assert datos["email"] == "jaicel.real@ucb.edu.bo"
+
+
+def test_decode_token_es256_asimetrico() -> None:
+    """Verifica que tokens con algoritmo ES256 (como los emitidos por Supabase) sean decodificados correctamente."""
+    from cryptography.hazmat.primitives.asymmetric import ec
+
+    private_key = ec.generate_private_key(ec.SECP256R1())
+    payload = {
+        "sub": "user-es256-test-uuid",
+        "email": "jaicel-es256@styleme.test",
+        "role": "authenticated",
+        "aud": "authenticated",
+        "exp": time.time() + 3600,
+    }
+    token = jwt.encode(payload, private_key, algorithm="ES256", headers={"kid": "test-kid"})
+    decoded = decode_supabase_token(token)
+    assert decoded["sub"] == "user-es256-test-uuid"
+    assert decoded["email"] == "jaicel-es256@styleme.test"

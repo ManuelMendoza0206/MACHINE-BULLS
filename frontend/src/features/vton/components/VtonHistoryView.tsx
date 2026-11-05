@@ -88,8 +88,7 @@ export function VtonHistoryView(): JSX.Element {
               Aún no realizaste ninguna prueba virtual
             </h2>
             <p className="max-w-md text-sm text-muted-foreground">
-              Seleccioná un outfit sugerido por la IA o armá el tuyo y subí una foto para ver cómo
-              te queda puesto.
+              Selecciona un outfit del catálogo o crea uno propio y sube tu foto para probarlo.
             </p>
           </div>
           <div className="flex flex-wrap items-center justify-center gap-3 pt-2">

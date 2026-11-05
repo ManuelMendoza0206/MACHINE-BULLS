@@ -298,7 +298,7 @@ describe('TryOnView', () => {
 
     expect(
       await screen.findByText(
-        'No pudimos generar la prueba virtual. Intentá con otra foto o prenda.',
+        /No pudimos generar la prueba virtual\. Intent[aá] con otra foto o prenda\./i,
         {},
         { timeout: 4_000 }
       )

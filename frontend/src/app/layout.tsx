@@ -3,16 +3,15 @@ import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import { AppProviders } from './providers';
 import { SkipToContentLink } from '@/components/shell/SkipToContentLink';
-import { TopNav } from '@/components/shell/TopNav';
-import { BottomTabBar } from '@/components/shell/BottomTabBar';
+import { AppShell } from '@/components/shell/AppShell';
 
 export const metadata: Metadata = {
   title: {
-    default: 'StyleMe — probate tu armario',
+    default: 'StyleMe — prueba tu armario',
     template: '%s · StyleMe',
   },
   description:
-    'Digitalizá tus prendas, descubrí combinaciones por armonía cromática y probátelas sobre tu propia foto con difusión multicapa.',
+    'Digitaliza tus prendas, descubre combinaciones por armonía cromática y pruébatelas sobre tu propia foto con difusión multicapa.',
 };
 
 export const viewport: Viewport = {
@@ -33,11 +32,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }):
         {/* First focusable element of the document. */}
         <SkipToContentLink />
         <AppProviders>
-          <TopNav />
-          <main id="main-content" tabIndex={-1} className="pb-24 lg:pb-0">
-            {children}
-          </main>
-          <BottomTabBar />
+          <AppShell>{children}</AppShell>
         </AppProviders>
       </body>
     </html>

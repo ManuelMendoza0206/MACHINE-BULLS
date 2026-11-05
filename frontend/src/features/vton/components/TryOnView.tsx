@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { PhotoConsentGate } from '@/features/garments/components/PhotoConsentGate';
 import { GarmentDropzone } from '@/features/garments/components/GarmentDropzone';
@@ -43,7 +43,7 @@ type Phase = 'idle' | 'processing' | 'completed' | 'failed' | 'timeout';
 
 function describeCreateError(error: unknown): string {
   if (error instanceof ApiError) return mapStatusToUserMessage(error.status, error.responseBody);
-  return 'No pudimos generar la prueba. Revisá tu conexión e intentá de nuevo.';
+  return 'No pudimos generar la prueba. Revisa tu conexión e intenta de nuevo.';
 }
 
 /**
@@ -189,7 +189,7 @@ export function TryOnView(): JSX.Element {
             const msg =
               status.error_message && status.error_message.trim().length > 0
                 ? status.error_message
-                : 'No pudimos generar la prueba virtual. Intentá con otra foto o prenda.';
+                : 'No pudimos generar la prueba virtual. Intenta con otra foto o prenda.';
             setFailure(msg);
             setPhase('failed');
           } else {
@@ -294,12 +294,12 @@ export function TryOnView(): JSX.Element {
         const msg =
           status.error_message && status.error_message.trim().length > 0
             ? status.error_message
-            : 'No pudimos generar la prueba virtual. Intentá con otra foto o prenda.';
+            : 'No pudimos generar la prueba virtual. Intenta con otra foto o prenda.';
         setFailure(msg);
         setPhase('failed');
       } else {
         setManualCheckMsg(
-          'El servidor aún está procesando la prueba virtual. Podés esperar o consultar tu historial más tarde.'
+          'El servidor aún está procesando la prueba virtual. Puedes esperar o consultar tu historial más tarde.'
         );
       }
     } catch {
@@ -312,7 +312,7 @@ export function TryOnView(): JSX.Element {
   if (!effectiveOutfitId) {
     return (
       <div className="rounded-lg border border-border p-6 text-center">
-        <p className="font-semibold">Elegí un outfit primero</p>
+        <p className="font-semibold">Elige un outfit primero</p>
         <p className="mt-2 text-sm text-muted-foreground">
           El probador trabaja sobre una combinación armada en la sección de outfits.
         </p>
@@ -346,70 +346,130 @@ export function TryOnView(): JSX.Element {
   );
 
   return (
-    <div className="grid gap-6 lg:grid-cols-2">
-      {/* Outfit elegido */}
-      <Card className="rounded-2xl sm:rounded-3xl border border-border/80 bg-background/80 shadow-xs">
-        <CardHeader className="flex-row items-center justify-between space-y-0">
-          <div>
-            <h2 className="text-lg font-semibold tracking-tight">Outfit a probar</h2>
-            {availableOutfits.length > 1 && (
-              <p className="text-xs text-muted-foreground mt-0.5">
-                {availableOutfits.length} combinaciones disponibles
-              </p>
-            )}
+    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
+      {/* Columna Izquierda: Outfit elegido y desglose de capas (Bento Modular) */}
+      <Card className="lg:col-span-5 flex flex-col justify-between rounded-3xl border border-border/80 bg-background/85 shadow-sm p-6 sm:p-7">
+        <div className="space-y-6">
+          <div className="flex items-center justify-between pb-3 border-b border-border/60">
+            <div>
+              <h2 className="text-xl font-bold tracking-tight text-foreground">Outfit a probar</h2>
+              {availableOutfits.length > 1 && (
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {availableOutfits.length} combinaciones disponibles
+                </p>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              <Badge
+                variant="outline"
+                className="border-accent/40 text-accent font-mono text-xs capitalize px-2.5 py-0.5"
+              >
+                {outfit.data.aesthetic.replace(/_/g, ' ')}
+              </Badge>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-7 px-2.5 text-xs text-muted-foreground hover:text-foreground rounded-full"
+                onClick={() => router.push('/outfits')}
+              >
+                Cambiar
+              </Button>
+            </div>
           </div>
-          <div className="flex items-center gap-2">
-            <Badge
-              variant="outline"
-              className="border-accent/40 text-accent font-mono text-xs capitalize"
-            >
-              {outfit.data.aesthetic.replace(/_/g, ' ')}
-            </Badge>
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground"
-              onClick={() => router.push('/outfits')}
-            >
-              Cambiar
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <ul className="grid grid-cols-4 gap-2" aria-label="Prendas del outfit">
-            {outfit.data.garments.map(ref => {
-              const src = images.get(ref.garment_id);
-              return (
-                <li
-                  key={ref.garment_id}
-                  className="relative aspect-square overflow-hidden rounded-xl bg-muted/60 border border-border/50"
-                >
-                  {src ? (
-                    // eslint-disable-next-line @next/next/no-img-element -- URL arbitraria del backend
-                    <img
-                      src={src}
-                      alt={POSITION_LABEL[ref.position]}
-                      className="h-full w-full object-cover"
-                    />
-                  ) : (
-                    <span className="flex h-full items-center justify-center p-1 text-center text-xs text-muted-foreground">
-                      {POSITION_LABEL[ref.position]}
+
+          <div className="space-y-2">
+            <p className="text-xs font-semibold text-foreground">Prendas combinadas:</p>
+            <ul className="grid grid-cols-4 gap-2.5" aria-label="Prendas del outfit">
+              {outfit.data.garments.map(ref => {
+                const src = images.get(ref.garment_id);
+                return (
+                  <li
+                    key={ref.garment_id}
+                    className="group relative aspect-square overflow-hidden rounded-2xl bg-muted/50 border border-border/60 transition-all hover:border-accent/50 hover:shadow-xs"
+                  >
+                    {src ? (
+                      // eslint-disable-next-line @next/next/no-img-element -- URL arbitraria del backend
+                      <img
+                        src={src}
+                        alt={POSITION_LABEL[ref.position]}
+                        className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                      />
+                    ) : (
+                      <span className="flex h-full items-center justify-center p-1 text-center text-[11px] text-muted-foreground">
+                        {POSITION_LABEL[ref.position]}
+                      </span>
+                    )}
+                    <span className="absolute bottom-1 left-1 right-1 rounded-md bg-background/85 px-1 py-0.5 text-[9px] font-mono font-medium text-foreground text-center truncate backdrop-blur-xs">
+                      {POSITION_LABEL[ref.position].split(' ')[1] ?? POSITION_LABEL[ref.position]}
                     </span>
-                  )}
-                </li>
-              );
-            })}
-          </ul>
-        </CardContent>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+
+          {/* Secuencia anatómica por capas */}
+          <div className="space-y-2.5 rounded-2xl border border-border/60 bg-muted/30 p-4">
+            <p className="text-xs font-semibold text-foreground">Secuencia anatómica CatVTON:</p>
+            <div className="space-y-2 text-xs text-muted-foreground">
+              <div className="flex items-center justify-between text-[11px]">
+                <span className="flex items-center gap-1.5">
+                  <span className="flex h-4 w-4 items-center justify-center rounded-full bg-accent/15 text-[10px] font-mono font-bold text-accent">
+                    1
+                  </span>
+                  Capa inferior
+                </span>
+                <span className="font-mono text-[10px] text-foreground">
+                  Ajuste de cadera y piernas
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-[11px]">
+                <span className="flex items-center gap-1.5">
+                  <span className="flex h-4 w-4 items-center justify-center rounded-full bg-accent/15 text-[10px] font-mono font-bold text-accent">
+                    2
+                  </span>
+                  Capa superior
+                </span>
+                <span className="font-mono text-[10px] text-foreground">
+                  Alineación de torso y cuello
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-[11px]">
+                <span className="flex items-center gap-1.5">
+                  <span className="flex h-4 w-4 items-center justify-center rounded-full bg-accent/15 text-[10px] font-mono font-bold text-accent">
+                    3
+                  </span>
+                  Capa exterior
+                </span>
+                <span className="font-mono text-[10px] text-foreground">
+                  Superposición sin deformación
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="pt-4 mt-4 border-t border-border/50 text-[11px] text-muted-foreground flex items-center justify-between">
+          <span>Difusión asistida por MediaPipe</span>
+          <span className="font-mono text-accent">Orden verificado</span>
+        </div>
       </Card>
 
-      {/* Foto + generación */}
-      <Card className="rounded-2xl sm:rounded-3xl border border-border/80 bg-background/80 shadow-xs">
-        <CardHeader>
-          <h2 className="text-lg font-semibold tracking-tight">Tu foto</h2>
-        </CardHeader>
-        <CardContent className="space-y-4">
+      {/* Columna Derecha: Foto del usuario + Pipeline + Inferencia (Bento Modular) */}
+      <Card className="lg:col-span-7 flex flex-col justify-between rounded-3xl border border-border/80 bg-background/85 shadow-sm p-6 sm:p-7">
+        <div className="space-y-6">
+          <div className="flex items-center justify-between pb-3 border-b border-border/60">
+            <div>
+              <h2 className="text-xl font-bold tracking-tight text-foreground">Tu foto</h2>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Foto frontal de cuerpo completo en postura A-Pose
+              </p>
+            </div>
+            <span className="text-xs font-mono text-muted-foreground bg-muted/60 px-2.5 py-1 rounded-full">
+              MediaPipe A-Pose
+            </span>
+          </div>
           <PhotoConsentGate>
             <div className="space-y-4">
               {previewUrl ? (
@@ -431,7 +491,7 @@ export function TryOnView(): JSX.Element {
                   <GarmentDropzone onFilesSelected={handleFiles} multiple={false} />
                   <div className="rounded-lg border border-border/80 bg-muted/30 p-3 space-y-2">
                     <p className="text-xs font-medium text-muted-foreground">
-                      O usá un modelo rápido para la demo:
+                      O usa un modelo rápido para la demo:
                     </p>
                     <div className="flex flex-wrap gap-2">
                       <Button
@@ -557,7 +617,7 @@ export function TryOnView(): JSX.Element {
 
               <Skeleton className="mx-auto h-2 w-full rounded-full" />
               <p className="text-sm text-muted-foreground" role="status">
-                La IA está vistiendo tu outfit… ({Math.round(getPollTimeoutMs() / 1000)}s máx.)
+                Generando la prueba virtual… ({Math.round(getPollTimeoutMs() / 1000)}s máx.)
               </p>
               <div className="pt-2 border-t border-border/40">
                 <Button
@@ -678,7 +738,7 @@ export function TryOnView(): JSX.Element {
                 No pudimos completar la prueba virtual
               </p>
               <p role="alert" className="text-sm font-medium text-foreground">
-                {failure || 'No pudimos generar la prueba virtual. Intentá con otra foto o prenda.'}
+                {failure || 'No pudimos generar la prueba virtual. Intenta con otra foto o prenda.'}
               </p>
               <div className="flex flex-wrap gap-2 pt-1">
                 <Button type="button" size="sm" onClick={submit}>
@@ -698,7 +758,7 @@ export function TryOnView(): JSX.Element {
               </div>
             </div>
           )}
-        </CardContent>
+        </div>
       </Card>
     </div>
   );

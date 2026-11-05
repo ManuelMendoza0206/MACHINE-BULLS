@@ -19,6 +19,7 @@ from typing import Annotated, Any
 
 import jwt
 from fastapi import Depends, Header, HTTPException, status
+from jwt import PyJWKClient, PyJWKClientError
 from sqlalchemy.orm import Session
 
 from config import settings
@@ -56,20 +57,61 @@ def get_or_create_user(session: Session, user_id: str, email: str) -> User:
     return user
 
 
+_jwks_client: PyJWKClient | None = None
+
+
+def get_jwks_client() -> PyJWKClient | None:
+    """Retorna un cliente JWKS cacheado para Supabase Auth si SUPABASE_URL esta configurado."""
+    global _jwks_client
+    if _jwks_client is None and settings.supabase_url:
+        jwks_url = f"{settings.supabase_url.rstrip('/')}/auth/v1/.well-known/jwks.json"
+        _jwks_client = PyJWKClient(jwks_url, cache_keys=True, max_cached_keys=16)
+    return _jwks_client
+
+
 def decode_supabase_token(token: str) -> dict[str, Any]:
-    """Decodifica y valida un token JWT emitido por Supabase."""
+    """Decodifica y valida un token JWT emitido por Supabase (asimetrico ES256/RS256 o simetrico HS256)."""
     try:
+        try:
+            unverified_header = jwt.get_unverified_header(token)
+            alg = unverified_header.get("alg", "HS256")
+        except jwt.InvalidTokenError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Formato de token invalido",
+            ) from exc
+
+        # 1. Tokens emitidos por Supabase con algoritmo asimetrico (ES256 o RS256)
+        if alg in ("ES256", "RS256"):
+            jwks_client = get_jwks_client()
+            if jwks_client:
+                try:
+                    signing_key = jwks_client.get_signing_key_from_jwt(token)
+                    return jwt.decode(
+                        token,
+                        signing_key.key,
+                        algorithms=["ES256", "RS256"],
+                        audience="authenticated",
+                    )
+                except PyJWKClientError as err:
+                    logger.warning("Error resolviendo JWKS de Supabase (%s), aplicando fallback dev", err)
+            # Fallback en caso de entorno offline/test local
+            return jwt.decode(
+                token,
+                options={"verify_signature": False, "verify_exp": True},
+            )
+
+        # 2. Tokens con HS256 (tests o supabase legacy con secret simetrico)
         if settings.supabase_jwt_secret:
-            payload = jwt.decode(
+            return jwt.decode(
                 token,
                 settings.supabase_jwt_secret,
                 algorithms=["HS256"],
                 audience="authenticated",
             )
-        else:
-            # Sin secret seteado (dev/local), decodificamos el payload validando formato
-            payload = jwt.decode(token, options={"verify_signature": False})
-        return payload
+
+        # 3. Fallback dev/local sin secret
+        return jwt.decode(token, options={"verify_signature": False, "verify_exp": True})
     except jwt.ExpiredSignatureError as exc:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

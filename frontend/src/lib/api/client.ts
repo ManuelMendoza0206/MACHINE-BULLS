@@ -43,8 +43,23 @@ export async function apiRequest<T>(config: RequestConfig, schema: z.ZodType<T>)
     try {
       const supabase = createBrowserSupabaseClient();
       const { data } = await supabase.auth.getSession();
-      if (data?.session?.access_token) {
-        authHeaders['Authorization'] = `Bearer ${data.session.access_token}`;
+      const session = data?.session;
+      if (session) {
+        let token = session.access_token;
+        const nowSec = Math.floor(Date.now() / 1000);
+        if (session.expires_at && session.expires_at <= nowSec + 30) {
+          try {
+            const { data: refreshed } = await supabase.auth.refreshSession();
+            if (refreshed?.session?.access_token) {
+              token = refreshed.session.access_token;
+            }
+          } catch {
+            // Si el refresh falla, continuar con el token existente
+          }
+        }
+        if (token) {
+          authHeaders['Authorization'] = `Bearer ${token}`;
+        }
       }
     } catch {
       // Ignora errores si Supabase no responde o esta offline (fallback a demo)

@@ -4,7 +4,7 @@ import { cn } from '@/lib/utils/cn';
 
 /** Label-like tags: rectangular, tracked, always carrying their meaning in text. */
 export const badgeVariants = cva(
-  'inline-flex items-center rounded-[2px] border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em]',
+  'inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold tracking-wide transition-colors',
   {
     variants: {
       variant: {

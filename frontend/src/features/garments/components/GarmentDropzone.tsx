@@ -1,6 +1,7 @@
 'use client';
 
 import { useRef, useState, type DragEvent, type JSX } from 'react';
+import { UploadCloud } from 'lucide-react';
 import { cn } from '@/lib/utils/cn';
 
 export interface GarmentDropzoneProps {
@@ -8,6 +9,7 @@ export interface GarmentDropzoneProps {
   /** @default true */
   multiple?: boolean;
   disabled?: boolean;
+  className?: string;
 }
 
 function toImageFiles(list: FileList | null): File[] {
@@ -23,6 +25,7 @@ export function GarmentDropzone({
   onFilesSelected,
   multiple = true,
   disabled = false,
+  className,
 }: GarmentDropzoneProps): JSX.Element {
   const inputRef = useRef<HTMLInputElement>(null);
   const [isDragOver, setIsDragOver] = useState(false);
@@ -54,14 +57,25 @@ export function GarmentDropzone({
       onDragLeave={() => setIsDragOver(false)}
       onDrop={handleDrop}
       className={cn(
-        'flex min-h-32 w-full cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-border p-6 text-center transition-colors',
-        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent',
-        isDragOver && 'border-accent bg-muted',
-        disabled && 'cursor-not-allowed opacity-50'
+        'group relative flex min-h-32 md:min-h-[380px] lg:min-h-[440px] h-full w-full cursor-pointer flex-col items-center justify-center gap-3 rounded-3xl border-2 border-dashed border-border/80 bg-background/70 backdrop-blur-sm p-8 sm:p-12 text-center transition-all hover:border-accent/60 hover:bg-muted/30 shadow-sm',
+        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2',
+        isDragOver && 'border-accent bg-accent/10 shadow-md scale-[0.99]',
+        disabled && 'cursor-not-allowed opacity-50',
+        className
       )}
     >
-      <p className="text-sm font-medium">Arrastrá tus prendas aquí</p>
-      <p className="text-xs text-muted-foreground">o hacé click para elegir archivos</p>
+      <div className="grid h-14 w-14 sm:h-16 sm:w-16 place-items-center rounded-2xl bg-accent/10 text-accent transition-transform group-hover:scale-105 mb-1 shadow-2xs">
+        <UploadCloud className="h-7 w-7 sm:h-8 sm:w-8 stroke-[1.75]" />
+      </div>
+      <p className="text-base sm:text-lg font-bold tracking-tight text-foreground">
+        Arrastra tus prendas aquí
+      </p>
+      <p className="text-xs sm:text-sm text-muted-foreground max-w-xs leading-relaxed">
+        o haz clic para elegir archivos desde tu dispositivo
+      </p>
+      <span className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-muted/60 px-3 py-1 text-[11px] font-mono text-muted-foreground border border-border/50">
+        JPG, PNG, WEBP (múltiples fotos)
+      </span>
       <input
         ref={inputRef}
         type="file"
