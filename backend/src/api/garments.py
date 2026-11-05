@@ -25,32 +25,23 @@ from domain.schemas import (
     GarmentUploadResponse,
 )
 from services import storage
+from services.auth import DEMO_USER_EMAIL, get_current_user, get_demo_user
 from services.garment_analysis.analyzer import analyze_garment
+from services.garment_analysis.background_remover import remove_background
+
+__all__ = ["DEMO_USER_EMAIL", "get_current_user", "get_demo_user", "router"]
 
 router = APIRouter(prefix="/api/v1/garments", tags=["garments"])
 
 SessionDep = Annotated[Session, Depends(get_session)]
-
-# Usuario demo: el MVP no valida JWT (Supabase auth queda para produccion).
-# El frontend no manda Authorization, asi que usamos un usuario fijo por email.
-DEMO_USER_EMAIL = "demo@styleme.test"
-
-
-def get_demo_user(session: Session) -> User:
-    """Devuelve (creandolo si falta) el usuario demo de la capsule."""
-    user = session.query(User).filter(User.email == DEMO_USER_EMAIL).first()
-    if user is None:
-        user = User(id=new_uuid(), email=DEMO_USER_EMAIL)
-        session.add(user)
-        session.commit()
-        session.refresh(user)
-    return user
+UserDep = Annotated[User, Depends(get_current_user)]
 
 
 @router.post("/upload", response_model=GarmentUploadResponse)
 def upload_garment(
     file: UploadFile,
     session: SessionDep,
+    user: UserDep,
 ) -> GarmentUploadResponse:
     """Analiza una prenda subida: CLIP (categoria + estetica) + colores."""
     contenido = file.file.read()
@@ -65,11 +56,16 @@ def upload_garment(
     except UnidentifiedImageError as exc:
         raise HTTPException(status_code=400, detail="archivo no es una imagen") from exc
 
-    user = get_demo_user(session)
-    analisis = analyze_garment(imagen)
+    # Remocion de fondo textil (u2net_cloth_seg)
+    imagen_procesada = remove_background(imagen)
+    buf_proc = io.BytesIO()
+    imagen_procesada.save(buf_proc, format="PNG")
+    proc_bytes = buf_proc.getvalue()
+
+    analisis = analyze_garment(imagen_procesada)
 
     rel_orig, _ = storage.save_image(contenido, "garments")
-    rel_proc, _ = storage.save_image(contenido, "garments")
+    rel_proc, _ = storage.save_image(proc_bytes, "garments")
 
     garment = Garment(
         id=new_uuid(),
@@ -141,9 +137,9 @@ def _dominant_aesthetic(g: Garment) -> str:
 def adopt_capsule_garment(
     garment_id: str,
     session: SessionDep,
+    user: UserDep,
 ) -> dict:
     """Adopta una prenda de capsule. 409 si ya era tuya (idempotente en efecto)."""
-    user = get_demo_user(session)
     garment = session.get(Garment, garment_id)
     if garment is None:
         raise HTTPException(status_code=404, detail="prenda no existe")

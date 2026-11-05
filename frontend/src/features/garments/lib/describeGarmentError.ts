@@ -8,7 +8,7 @@ export function describeGarmentError(error: unknown): string {
   }
   if (error instanceof Error) {
     return error.name === 'NetworkError'
-      ? 'No pudimos conectar con el servidor. Revisá tu conexión.'
+      ? 'No pudimos conectar con el servidor. Revisa tu conexión.'
       : 'La respuesta del servidor no tuvo el formato esperado.';
   }
   return 'Ocurrió un error inesperado.';

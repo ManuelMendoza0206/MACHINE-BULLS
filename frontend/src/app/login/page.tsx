@@ -4,6 +4,7 @@ import { Suspense } from 'react';
 import type { JSX } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { AuthForm } from '@/features/auth/components/AuthForm';
+import { AuthScreenLayout } from '@/features/auth/components/AuthScreenLayout';
 
 function LoginContent(): JSX.Element {
   const router = useRouter();
@@ -15,14 +16,18 @@ function LoginContent(): JSX.Element {
 
 export default function LoginPage(): JSX.Element {
   return (
-    <div className="mx-auto max-w-md px-4 py-12">
-      <h1 className="text-2xl font-bold">Iniciar sesión</h1>
-      <p className="mt-2 text-sm text-muted-foreground">Ingresá tus credenciales para continuar.</p>
-      <div className="mt-6">
-        <Suspense fallback={<p className="text-sm text-muted-foreground">Cargando...</p>}>
-          <LoginContent />
-        </Suspense>
-      </div>
-    </div>
+    <AuthScreenLayout
+      mode="login"
+      title="Iniciar sesión"
+      subtitle="Ingresa con tu email y contraseña para ver tus prendas y pruebas."
+    >
+      <Suspense
+        fallback={
+          <p className="text-sm text-muted-foreground py-4 text-center">Cargando formulario...</p>
+        }
+      >
+        <LoginContent />
+      </Suspense>
+    </AuthScreenLayout>
   );
 }

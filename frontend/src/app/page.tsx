@@ -1,8 +1,9 @@
 import type { JSX } from 'react';
 import Link from 'next/link';
-import { ArrowRight, Layers, Palette, ScanLine } from 'lucide-react';
+import { ArrowRight, Layers, Palette, ScanLine, ShieldCheck, CheckCircle2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { BentoCard } from '@/components/ui/card';
 import { ScoreGauge } from '@/components/ui/score-gauge';
 import { LandingCta } from '@/features/auth/components/LandingCta';
 
@@ -16,21 +17,21 @@ const SAMPLES = [
 
 const STEPS = [
   {
-    title: 'Digitalizá',
-    body: 'Subís la foto de una prenda. CLIP la clasifica, le asigna una posición y extrae sus colores dominantes en HSV.',
-    data: '512 dimensiones · CLIP ViT-B/32',
+    title: 'Sube tus prendas',
+    body: 'Toma una foto de cada prenda. El sistema quita el fondo y detecta su categoría y colores principales.',
+    data: 'Corte de fondo y colorimetría',
     Icon: ScanLine,
   },
   {
-    title: 'Combiná',
-    body: 'El recomendador cruza posición, contraste y afinidad cromática. Cada outfit sale con dos puntajes medidos, no estimados a ojo.',
-    data: '2 puntajes · armonía HSV + embedding',
+    title: 'Arma combinaciones',
+    body: 'Revisa el contraste tonal y la compatibilidad entre prendas antes de decidir qué ponerte.',
+    data: 'Armonía cromática y estilo',
     Icon: Palette,
   },
   {
-    title: 'Probate',
-    body: 'CatVTON genera el outfit capa por capa sobre tu foto: inferiores, superiores y abrigo, en ese orden.',
-    data: '1 a 6 capas · difusión secuencial',
+    title: 'Pruébalo en tu foto',
+    body: 'El probador ajusta las prendas sobre tu foto en orden: parte inferior, superior y abrigo.',
+    data: 'Prueba virtual por capas',
     Icon: Layers,
   },
 ] as const;
@@ -43,243 +44,336 @@ const CHIPS = [
 
 export default function Home(): JSX.Element {
   return (
-    <div className="pb-16">
-      {/* Portada: la tesis del muestrario en un solo viewport. */}
-      <section className="border-b border-border">
-        <div className="mx-auto grid max-w-[1440px] items-start gap-10 px-4 py-10 sm:px-6 lg:grid-cols-12 lg:gap-12 lg:px-10 lg:py-16">
-          <div className="flex flex-col justify-between lg:col-span-7">
-            <div>
-              <h1 className="display animate-enter text-[clamp(2.85rem,7.4vw,5.5rem)]">
-                Probate
-                <br />
-                tu armario.
-              </h1>
-              <p
-                className="animate-enter mt-6 max-w-[48ch] text-base leading-relaxed text-muted-foreground sm:text-lg"
-                style={{ animationDelay: '80ms' }}
+    <div className="min-h-full h-full pb-20 pt-4 px-4 sm:px-6 lg:px-8 max-w-[1440px] mx-auto space-y-8 sm:space-y-12">
+      {/* Hero Section: Bento Asimétrico 2-Columnas (Equilibrio horizontal y vertical) */}
+      <section
+        aria-label="Hero Showcase"
+        className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch pt-4 sm:pt-6"
+      >
+        {/* Hero Bento Izquierdo: Propuesta de valor, CTA y garantías */}
+        <BentoCard
+          glow
+          className="lg:col-span-7 p-8 sm:p-10 lg:p-12 rounded-3xl justify-between border-border/80 bg-background/85 shadow-sm"
+        >
+          <div className="space-y-6">
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge
+                variant="outline"
+                className="rounded-full border-border/80 bg-muted/50 px-3.5 py-1 text-xs font-medium text-foreground"
               >
-                Subí una foto de cada prenda, mirá qué combina de verdad y vestite con el outfit
-                elegido sobre tu propio cuerpo. Difusión multicapa, no un fotomontaje.
-              </p>
-              <div
-                className="animate-enter mt-8 flex flex-col gap-3 sm:flex-row"
-                style={{ animationDelay: '160ms' }}
-              >
-                <LandingCta />
-                <Button asChild size="lg" variant="secondary">
-                  <Link href="/try-on">
-                    Ver el probador
-                    <ArrowRight className="h-4 w-4" aria-hidden="true" />
-                  </Link>
-                </Button>
-              </div>
+                StyleMe · Probador virtual multicapa
+              </Badge>
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-3 py-0.5 text-[11px] font-medium text-emerald-700 dark:text-emerald-400 border border-emerald-500/20">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                Difusión activa
+              </span>
             </div>
 
-            <div className="animate-enter mt-10" style={{ animationDelay: '240ms' }}>
-              <div className="flex items-end justify-between gap-4 border-b border-border pb-2">
-                <p className="label text-muted-foreground">Muestras del armario</p>
-                <p className="num text-[10px] text-muted-foreground">05 REF.</p>
-              </div>
-              <ul className="mt-3 grid grid-cols-5 gap-2 sm:gap-3">
-                {SAMPLES.map(sample => (
-                  <li key={sample.src} className="paper p-1">
-                    <div className="relative aspect-[4/5] overflow-hidden bg-muted">
-                      {/* eslint-disable-next-line @next/next/no-img-element -- muestras locales del demo */}
-                      <img
-                        src={sample.src}
-                        alt={`Muestra ${sample.label}`}
-                        className="h-full w-full object-cover"
-                        loading="lazy"
-                      />
-                      <span className="num absolute left-1 top-1 bg-background/90 px-1 text-[9px] font-semibold text-foreground">
-                        {sample.ref}
-                      </span>
-                    </div>
-                    <p className="label mt-1.5 truncate text-[8px] text-muted-foreground">
-                      {sample.label}
-                    </p>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
+            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-foreground leading-[1.08] text-balance">
+              Pruébate la ropa de tu armario{' '}
+              <span className="text-accent underline decoration-accent/40 underline-offset-8">
+                antes de vestirte
+              </span>
+              .
+            </h1>
 
-          {/* Ficha de muestra: el objeto del mundo, con datos reales del pipeline. */}
-          <div className="animate-enter lg:col-span-5" style={{ animationDelay: '120ms' }}>
-            <div className="relative mx-auto w-full max-w-[430px]">
-              <div
-                aria-hidden="true"
-                className="absolute inset-0 translate-x-3 translate-y-3 border border-accent/30 bg-accent/10"
-              />
-              <article className="paper relative">
-                <div className="flex items-center justify-between border-b border-border px-3 py-2">
-                  <span className="label text-muted-foreground">Ficha 001 · Modelo</span>
-                  <Badge variant="outline" className="border-thread/40 text-thread">
-                    A-Pose
-                  </Badge>
-                </div>
-                <div className="relative">
-                  {/* eslint-disable-next-line @next/next/no-img-element -- muestra local del demo */}
-                  <img
-                    src="/samples/usuario_canonico.jpg"
-                    alt="Modelo de cuerpo completo en pose A, listo para la prueba virtual"
-                    className="aspect-[3/4] w-full object-cover"
-                  />
-                  <span className="animate-stamp absolute right-3 top-3 inline-block border-2 border-thread px-2 py-1 text-thread">
-                    <span className="label text-[9px]">Listo para probar</span>
-                  </span>
-                </div>
-                <dl className="grid grid-cols-3 divide-x divide-border border-t border-border">
-                  <div className="px-3 py-2.5">
-                    <dt className="label text-muted-foreground">Capas</dt>
-                    <dd className="num mt-1 text-sm font-semibold">1–6</dd>
-                  </div>
-                  <div className="px-3 py-2.5">
-                    <dt className="label text-muted-foreground">Entrada</dt>
-                    <dd className="mt-1 text-sm font-semibold">JPEG</dd>
-                  </div>
-                  <div className="px-3 py-2.5">
-                    <dt className="label text-muted-foreground">Salida</dt>
-                    <dd className="mt-1 text-sm font-semibold">1 foto</dd>
-                  </div>
-                </dl>
-              </article>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* La secuencia real del producto. */}
-      <section className="border-b border-border">
-        <div className="mx-auto max-w-[1440px] px-4 py-14 sm:px-6 lg:px-10">
-          <div className="flex flex-wrap items-end justify-between gap-4">
-            <h2 className="display text-[clamp(1.9rem,3.4vw,3rem)]">Del cajón al espejo.</h2>
-            <p className="max-w-[38ch] text-sm leading-relaxed text-muted-foreground">
-              Tres pasos, todos con datos que el sistema realmente produce.
+            <p className="max-w-xl text-base sm:text-lg text-muted-foreground leading-relaxed text-pretty">
+              Sube fotos de tus prendas, revisa qué tan bien combinan por color y pruébalas capa por
+              capa sobre una foto de tu cuerpo.
             </p>
           </div>
 
-          <ol className="mt-9 grid gap-px border border-border bg-border sm:grid-cols-3">
-            {STEPS.map((step, index) => (
-              <li key={step.title} className="flex flex-col bg-background p-6">
-                <div className="flex items-center justify-between">
-                  <span className="num display text-[2.4rem] leading-none text-thread">
-                    {String(index + 1).padStart(2, '0')}
-                  </span>
-                  <step.Icon className="h-5 w-5 text-muted-foreground" aria-hidden="true" />
+          <div className="space-y-6 pt-8 mt-4 border-t border-border/60">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+              <LandingCta />
+              <Button asChild size="lg" variant="secondary" className="rounded-full h-11 px-6">
+                <Link href="/try-on">
+                  Ver el probador
+                  <ArrowRight className="h-4 w-4 ml-1.5" aria-hidden="true" />
+                </Link>
+              </Button>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-y-2 gap-x-4 text-xs text-muted-foreground pt-1">
+              <span className="inline-flex items-center gap-1.5">
+                <CheckCircle2 className="h-3.5 w-3.5 text-accent" />
+                Sin registro obligatorio
+              </span>
+              <span className="inline-flex items-center gap-1.5">
+                <CheckCircle2 className="h-3.5 w-3.5 text-accent" />
+                Validación de pose frontal
+              </span>
+              <span className="inline-flex items-center gap-1.5">
+                <ShieldCheck className="h-3.5 w-3.5 text-accent" />
+                Procesamiento privado
+              </span>
+            </div>
+          </div>
+        </BentoCard>
+
+        {/* Hero Bento Derecho: Vitrina interactiva y preview en vivo */}
+        <BentoCard className="lg:col-span-5 p-6 sm:p-7 rounded-3xl justify-between border-border/80 bg-background/85 shadow-sm overflow-hidden">
+          <div>
+            <div className="flex items-center justify-between mb-4 pb-2 border-b border-border/50">
+              <div className="flex items-center gap-2">
+                <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                <span className="text-xs font-mono font-medium text-foreground">
+                  CatVTON sobre silueta
+                </span>
+              </div>
+              <Badge
+                variant="outline"
+                className="text-[11px] font-mono text-accent border-accent/30"
+              >
+                Hasta 6 capas
+              </Badge>
+            </div>
+
+            <div className="relative aspect-[4/3] sm:aspect-[16/10] lg:aspect-[4/3] w-full overflow-hidden rounded-2xl bg-muted/40 border border-border/60">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/samples/usuario_canonico.jpg"
+                alt="Modelo en probador virtual VTON"
+                className="h-full w-full object-cover object-top transition-transform duration-500 hover:scale-105"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-background/95 via-background/20 to-transparent" />
+              <div className="absolute top-3 left-3 flex flex-wrap gap-2">
+                <span className="rounded-full bg-accent px-2.5 py-1 text-[11px] font-semibold text-accent-foreground shadow-xs">
+                  Prueba por capas
+                </span>
+                <span className="rounded-full bg-background/90 px-2.5 py-1 text-[11px] font-mono text-foreground backdrop-blur-md border border-border/50">
+                  Alineación de postura
+                </span>
+              </div>
+              <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between text-xs font-mono text-foreground backdrop-blur-md bg-background/85 px-3 py-1.5 rounded-xl border border-border/50 shadow-xs">
+                <span>Postura A-Pose</span>
+                <span className="text-emerald-600 dark:text-emerald-400 font-semibold">
+                  100% Detectada
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-4 pt-3 border-t border-border/60 space-y-2">
+            <p className="text-xs font-semibold text-foreground">Capas activas en la prueba:</p>
+            <div className="grid grid-cols-3 gap-2">
+              {CHIPS.map(chip => (
+                <div
+                  key={chip.name}
+                  className="flex items-center gap-2 p-1.5 rounded-xl bg-muted/40 border border-border/40"
+                >
+                  <span
+                    className="h-3 w-3 rounded-full shrink-0 border border-border/60"
+                    style={{ backgroundColor: chip.hex }}
+                  />
+                  <div className="truncate">
+                    <p className="text-[11px] font-medium leading-none truncate">{chip.name}</p>
+                    <p className="text-[9px] font-mono text-muted-foreground">{chip.hex}</p>
+                  </div>
                 </div>
-                <h3 className="mt-5 text-lg font-semibold tracking-tight">{step.title}</h3>
-                <p className="mt-2 flex-1 text-sm leading-relaxed text-muted-foreground">
+              ))}
+            </div>
+          </div>
+        </BentoCard>
+      </section>
+
+      {/* Bento Grid Principal: 4 columnas modulares con ritmo visual asimétrico */}
+      <section
+        aria-label="Showcase Bento Grid"
+        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 items-stretch"
+      >
+        {/* Bento 1: Héroe VTON Multicapa (2 cols x 2 rows en desktop) */}
+        <BentoCard
+          glow
+          className="md:col-span-2 lg:col-span-2 md:row-span-2 min-h-[440px] sm:min-h-[500px] justify-between p-0 overflow-hidden rounded-3xl border-border/80 bg-background/85"
+        >
+          <div className="relative aspect-[4/3] sm:aspect-[16/11] lg:aspect-auto lg:h-[340px] w-full bg-muted/40 overflow-hidden">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/samples/usuario_canonico.jpg"
+              alt="Modelo en probador virtual VTON"
+              className="h-full w-full object-cover object-top transition-transform duration-500 hover:scale-105"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-background/95 via-background/25 to-transparent" />
+            <div className="absolute top-4 left-4 flex flex-wrap gap-2">
+              <span className="rounded-full bg-accent px-3 py-1 text-xs font-semibold text-accent-foreground shadow-xs">
+                Prueba por capas
+              </span>
+              <span className="rounded-full bg-background/90 px-3 py-1 text-xs font-mono text-foreground backdrop-blur-md border border-border/50">
+                Alineación de postura
+              </span>
+            </div>
+            <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between text-xs font-mono text-foreground backdrop-blur-md bg-background/85 px-3.5 py-2 rounded-2xl border border-border/50 shadow-xs">
+              <span className="flex items-center gap-2">
+                <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                CatVTON sobre silueta
+              </span>
+              <span className="text-accent font-semibold">Hasta 6 capas</span>
+            </div>
+          </div>
+          <div className="p-6 sm:p-7 space-y-2">
+            <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground">
+              Probador virtual sobre tu foto
+            </h2>
+            <p className="text-sm text-muted-foreground leading-relaxed text-pretty">
+              Superpone las prendas respetando la postura de tu cuerpo y el orden de cada capa sin
+              deformar la foto original.
+            </p>
+          </div>
+        </BentoCard>
+
+        {/* Bento 2: Armonía Cromática y Estilo (2 cols x 1 row) */}
+        <BentoCard className="md:col-span-2 lg:col-span-2 p-6 sm:p-7 rounded-3xl justify-between border-border/80 bg-background/85">
+          <div>
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <Palette className="h-5 w-5 text-accent" />
+                <h2 className="text-lg font-bold tracking-tight">Armonía de color</h2>
+              </div>
+              <Badge variant="outline" className="rounded-full text-xs font-mono">
+                HSV + CLIP
+              </Badge>
+            </div>
+            <p className="text-sm text-muted-foreground leading-relaxed mb-4 text-pretty">
+              Evalúa el contraste entre prendas según el círculo cromático y la afinidad de estilo.
+            </p>
+
+            <div className="grid grid-cols-3 gap-2.5 mb-5">
+              {CHIPS.map(chip => (
+                <div
+                  key={chip.hex}
+                  className="rounded-2xl border border-border/70 bg-background/70 p-2.5 text-center"
+                >
+                  <div
+                    className="h-12 w-full rounded-xl border border-border/50 mb-2 shadow-xs"
+                    style={{ backgroundColor: chip.hex }}
+                  />
+                  <p className="text-xs font-semibold truncate">{chip.name}</p>
+                  <p className="text-[10px] font-mono text-muted-foreground">{chip.hex}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="space-y-3 pt-3 border-t border-border/60">
+            <ScoreGauge label="Armonía cromática" value={94} />
+            <ScoreGauge label="Compatibilidad de estilo" value={87} />
+          </div>
+        </BentoCard>
+
+        {/* Bento 3: Corte de fondo (1 col x 1 row) */}
+        <BentoCard className="p-6 rounded-3xl border-border/80 bg-background/85 justify-between">
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <div className="grid h-10 w-10 place-items-center rounded-2xl bg-accent/10 text-accent">
+                <ScanLine className="h-5 w-5" />
+              </div>
+              <span className="text-xs font-mono text-muted-foreground">U2Net</span>
+            </div>
+            <h3 className="text-base font-bold text-foreground">Corte de fondo</h3>
+            <p className="mt-1.5 text-xs text-muted-foreground leading-relaxed text-pretty">
+              Separa la prenda del fondo para dejarla lista para combinar y probar.
+            </p>
+          </div>
+          <div className="mt-4 pt-3 border-t border-border/40 text-[11px] font-mono text-accent">
+            Precisión de máscara de silueta
+          </div>
+        </BentoCard>
+
+        {/* Bento 4: Categorización (1 col x 1 row) */}
+        <BentoCard className="p-6 rounded-3xl border-border/80 bg-background/85 justify-between">
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <div className="grid h-10 w-10 place-items-center rounded-2xl bg-accent/10 text-accent">
+                <Layers className="h-5 w-5" />
+              </div>
+              <span className="text-xs font-mono text-muted-foreground">CLIP</span>
+            </div>
+            <h3 className="text-base font-bold text-foreground">Categorización</h3>
+            <p className="mt-1.5 text-xs text-muted-foreground leading-relaxed text-pretty">
+              Identifica el tipo de prenda y su estilo a partir de la imagen sin carga manual.
+            </p>
+          </div>
+          <div className="mt-4 pt-3 border-t border-border/40 text-[11px] font-mono text-accent">
+            Clasificación zero-shot
+          </div>
+        </BentoCard>
+
+        {/* Bento 5: Muestras del Armario (4 cols full width) */}
+        <BentoCard className="md:col-span-2 lg:col-span-4 p-6 sm:p-7 rounded-3xl border-border/80 bg-background/85">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4 pb-2 border-b border-border/60">
+            <div>
+              <h2 className="text-lg font-bold text-foreground">Prendas de ejemplo</h2>
+              <p className="text-xs text-muted-foreground">Prendas básicas listas para probar</p>
+            </div>
+            <span className="text-xs font-mono font-semibold text-accent bg-accent/10 px-3 py-1 rounded-full self-start sm:self-auto">
+              05 PRENDAS
+            </span>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 pt-2">
+            {SAMPLES.map(sample => (
+              <div
+                key={sample.src}
+                className="group relative overflow-hidden rounded-2xl border border-border/80 bg-background/60 p-2 transition-all hover:border-accent/40 hover:shadow-xs"
+              >
+                <div className="relative aspect-[4/5] overflow-hidden rounded-xl bg-muted/30">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={sample.src}
+                    alt={`Muestra ${sample.label}`}
+                    className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                    loading="lazy"
+                  />
+                  <span className="absolute top-1.5 left-1.5 rounded-full bg-background/90 px-2 py-0.5 text-[9px] font-mono font-semibold text-foreground backdrop-blur-xs">
+                    {sample.ref}
+                  </span>
+                </div>
+                <p className="mt-2 text-xs font-semibold text-foreground truncate px-1">
+                  {sample.label}
+                </p>
+              </div>
+            ))}
+          </div>
+        </BentoCard>
+      </section>
+
+      {/* Secuencia del Flujo: 3 Compartimentos Bento alineados horizontal y verticalmente */}
+      <section aria-label="Flujo de tres pasos" className="space-y-6">
+        <div className="text-center max-w-2xl mx-auto space-y-2">
+          <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
+            Cómo funciona
+          </h2>
+          <p className="text-sm text-muted-foreground text-pretty">
+            Tres pasos desde las prendas de tu armario hasta la prueba sobre tu silueta.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-stretch">
+          {STEPS.map((step, index) => (
+            <BentoCard
+              key={step.title}
+              className="p-6 sm:p-7 rounded-3xl justify-between border-border/80 bg-background/85"
+            >
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                  <span className="text-3xl font-extrabold text-accent/30 font-mono">
+                    0{index + 1}
+                  </span>
+                  <div className="grid h-10 w-10 place-items-center rounded-2xl bg-muted text-foreground">
+                    <step.Icon className="h-5 w-5" aria-hidden="true" />
+                  </div>
+                </div>
+                <h3 className="text-lg font-bold text-foreground mb-2">{step.title}</h3>
+                <p className="text-sm text-muted-foreground leading-relaxed text-pretty">
                   {step.body}
                 </p>
-                <p className="label mt-6 border-t border-border pt-3 text-muted-foreground">
-                  {step.data}
-                </p>
-              </li>
-            ))}
-          </ol>
-        </div>
-      </section>
-
-      {/* El mecanismo: color medido, no adivinado. */}
-      <section className="border-b border-border bg-background">
-        <div className="mx-auto grid max-w-[1440px] gap-10 px-4 py-14 sm:px-6 lg:grid-cols-12 lg:px-10">
-          <div className="lg:col-span-5">
-            <h2 className="display text-[clamp(1.9rem,3.4vw,3rem)]">
-              La armonía se mide,
-              <br />
-              no se adivina.
-            </h2>
-            <p className="mt-4 max-w-[46ch] text-sm leading-relaxed text-muted-foreground">
-              Cada prenda llega con sus colores dominantes. El recomendador compara luminosidad y
-              afinidad de matiz, y ordena los outfits por dos puntajes independientes.
-            </p>
-            <ul className="mt-7 space-y-4">
-              <li className="flex gap-3">
-                <span className="num label pt-0.5 text-thread">01</span>
-                <div>
-                  <p className="text-sm font-semibold">Contraste de luminosidad</p>
-                  <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-                    Evita combinaciones que se apagan entre sí o compiten por el mismo plano.
-                  </p>
-                </div>
-              </li>
-              <li className="flex gap-3">
-                <span className="num label pt-0.5 text-thread">02</span>
-                <div>
-                  <p className="text-sm font-semibold">Afinidad cromática</p>
-                  <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-                    Mide qué tan cerca están los matices en la rueda antes de proponer el conjunto.
-                  </p>
-                </div>
-              </li>
-              <li className="flex gap-3">
-                <span className="num label pt-0.5 text-thread">03</span>
-                <div>
-                  <p className="text-sm font-semibold">Compatibilidad de estilo</p>
-                  <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-                    Cruza los embeddings CLIP de las prendas para que el outfit no sea solo color.
-                  </p>
-                </div>
-              </li>
-            </ul>
-          </div>
-
-          <div className="lg:col-span-7">
-            <div className="paper">
-              <div className="flex items-center justify-between border-b border-border px-4 py-2.5">
-                <span className="label">Muestra cromática</span>
-                <span className="num text-[10px] text-muted-foreground">HSV · EJEMPLO DE SALIDA</span>
               </div>
-              <div className="grid grid-cols-3 gap-px bg-border">
-                {CHIPS.map(chip => (
-                  <div key={chip.hex} className="bg-background p-3">
-                    <div
-                      className="h-24 w-full border border-border"
-                      style={{ backgroundColor: chip.hex }}
-                    />
-                    <p className="label mt-2">{chip.name}</p>
-                    <p className="num mt-1 text-[10px] text-muted-foreground">{chip.hex}</p>
-                    <p className="num text-[10px] text-muted-foreground">{chip.hsv}</p>
-                  </div>
-                ))}
+              <div className="mt-6 pt-4 border-t border-border/60">
+                <span className="text-xs font-mono text-muted-foreground">{step.data}</span>
               </div>
-              <div className="space-y-4 border-t border-border p-4">
-                <ScoreGauge label="Armonía cromática" value={94} />
-                <ScoreGauge label="Compatibilidad de estilo" value={87} />
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Cierre: la acción primaria del producto. */}
-      <section className="mx-auto max-w-[1440px] px-4 pt-14 sm:px-6 lg:px-10">
-        <div className="relative overflow-hidden bg-accent px-6 py-12 text-accent-foreground sm:px-12">
-          <div aria-hidden="true" className="grain absolute inset-0 opacity-50" />
-          <div className="relative flex flex-wrap items-end justify-between gap-8">
-            <div>
-              <h2 className="display max-w-[16ch] text-[clamp(2rem,4.4vw,3.4rem)]">
-                Empezá por una prenda.
-              </h2>
-              <p className="mt-3 max-w-[48ch] text-sm leading-relaxed text-accent-foreground/75">
-                El armario se arma solo: subís la primera foto y el recomendador hace el resto.
-              </p>
-            </div>
-            <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
-              <Button asChild size="lg" variant="thread">
-                <Link href="/wardrobe">Abrir el armario</Link>
-              </Button>
-              <Button
-                asChild
-                size="lg"
-                variant="outline"
-                className="border-accent-foreground/45 text-accent-foreground hover:bg-accent-foreground/10"
-              >
-                <Link href="/outfits">Ver outfits</Link>
-              </Button>
-            </div>
-          </div>
+            </BentoCard>
+          ))}
         </div>
       </section>
     </div>

@@ -8,6 +8,8 @@ en estado de error tipado. Si cambia un schema Zod, cambia este.
 
 from __future__ import annotations
 
+from datetime import datetime
+
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from domain.enums import GarmentPosition, VtonJobStatus
@@ -124,3 +126,23 @@ class VtonJobStatusResponse(BaseModel):
     status: VtonJobStatus
     result_url: str | None = None
     error_message: str | None = None
+
+
+class VtonJobListItem(BaseModel):
+    """Item individual en el historial de jobs VTON (GET /api/v1/vton/jobs, Gap G3)."""
+
+    job_id: str
+    outfit_id: str | None = None
+    status: VtonJobStatus
+    stage: str | None = None
+    result_url: str | None = None
+    error_message: str | None = None
+    created_at: datetime
+
+
+class VtonJobListResponse(BaseModel):
+    """GET /api/v1/vton/jobs: historial de jobs de try-on del usuario (Gap G3)."""
+
+    jobs: list[VtonJobListItem]
+    total: int
+

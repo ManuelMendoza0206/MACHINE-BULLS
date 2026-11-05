@@ -49,7 +49,9 @@ from .prompts import (
     slices_por_clase,
 )
 
-MODEL_NAME = "openai/clip-vit-base-patch32"
+DEFAULT_MODEL_NAME = "patrickjohncyh/fashion-clip"
+FALLBACK_MODEL_NAME = "openai/clip-vit-base-patch32"
+MODEL_NAME = DEFAULT_MODEL_NAME
 
 NIVELES = ("train", "val", "test")
 DEFAULT_SEED = 42
@@ -309,7 +311,12 @@ class ClipClassifier:
     de dependencia se re-lanzan con un mensaje que dice que falta que.
     """
 
-    def __init__(self, nivel: str = "CATEGORIA", device: str | None = None) -> None:
+    def __init__(
+        self,
+        nivel: str = "CATEGORIA",
+        device: str | None = None,
+        model_name: str | None = None,
+    ) -> None:
         try:
             import torch
             from transformers import CLIPModel, CLIPProcessor
@@ -322,9 +329,19 @@ class ClipClassifier:
 
         self.nivel = nivel
         self._torch = torch
-        self._processor = CLIPProcessor.from_pretrained(MODEL_NAME)
+        target_model = model_name or MODEL_NAME
+        self.model_name = target_model
+        try:
+            self._processor = CLIPProcessor.from_pretrained(target_model)
+            self.model = CLIPModel.from_pretrained(target_model)
+        except Exception:  # noqa: BLE001
+            target_model = FALLBACK_MODEL_NAME
+            self.model_name = target_model
+            self._processor = CLIPProcessor.from_pretrained(target_model)
+            self.model = CLIPModel.from_pretrained(target_model)
+
         self.device = device or ("cuda" if torch.cuda.is_available() else "cpu")
-        self.model = CLIPModel.from_pretrained(MODEL_NAME).to(self.device).eval()
+        self.model = self.model.to(self.device).eval()
 
     @property
     def processor(self) -> Any:

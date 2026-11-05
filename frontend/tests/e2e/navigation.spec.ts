@@ -6,7 +6,15 @@ test('desktop shows TopNav, mobile shows BottomTabBar — CSS only, no console e
   page,
 }) => {
   const errors: string[] = [];
-  page.on('console', m => m.type() === 'error' && errors.push(m.text()));
+  page.on('console', m => {
+    if (m.type() === 'error' && !m.text().includes('ERR_CONNECTION_REFUSED')) {
+      errors.push(m.text());
+    }
+  });
+
+  await page.route('**/api/**', route =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: '[]' })
+  );
 
   await page.setViewportSize({ width: 1280, height: 800 });
   await page.goto('/wardrobe');

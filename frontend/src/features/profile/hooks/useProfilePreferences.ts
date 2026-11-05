@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useState } from 'react';
-import { toast } from 'sonner';
+import { toast } from '@/components/ui/sonner';
 import { useAuth } from '@/features/auth/hooks/useAuth';
 import {
   getDefaultAesthetic,

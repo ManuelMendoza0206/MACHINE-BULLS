@@ -1,12 +1,13 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { http, HttpResponse } from 'msw';
-import { screen } from '@testing-library/react';
+import { screen, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { renderWithProviders } from '../../utils/renderWithProviders';
 import { server } from '../../fixtures/msw/server';
 import recommendFixture from '../../fixtures/api/outfitRecommendationResponse.json';
 import capsuleFixture from '../../fixtures/api/capsuleCatalogResponse.json';
 import { TryOnView } from '@/features/vton/components/TryOnView';
+import { clearCachedVtonResult } from '@/features/vton/lib/checkCachedVtonResult';
 import { usePhotoConsentStore } from '@/stores/photoConsentStore';
 
 const JOB_UUID = '9b1deb4d-3b7d-4567-8901-2b0d7b3dcb6d';
@@ -21,10 +22,12 @@ vi.mock('next/navigation', () => ({
 }));
 
 const originalEnv = process.env['NEXT_PUBLIC_API_BASE_URL'];
+const originalTimeoutEnv = process.env['NEXT_PUBLIC_VTON_POLL_TIMEOUT_MS'];
 
 function happyHandlers(): void {
   server.use(
     http.get('*/api/v1/outfits/:id', () => HttpResponse.json(recommendFixture.outfits[0])),
+    http.post('*/api/v1/outfits/recommend', () => HttpResponse.json(recommendFixture)),
     http.get('*/api/v1/garments/capsule', () => HttpResponse.json(capsuleFixture)),
     http.post('*/api/v1/vton/try-on', () =>
       HttpResponse.json({ job_id: JOB_UUID, status: 'processing', estimated_time_seconds: 1 })
@@ -48,6 +51,7 @@ async function uploadPhoto(): Promise<void> {
 beforeEach(() => {
   process.env['NEXT_PUBLIC_API_BASE_URL'] = 'https://api.example.com';
   push.mockClear();
+  clearCachedVtonResult();
   usePhotoConsentStore.setState({ consentGiven: true });
   happyHandlers();
 });
@@ -57,6 +61,11 @@ afterEach(() => {
     delete process.env['NEXT_PUBLIC_API_BASE_URL'];
   } else {
     process.env['NEXT_PUBLIC_API_BASE_URL'] = originalEnv;
+  }
+  if (originalTimeoutEnv === undefined) {
+    delete process.env['NEXT_PUBLIC_VTON_POLL_TIMEOUT_MS'];
+  } else {
+    process.env['NEXT_PUBLIC_VTON_POLL_TIMEOUT_MS'] = originalTimeoutEnv;
   }
 });
 
@@ -130,4 +139,213 @@ describe('TryOnView', () => {
     ).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /probar con otra foto/i })).toBeInTheDocument();
   });
+
+  it('pausa el polling cuando document.visibilityState no es visible y lo reanuda al volver', async () => {
+    let statusCalls = 0;
+    server.use(
+      http.get('*/api/v1/vton/status/:id', () => {
+        statusCalls += 1;
+        return HttpResponse.json({
+          job_id: JOB_UUID,
+          status: 'processing',
+        });
+      })
+    );
+
+    renderWithProviders(<TryOnView />);
+    await uploadPhoto();
+    await userEvent.click(await screen.findByRole('button', { name: /generar prueba virtual/i }));
+
+    expect(await screen.findByText(/inferencia asíncrona/i)).toBeInTheDocument();
+
+    // Pestaña pasa a segundo plano
+    await act(async () => {
+      Object.defineProperty(document, 'visibilityState', {
+        value: 'hidden',
+        writable: true,
+        configurable: true,
+      });
+      document.dispatchEvent(new Event('visibilitychange'));
+    });
+
+    const callsWhileHidden = statusCalls;
+    await new Promise(r => setTimeout(r, 600));
+
+    // No se ejecutan llamadas adicionales mientras está en background
+    expect(statusCalls).toBe(callsWhileHidden);
+
+    // Pestaña vuelve a primer plano
+    await act(async () => {
+      Object.defineProperty(document, 'visibilityState', {
+        value: 'visible',
+        writable: true,
+        configurable: true,
+      });
+      document.dispatchEvent(new Event('visibilitychange'));
+    });
+
+    // Al volver, se reanuda el polling
+    await vi.waitFor(() => {
+      expect(statusCalls).toBeGreaterThan(callsWhileHidden);
+    });
+  });
+
+  it('checkCachedVtonResult evita una llamada de red duplicada para el mismo par (outfit, foto) en la misma sesión', async () => {
+    let tryOnPostCount = 0;
+    server.use(
+      http.post('*/api/v1/vton/try-on', () => {
+        tryOnPostCount += 1;
+        return HttpResponse.json({
+          job_id: JOB_UUID,
+          status: 'processing',
+          estimated_time_seconds: 1,
+        });
+      })
+    );
+
+    renderWithProviders(<TryOnView />);
+
+    // Primera prueba con la foto
+    await uploadPhoto();
+    await userEvent.click(await screen.findByRole('button', { name: /generar prueba virtual/i }));
+
+    // Esperar a que resuelva y muestre el resultado
+    expect(
+      await screen.findByAltText(/resultado de la prueba virtual/i, {}, { timeout: 4_000 })
+    ).toBeInTheDocument();
+    expect(tryOnPostCount).toBe(1);
+
+    // Usuario resetea la foto
+    await userEvent.click(screen.getByRole('button', { name: /probar con otra foto/i }));
+
+    // Vuelve a subir la misma foto en la misma sesión
+    await uploadPhoto();
+    await userEvent.click(await screen.findByRole('button', { name: /generar prueba virtual/i }));
+
+    // El resultado aparece de inmediato desde caché sin disparar un segundo POST
+    expect(
+      await screen.findByAltText(/resultado de la prueba virtual/i, {}, { timeout: 4_000 })
+    ).toBeInTheDocument();
+    expect(tryOnPostCount).toBe(1);
+  });
+
+  it('respeta prefers-reduced-motion y expone alt distinguibles en foto original y resultado', async () => {
+    renderWithProviders(<TryOnView />);
+    await uploadPhoto();
+
+    await userEvent.click(await screen.findByRole('button', { name: /generar prueba virtual/i }));
+
+    // Durante la fase de procesamiento, los spinners contienen la clase de adaptación a reduced motion
+    const tracker = await screen.findByText(/inferencia asíncrona/i);
+    expect(tracker).toBeInTheDocument();
+    const spinningIcon = tracker.querySelector('svg');
+    expect(spinningIcon).toHaveClass('motion-reduce:animate-none');
+
+    // Al completarse, ambas imágenes tienen alt descriptivo y distinguible
+    const originalImg = await screen.findByAltText(
+      /foto original del usuario/i,
+      {},
+      { timeout: 4_000 }
+    );
+    const resultImg = await screen.findByAltText(
+      /resultado de la prueba virtual con el outfit/i,
+      {},
+      { timeout: 4_000 }
+    );
+
+    expect(originalImg).toBeInTheDocument();
+    expect(resultImg).toBeInTheDocument();
+    expect(originalImg.getAttribute('alt')).not.toEqual(resultImg.getAttribute('alt'));
+  });
+
+  it('durante el procesamiento ofrece el botón "seguir usando la app" y navega a /wardrobe (86e301dm7)', async () => {
+    server.use(
+      http.get('*/api/v1/vton/status/:id', () =>
+        HttpResponse.json({
+          job_id: JOB_UUID,
+          status: 'processing',
+        })
+      )
+    );
+
+    renderWithProviders(<TryOnView />);
+    await uploadPhoto();
+    await userEvent.click(await screen.findByRole('button', { name: /generar prueba virtual/i }));
+
+    const continueBtn = await screen.findByRole('button', {
+      name: /seguir usando la app/i,
+    });
+    expect(continueBtn).toBeInTheDocument();
+
+    await userEvent.click(continueBtn);
+    expect(push).toHaveBeenCalledWith('/wardrobe');
+  });
+
+  it('un job fallido con error_message null muestra copy de fallback limpio', async () => {
+    server.use(
+      http.get('*/api/v1/vton/status/:id', () =>
+        HttpResponse.json({
+          job_id: JOB_UUID,
+          status: 'failed',
+          error_message: null,
+        })
+      )
+    );
+
+    renderWithProviders(<TryOnView />);
+    await uploadPhoto();
+    await userEvent.click(await screen.findByRole('button', { name: /generar prueba virtual/i }));
+
+    expect(
+      await screen.findByText(
+        /No pudimos generar la prueba virtual\. Intent[aá] con otra foto o prenda\./i,
+        {},
+        { timeout: 4_000 }
+      )
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/null/i)).not.toBeInTheDocument();
+  });
+
+  it('en timeout ofrece verificar de nuevo y resuelve a completed tras comprobación manual', async () => {
+    let checkCount = 0;
+    server.use(
+      http.get('*/api/v1/vton/status/:id', () => {
+        checkCount += 1;
+        if (checkCount <= 1) {
+          return HttpResponse.json({
+            job_id: JOB_UUID,
+            status: 'processing',
+          });
+        }
+        return HttpResponse.json({
+          job_id: JOB_UUID,
+          status: 'completed',
+          result_url: 'https://cdn.example.com/result-manual.jpg',
+        });
+      })
+    );
+
+    // Timeout ultracorto para disparar phase === 'timeout'
+    process.env['NEXT_PUBLIC_VTON_POLL_TIMEOUT_MS'] = '50';
+
+    renderWithProviders(<TryOnView />);
+    await uploadPhoto();
+    await userEvent.click(await screen.findByRole('button', { name: /generar prueba virtual/i }));
+
+    const manualBtn = await screen.findByRole(
+      'button',
+      { name: /verificar de nuevo/i },
+      { timeout: 4_000 }
+    );
+    expect(manualBtn).toBeInTheDocument();
+
+    await userEvent.click(manualBtn);
+
+    const resultado = await screen.findByAltText(
+      /resultado de la prueba virtual/i,
+      {},
+      { timeout: 4_000 }
+    );
+    expect(resultado).toBeInTheDocument();
+  }, 10_000);
 });

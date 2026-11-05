@@ -188,7 +188,7 @@ export function CapsuleCatalogGrid(): JSX.Element {
             <span>
               ¡{adoptedSuccessCount}{' '}
               {adoptedSuccessCount === 1 ? 'prenda agregada' : 'prendas agregadas'} a tu armario! Ya
-              podés combinarlas.
+              puedes combinarlas.
             </span>
           </div>
           <div className="flex items-center gap-2 shrink-0">

@@ -131,8 +131,19 @@ services:
         # Inlined en build time; el navegador llama a localhost:8000 (publicado abajo).
         NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-http://localhost:8000}
         NEXT_PUBLIC_VTON_POLL_TIMEOUT_MS: ${NEXT_PUBLIC_VTON_POLL_TIMEOUT_MS:-90000}
+        NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL:-https://zachvjopqlhzdvhajept.supabase.co}
+        NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY:-sb_publishable_qS75_HNxxzVy3x-xuTDRJw___vGNERa}
+        NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY:-}
     container_name: styleme-frontend
     restart: unless-stopped
+    env_file:
+      - path: ../frontend/.env
+        required: false
+    environment:
+      NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-http://localhost:8000}
+      NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL:-https://zachvjopqlhzdvhajept.supabase.co}
+      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY:-sb_publishable_qS75_HNxxzVy3x-xuTDRJw___vGNERa}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY:-}
     ports:
       - "3000:3000"
     depends_on:

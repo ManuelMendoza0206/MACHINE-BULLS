@@ -264,3 +264,45 @@ def test_vton_pose_invalida_da_422_con_causa(client: Any, demo_user_id: str, mon
     )
     assert rv.status_code == 422
     assert "A-Pose invalida" in rv.json()["detail"]
+
+
+def test_vton_historial_jobs_vacio(client: Any) -> None:
+    """GET /vton/jobs devuelve lista vacia si el usuario no tiene jobs (G3)."""
+    r = client.get("/api/v1/vton/jobs")
+    assert r.status_code == 200
+    body = r.json()
+    assert "jobs" in body
+    assert "total" in body
+    assert body["total"] == 0
+    assert body["jobs"] == []
+
+
+def test_vton_historial_jobs_lista_ordenada(client: Any, demo_user_id: str, monkeypatch: Any) -> None:
+    """GET /vton/jobs lista los jobs del usuario ordenados por fecha desc (G3)."""
+    monkeypatch.setenv("VTON_PROVIDER", "mock")
+    monkeypatch.setenv("POSE_VALIDATION", "off")
+
+    _upload(client, nombre="remera")
+    _upload(client, nombre="pantalon", color=(200, 30, 30))
+    r = client.post("/api/v1/outfits/recommend", json={"user_id": demo_user_id})
+    outfit_id = r.json()["outfits"][0]["outfit_id"]
+
+    nombre, buf = _jpg_bytes(color=(200, 180, 160), nombre="persona")
+    rv = client.post(
+        "/api/v1/vton/try-on",
+        data={"outfit_id": outfit_id},
+        files={"user_image": (nombre, buf, "image/jpeg")},
+    )
+    assert rv.status_code == 200
+    job_id = rv.json()["job_id"]
+
+    r_hist = client.get("/api/v1/vton/jobs")
+    assert r_hist.status_code == 200
+    data = r_hist.json()
+    assert data["total"] >= 1
+    found = next((j for j in data["jobs"] if j["job_id"] == job_id), None)
+    assert found is not None
+    assert found["outfit_id"] == outfit_id
+    assert found["status"] in ["pending", "processing", "completed"]
+    assert "created_at" in found
+

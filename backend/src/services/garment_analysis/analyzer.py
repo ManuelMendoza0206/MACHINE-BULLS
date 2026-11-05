@@ -68,8 +68,19 @@ def get_classifier() -> ClipClassifier:
     if _classifier is None:
         with _lock:
             if _classifier is None:
-                _classifier = ClipClassifier()
+                from config import settings
+
+                _classifier = ClipClassifier(model_name=settings.clip_model_name)
     return _classifier
+
+
+def _prepare_for_clip(image: Image.Image) -> Image.Image:
+    """Prepara la imagen para CLIP: si es RGBA, la compone sobre fondo blanco de estudio."""
+    if image.mode == "RGBA":
+        bg = Image.new("RGB", image.size, (255, 255, 255))
+        bg.paste(image, mask=image.split()[3])
+        return bg
+    return image.convert("RGB")
 
 
 def classify_category(image: Image.Image) -> tuple[str, float, dict[str, float]]:
@@ -79,10 +90,11 @@ def classify_category(image: Image.Image) -> tuple[str, float, dict[str, float]]
     de eval de la libreria: ver el comentario de esa constante.
     """
     clf = get_classifier()
+    clip_img = _prepare_for_clip(image)
     clases = list(CLIP_CATEGORIES)
     textos = [_CATEGORY_PROMPTS[c] for c in clases]
     probs = ClipClassifier.probs_imagen(
-        clf.model, clf.processor, image, textos, clf.device
+        clf.model, clf.processor, clip_img, textos, clf.device
     )
     total = sum(probs) or 1.0
     por_clase = [p / total for p in probs]
@@ -93,8 +105,9 @@ def classify_category(image: Image.Image) -> tuple[str, float, dict[str, float]]
 def classify_aesthetics(image: Image.Image, top_n: int = 3) -> list[dict[str, Any]]:
     """Top-N esteticas CLIP con confianza normalizada a 1 sobre el total."""
     clf = get_classifier()
+    clip_img = _prepare_for_clip(image)
     textos = [t.format(c=a) for a in AESTHETICS for t in _AESTHETIC_TEMPLATES]
-    probs = ClipClassifier.probs_imagen(clf.model, clf.processor, image, textos, clf.device)
+    probs = ClipClassifier.probs_imagen(clf.model, clf.processor, clip_img, textos, clf.device)
     por_estetica: dict[str, float] = {}
     ancho = len(_AESTHETIC_TEMPLATES)
     for i, aest in enumerate(AESTHETICS):
@@ -137,7 +150,8 @@ def _image_embedding(clf: ClipClassifier, image: Image.Image) -> list[float]:
     """
     import torch
 
-    entrada = clf.processor(images=image, return_tensors="pt")
+    clip_img = _prepare_for_clip(image)
+    entrada = clf.processor(images=clip_img, return_tensors="pt")
     entrada = {k: v.to(clf.device) for k, v in entrada.items()}
     with torch.no_grad():
         feats = clf.model.get_image_features(**entrada)

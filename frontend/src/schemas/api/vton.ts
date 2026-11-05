@@ -42,3 +42,20 @@ export const VtonMultilayerRequestSchema = z.object({
   garment_layers: z.array(VtonGarmentLayerSchema).min(1).max(4),
 });
 export type VtonMultilayerRequest = z.infer<typeof VtonMultilayerRequestSchema>;
+
+export const VtonJobListItemSchema = z.object({
+  job_id: z.string().uuid(),
+  outfit_id: z.string().uuid().nullable().optional(),
+  status: VtonJobStatusSchema,
+  stage: z.string().nullable().optional(),
+  result_url: z.string().url().nullable().optional(),
+  error_message: z.string().nullable().optional(),
+  created_at: z.string(),
+});
+export type VtonJobListItem = z.infer<typeof VtonJobListItemSchema>;
+
+export const VtonJobListResponseSchema = z.object({
+  jobs: z.array(VtonJobListItemSchema),
+  total: z.number().int().nonnegative(),
+});
+export type VtonJobListResponse = z.infer<typeof VtonJobListResponseSchema>;

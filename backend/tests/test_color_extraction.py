@@ -85,3 +85,32 @@ def test_imagen_totalmente_neutra_no_devuelve_vacio() -> None:
     """Blanco puro: el Zod exige min 1 color, no puede quedar lista vacia."""
     resultado = dominant_colors(_imagen_color(255, 255, 255))
     assert len(resultado) >= 1
+
+
+def test_transparencia_rgba_ignora_pixeles_transparentes() -> None:
+    """Una prenda RGBA con fondo transparente (alpha=0) no debe contaminar el color dominante.
+
+    Simula el resultado de rembg: el 70% de la imagen es fondo transparente (0,0,0,0),
+    mientras que el 30% restante es una prenda verde esmeralda pura (20, 180, 50, 255).
+    """
+    img = Image.new("RGBA", (100, 100), (0, 0, 0, 0))
+    for x in range(35, 65):
+        for y in range(35, 65):
+            img.putpixel((x, y), (20, 180, 50, 255))
+
+    colores = dominant_colors(img, max_colors=3)
+    assert len(colores) >= 1
+    # El color dominante debe ser verde (G > R y G > B), nunca negro ni transparente
+    verde = colores[0]
+    r, g, b = _rgb_desde_hex(verde["hex"])
+    assert g > r and g > b
+    assert verde["s"] > 40.0
+    assert verde["v"] > 40.0
+
+
+def test_imagen_totalmente_transparente_no_rompe() -> None:
+    """Una imagen completamente transparente (0,0,0,0) devuelve al menos 1 color valido."""
+    img = Image.new("RGBA", (50, 50), (0, 0, 0, 0))
+    colores = dominant_colors(img)
+    assert len(colores) >= 1
+    assert "hex" in colores[0]

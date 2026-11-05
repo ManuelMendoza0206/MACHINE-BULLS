@@ -26,35 +26,35 @@ Consolida en un único documento, con dueño y criterio de cierre, los endpoints
 
 | # | Gap | Bloquea | Fase de corte recomendada | Estado |
 | :--- | :--- | :--- | :--- | :--- |
-| G1 | Listado de prendas del usuario (`GET /api/v1/garments?user_id=` o equivalente) | `/wardrobe` (spec 02) | Antes de Fase 2 | Pendiente de confirmación con backend |
-| G2 | Recuperación de un outfit individual o del último set de recomendaciones (no solo `POST /outfits/recommend`) | `/outfits/[outfitId]` en acceso directo por URL (spec 03) | Antes de Fase 2 | Pendiente de confirmación con backend |
-| G3 | Listado de `VTONJob` por usuario (`GET /api/v1/vton/jobs?user_id=` o equivalente) | `/try-on/history` (spec 04) | Antes de Fase 3 | Pendiente de confirmación con backend |
-| G4 | Mecanismo de asociación de prendas del catálogo cápsula al usuario | Confirmación de onboarding, paso 2 rama B (spec 02) | Antes de Fase 2 | Pendiente de confirmación con backend |
-| G5 | Sincronización `auth.users` (Supabase) ↔ `User` (backend) | Todo flujo de registro end-to-end (spec 06) | Antes de Fase 1 (bloqueante temprano) | Pendiente — ruta preferida ya recomendada, ver §3 |
+| G1 | Listado de prendas del usuario (`GET /api/v1/garments` / `/capsule`) | `/wardrobe` (spec 02) | Antes de Fase 2 | **Cerrado.** Implementado en `backend/src/api/garments.py` y consumido por frontend. |
+| G2 | Recuperación de un outfit individual (`GET /api/v1/outfits/{id}`) | `/outfits/[outfitId]` en acceso directo por URL (spec 03) | Antes de Fase 2 | **Cerrado.** Implementado en `backend/src/api/outfits.py` y `frontend/src/features/outfits/api/getOutfit.ts`. |
+| G3 | Listado de `VTONJob` por usuario (`GET /api/v1/vton/jobs`) | `/try-on/history` (spec 04) | Antes de Fase 3 | **Cerrado.** Implementado en `backend/src/api/vton.py` y vista `/try-on/history` en frontend (PR #48). |
+| G4 | Mecanismo de adopción de prendas del catálogo cápsula al usuario (`POST /api/v1/garments/capsule/{id}/adopt`) | Confirmación de onboarding, paso 2 rama B (spec 02) | Antes de Fase 2 | **Cerrado.** Implementado en `backend/src/api/garments.py` vía `GarmentOwnership`. |
+| G5 | Sincronización `auth.users` (Supabase) ↔ `User` (backend) | Todo flujo de registro end-to-end (spec 06) | Antes de Fase 1 (bloqueante temprano) | **Pendiente.** Trigger `AFTER INSERT` documentado en `backend-plan.md` §7, pendiente de migración en Supabase prod. |
 
 ---
 
 ## 2. Detalle por gap
 
 ### G1 — Listado de prendas del usuario
-**Consumido por:** `specs/02-wardrobe-flow.md` §6. **Placeholder actual:** tipo `GarmentSummary` mínimo (`{ id, processed_image_url, category, dominant_aesthetic }`), servido por mocks MSW.
-**Criterio de cierre:** el backend publica la forma exacta del endpoint (paginación, filtros por categoría/estética si aplica); el frontend reemplaza `GarmentSummary` por un schema Zod derivado 1:1 y conecta `/wardrobe` a datos reales.
+**Consumido por:** `specs/02-wardrobe-flow.md` §6.
+**Estado de cierre:** El backend publica `GET /api/v1/garments/capsule` y upload de prendas en `backend/src/api/garments.py`. El frontend consume los schemas Zod correspondientes y conecta `/wardrobe` a datos reales.
 
 ### G2 — Recuperación de outfit individual
-**Consumido por:** `specs/03-outfits-flow.md` §6. **Estado interino:** `/outfits/[outfitId]` depende de la caché de cliente de TanStack Query (navegación desde el grid); acceso directo por URL sin caché muestra "no encontrado en esta sesión".
-**Criterio de cierre:** confirmación de si existirá `GET /api/v1/outfits/{outfit_id}` o si el frontend debe siempre re-derivar del último `recommend` — esto determina si el fallback actual es permanente o temporal.
+**Consumido por:** `specs/03-outfits-flow.md` §6.
+**Estado de cierre:** El backend implementa `GET /api/v1/outfits/{outfit_id}` en `backend/src/api/outfits.py`. El frontend lo consume vía `frontend/src/features/outfits/api/getOutfit.ts` permitiendo carga directa por ID y fallback en TryOnView.
 
 ### G3 — Listado de VTONJobs por usuario
-**Consumido por:** `specs/04-vton-flow.md` §6. **Estado interino:** `/try-on/history` desarrollado contra mocks MSW.
-**Criterio de cierre:** el backend publica el endpoint; el frontend conecta el historial real y evalúa si puede alimentar también la caché de reuso en cliente (`vtonResultCache`, spec 04 §2.4) al montar, no solo mostrar resultados pasados.
+**Consumido por:** `specs/04-vton-flow.md` §6.
+**Estado de cierre:** El backend publica `GET /api/v1/vton/jobs` con soporte para filtrado por `user_id`. El frontend implementa la vista `/try-on/history` (PR #48) conectando el historial real y permitiendo re-probar outfits con fotos previas.
 
 ### G4 — Asociación de catálogo cápsula al usuario
-**Consumido por:** `specs/02-wardrobe-flow.md` §6. **Pregunta abierta:** ¿es un `POST` de asociación separado, o el `user_id` se asigna directamente al seleccionar?
-**Criterio de cierre:** confirmación del mecanismo exacto con backend antes de implementar la confirmación del paso 2 de onboarding contra datos reales.
+**Consumido por:** `specs/02-wardrobe-flow.md` §6.
+**Estado de cierre:** El backend publica `POST /api/v1/garments/capsule/{garment_id}/adopt` en `backend/src/api/garments.py`, asociando prendas mediante la entidad `GarmentOwnership` de forma idempotente (409 en duplicados).
 
 ### G5 — Sincronización de identidad `auth.users` ↔ `User`
-**Consumido por:** `specs/06-landing-and-auth-flow.md` §6. **Ruta preferida recomendada:** trigger de base de datos sobre `auth.users` (`AFTER INSERT`) que inserta la fila correspondiente en `User` con el mismo `id` — preferible a un endpoint HTTP de sincronización porque ambos sistemas ya comparten el mismo Postgres (`plan-base.md` §6.1), lo que elimina una clase entera de fallos de sincronización (reintentos, orden de operaciones, fallos parciales) que un endpoint adicional no elimina.
-**Criterio de cierre:** el equipo backend confirma la implementación del trigger (o, si opta por el endpoint alternativo, lo publica) — `signUpWithEmail` (spec 06 §2.4) ya está diseñado para que ambas rutas sean swappable sin tocar `AuthForm`.
+**Consumido por:** `specs/06-landing-and-auth-flow.md` §6. **Ruta preferida recomendada:** trigger de base de datos sobre `auth.users` (`AFTER INSERT`) que inserta la fila correspondiente en `User` con el mismo `id` — preferible a un endpoint HTTP de sincronización porque ambos sistemas ya comparten el mismo Postgres (`plan-base.md` §6.1).
+**Estado:** Pendiente de ejecución de la migración de base de datos en el entorno de Supabase.
 
 ---
 

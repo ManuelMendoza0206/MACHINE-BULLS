@@ -60,8 +60,11 @@ export function GarmentBatchUploader(): JSX.Element {
   };
 
   return (
-    <div className="space-y-6">
-      <GarmentDropzone onFilesSelected={handleFilesSelected} />
+    <div className="h-full flex flex-col space-y-6">
+      <GarmentDropzone
+        onFilesSelected={handleFilesSelected}
+        className={allFiles.length === 0 ? 'h-full flex-1' : undefined}
+      />
       {allFiles.length > 0 ? (
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
           {allFiles.map(file => {

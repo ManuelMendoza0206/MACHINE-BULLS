@@ -24,7 +24,7 @@ describe('WardrobeView', () => {
   it('starts on the upload section, gated by photo consent', () => {
     renderWithProviders(<WardrobeView />);
     expect(screen.getByRole('button', { name: /acepto/i })).toBeInTheDocument();
-    expect(screen.queryByText(/arrastrá tus prendas/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/arrastr[aá] tus prendas/i)).not.toBeInTheDocument();
   });
 
   it('switching to the capsule catalog bypasses the photo consent gate', async () => {
@@ -38,6 +38,6 @@ describe('WardrobeView', () => {
   it('the dropzone appears once consent is granted', async () => {
     renderWithProviders(<WardrobeView />);
     await userEvent.click(screen.getByRole('button', { name: /acepto/i }));
-    expect(screen.getByText(/arrastrá tus prendas/i)).toBeInTheDocument();
+    expect(screen.getByText(/arrastr[aá] tus prendas/i)).toBeInTheDocument();
   });
 });
