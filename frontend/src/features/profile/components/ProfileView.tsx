@@ -1,7 +1,6 @@
 'use client';
 
 import { type JSX } from 'react';
-import { useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -27,7 +26,6 @@ const POSITION_LABEL: Record<string, string> = {
  * cierre de sesión.
  */
 export function ProfileView(): JSX.Element {
-  const router = useRouter();
   const { signOut, status: authStatus } = useAuth();
   const { data: me, isLoading, error } = useMe();
 
@@ -69,7 +67,8 @@ export function ProfileView(): JSX.Element {
               variant="default"
               onClick={async () => {
                 await signOut();
-                router.push('/login');
+                // eslint-disable-next-line @next/next/no-location-assign-relative-destination
+                window.location.href = '/login';
               }}
             >
               Iniciar sesión
