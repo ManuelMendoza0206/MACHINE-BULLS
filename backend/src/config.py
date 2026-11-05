@@ -61,6 +61,7 @@ class Settings:
     azure_storage_container_name: str
     azure_storage_public_url_base: str | None
     supabase_jwt_secret: str | None
+    supabase_url: str | None
     # Modelo CLIP para clasificacion y embedding de prendas
     clip_model_name: str
 
@@ -74,6 +75,8 @@ def load_settings() -> Settings:
     """Resuelve settings desde entorno, con defaults pensados para la demo."""
     _load_dotenv(BASE_DIR.parent / ".env")
     database_url = os.environ.get("DATABASE_URL", "sqlite:///./styleme.db")
+    if database_url.startswith("postgresql://"):
+        database_url = "postgresql+psycopg://" + database_url[len("postgresql://") :]
     origins = [
         o.strip()
         for o in os.environ.get("CORS_ORIGINS", DEFAULT_CORS_ORIGINS).split(",")
@@ -95,6 +98,7 @@ def load_settings() -> Settings:
         azure_storage_container_name=os.environ.get("AZURE_STORAGE_CONTAINER_NAME", "styleme"),
         azure_storage_public_url_base=os.environ.get("AZURE_STORAGE_PUBLIC_URL_BASE") or None,
         supabase_jwt_secret=os.environ.get("SUPABASE_JWT_SECRET") or None,
+        supabase_url=os.environ.get("SUPABASE_URL") or None,
         clip_model_name=os.environ.get("CLIP_MODEL_NAME", "patrickjohncyh/fashion-clip"),
     )
 
