@@ -1,0 +1,5 @@
+outs:
+- md5: e8c58021cd5884cb1a5f43cab5e4ac03
+  size: 671967
+  hash: md5
+  path: fashion_clip_adapter.pt
