@@ -26,6 +26,11 @@ from db.session import SessionLocal
 from domain.enums import STAGE_TO_STATUS, VtonJobStatus, VtonStage
 from domain.models import Garment, Outfit, OutfitGarment, VtonJob
 from services import storage
+from services.vton.circuit_breaker import (
+    CircuitBreakerOpenError,
+    get_circuit_breaker,
+    retry_with_backoff,
+)
 from services.vton.provider import VtonInferenceProvider, build_provider
 
 logger = logging.getLogger(__name__)
@@ -45,6 +50,11 @@ def run_job(job_id: str, human_image_path: str) -> None:
             return
 
         try:
+            cb = get_circuit_breaker(provider.name)
+            if cb.is_open():
+                raise CircuitBreakerOpenError(
+                    f"Circuit breaker abierto para {provider.name}: proveedor temporalmente no disponible"
+                )
             _set_stage(session, job, VtonStage.VALIDATING)
             resultado_path = _procesar(session, job, human_image_path, provider)
             job.result_path = resultado_path
@@ -81,13 +91,25 @@ def _procesar(session, job: VtonJob, human_image_path: str, provider: VtonInfere
             "VTON job %s: capa %d/%d (%s -> %s, mask=%s) con %s",
             job.id, i + 1, len(capas), posicion, categoria, mask_type, provider.name,
         )
-        resultado = provider.try_on(
-            human_image=resultado,
-            garment_image=prenda_bytes,
-            garment_description=descripcion,
-            category=categoria,
-            mask_type=mask_type,
-        )
+        cb = get_circuit_breaker(provider.name)
+        cb.check_call()
+        try:
+            resultado = retry_with_backoff(
+                lambda: provider.try_on(
+                    human_image=resultado,
+                    garment_image=prenda_bytes,
+                    garment_description=descripcion,
+                    category=categoria,
+                    mask_type=mask_type,
+                ),
+                max_retries=3,
+                base_delay=0.1,
+                factor=2.0,
+            )
+            cb.record_success()
+        except Exception as exc:
+            cb.record_failure(exc)
+            raise
 
     # Guardado del compuesto (subida a la version publicada de la imagen).
     _set_stage(session, job, VtonStage.UPLOADING)

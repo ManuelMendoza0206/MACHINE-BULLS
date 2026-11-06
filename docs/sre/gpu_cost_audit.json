@@ -1,0 +1,84 @@
+{
+  "report": "GPU Cost & Latency Continuous Audit",
+  "task_id": "86e301dz5",
+  "pricing_reference": {
+    "replicate_a40": {
+      "name": "Replicate (Nvidia A40 48GB)",
+      "cost_per_second_usd": 0.0023,
+      "avg_duration_s_per_layer": 8.5
+    },
+    "replicate_a100": {
+      "name": "Replicate (Nvidia A100 40GB)",
+      "cost_per_second_usd": 0.0032,
+      "avg_duration_s_per_layer": 6.2
+    },
+    "runpod_serverless_rtx4090": {
+      "name": "RunPod Serverless (RTX 4090 24GB)",
+      "cost_per_second_usd": 0.00044,
+      "avg_duration_s_per_layer": 6.8
+    },
+    "local_colab_pro": {
+      "name": "Google Colab Pro (Flat mensual)",
+      "cost_per_second_usd": 0.0,
+      "flat_monthly_usd": 10.0,
+      "avg_duration_s_per_layer": 9.5
+    }
+  },
+  "standard_job_estimates": {
+    "1_layer_upper": {
+      "provider": "Replicate (Nvidia A40 48GB)",
+      "num_layers": 1,
+      "total_inference_seconds": 8.5,
+      "cost_per_job_usd": 0.01955
+    },
+    "2_layers_upper_lower": {
+      "provider": "Replicate (Nvidia A40 48GB)",
+      "num_layers": 2,
+      "total_inference_seconds": 17.0,
+      "cost_per_job_usd": 0.0391
+    },
+    "3_layers_complete": {
+      "provider": "Replicate (Nvidia A40 48GB)",
+      "num_layers": 3,
+      "total_inference_seconds": 25.5,
+      "cost_per_job_usd": 0.05865
+    }
+  },
+  "monthly_projections_usd": {
+    "replicate_a40": {
+      "provider_name": "Replicate (Nvidia A40 48GB)",
+      "cost_per_single_job_usd": 0.0352,
+      "by_volume": {
+        "500_jobs": 17.59,
+        "1000_jobs": 35.19,
+        "5000_jobs": 175.95,
+        "10000_jobs": 351.9
+      }
+    },
+    "replicate_a100": {
+      "provider_name": "Replicate (Nvidia A100 40GB)",
+      "cost_per_single_job_usd": 0.0357,
+      "by_volume": {
+        "500_jobs": 17.86,
+        "1000_jobs": 35.71,
+        "5000_jobs": 178.56,
+        "10000_jobs": 357.12
+      }
+    },
+    "runpod_serverless_rtx4090": {
+      "provider_name": "RunPod Serverless (RTX 4090 24GB)",
+      "cost_per_single_job_usd": 0.0054,
+      "by_volume": {
+        "500_jobs": 2.69,
+        "1000_jobs": 5.39,
+        "5000_jobs": 26.93,
+        "10000_jobs": 53.86
+      }
+    }
+  },
+  "policy_recommendations": [
+    "Para el MVP (volumen <= 1.000 jobs/mes), Replicate A40 tiene un costo de ~$35 USD/mes, perfectamente asumible dentro del presupuesto de $50 USD.",
+    "Para escalar a Sprint 6+ (> 5.000 jobs/mes), migrar a RunPod Serverless RTX 4090 para reducir el costo a ~$27 USD por cada 5.000 jobs (ahorro del 81%).",
+    "Establecer alerta de gasto cuando el consumo diario supere los $5 USD."
+  ]
+}

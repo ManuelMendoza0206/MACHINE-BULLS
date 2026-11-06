@@ -102,8 +102,21 @@ def classify_category(image: Image.Image) -> tuple[str, float, dict[str, float]]
     return clases[mejor], por_clase[mejor], dict(zip(clases, por_clase))
 
 
-def classify_aesthetics(image: Image.Image, top_n: int = 3) -> list[dict[str, Any]]:
-    """Top-N esteticas CLIP con confianza normalizada a 1 sobre el total."""
+def classify_aesthetics(
+    image: Image.Image,
+    top_n: int = 3,
+    confidence_threshold: float | None = None,
+) -> list[dict[str, Any]]:
+    """Top-N esteticas CLIP con confianza normalizada a 1 sobre el total.
+
+    Fallback a ResNet-50 fine-tuned (86e3122f7):
+    Si la confianza de la estética dominante cae bajo el umbral configurado
+    (settings.clip_confidence_threshold, default 0.40), se dispara el clasificador
+    ResNet-50 de respaldo para mayor robustez ante imágenes ambiguas o atípicas.
+    """
+    from config import settings
+
+    threshold = confidence_threshold if confidence_threshold is not None else settings.clip_confidence_threshold
     clf = get_classifier()
     clip_img = _prepare_for_clip(image)
     textos = [t.format(c=a) for a in AESTHETICS for t in _AESTHETIC_TEMPLATES]
@@ -114,7 +127,18 @@ def classify_aesthetics(image: Image.Image, top_n: int = 3) -> list[dict[str, An
         por_estetica[aest] = sum(probs[i * ancho : (i + 1) * ancho])
     total = sum(por_estetica.values()) or 1.0
     ordenadas = sorted(por_estetica.items(), key=lambda kv: -kv[1])[:top_n]
-    return [{"aesthetic": k, "confidence": round(v / total, 4)} for k, v in ordenadas]
+    resultado = [{"aesthetic": k, "confidence": round(v / total, 4)} for k, v in ordenadas]
+
+    # Verificar condición de fallback ResNet-50
+    top_confidence = resultado[0]["confidence"] if resultado else 0.0
+    if settings.resnet_fallback_enabled and top_confidence < threshold:
+        from services.garment_analysis.resnet_fallback_classifier import (
+            get_resnet_fallback_classifier,
+        )
+        fallback_clf = get_resnet_fallback_classifier()
+        return fallback_clf.classify(image, top_n=top_n)
+
+    return resultado
 
 
 def analyze_garment(image: Image.Image) -> dict[str, Any]:
