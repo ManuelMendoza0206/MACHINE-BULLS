@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useState, type JSX } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { cn } from '@/lib/utils/cn';
 import { Badge } from '@/components/ui/badge';
@@ -177,8 +177,16 @@ function OutfitCard({ outfit, images, onTryOn, onDismiss }: OutfitCardProps): JS
  */
 export function OutfitsView(): JSX.Element {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { data: me, isLoading: meLoading, error: meError } = useMe();
   const userId = me?.user_id;
+
+  // Regla de prevalencia (86e301dru): query params de la URL tienen prioridad estricta sobre la preferencia guardada
+  const queryAesthetic =
+    typeof searchParams?.get === 'function'
+      ? searchParams.get('aesthetic') || searchParams.get('target_aesthetic') || null
+      : null;
+  const targetAesthetic = queryAesthetic ?? undefined;
 
   const [dismissed, setDismissed] = useState<string[]>(() => getStoredDismissed(userId));
 
@@ -212,10 +220,16 @@ export function OutfitsView(): JSX.Element {
   });
 
   const recommend = useQuery({
-    queryKey: ['outfits', 'recommend', me?.user_id],
+    queryKey: ['outfits', 'recommend', me?.user_id, targetAesthetic],
     queryFn: ({ signal }) => {
       if (!me) throw new Error('sin identidad del backend');
-      return recommendOutfits({ user_id: me.user_id }, signal);
+      return recommendOutfits(
+        {
+          user_id: me.user_id,
+          target_aesthetic: targetAesthetic,
+        },
+        signal
+      );
     },
     enabled: Boolean(me),
     staleTime: Infinity,
@@ -319,6 +333,22 @@ export function OutfitsView(): JSX.Element {
             {activeOutfits.length}{' '}
             {activeOutfits.length === 1 ? 'combinación para ti' : 'combinaciones para ti'}
           </p>
+          {queryAesthetic && (
+            <Badge
+              variant="outline"
+              className="ml-2 border-accent/40 bg-accent/10 text-accent font-mono text-xs px-2.5 py-0.5 inline-flex items-center gap-1.5"
+            >
+              <span>Filtro: {queryAesthetic.replace(/_/g, ' ')}</span>
+              <button
+                type="button"
+                onClick={() => router.push('/outfits')}
+                className="hover:text-destructive transition-colors ml-1"
+                aria-label="Quitar filtro de estética"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </Badge>
+          )}
         </div>
         <div className="flex items-center gap-2">
           {dismissed.length > 0 && (

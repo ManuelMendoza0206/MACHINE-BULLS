@@ -1,9 +1,12 @@
-import type { JSX } from 'react';
+import { Suspense, type JSX } from 'react';
 import { OutfitsView } from '@/features/outfits/components/OutfitsView';
 import { Badge } from '@/components/ui/badge';
 import { BentoCard } from '@/components/ui/card';
 import { Sparkles, Palette } from 'lucide-react';
 
+/**
+ * `useSearchParams` en `OutfitsView` exige un Suspense boundary para el prerender de `next build`.
+ */
 export default function OutfitsPage(): JSX.Element {
   return (
     <div className="min-h-full h-full pb-20 pt-4 px-4 sm:px-6 lg:px-8 max-w-[1440px] mx-auto space-y-6 sm:space-y-8">
@@ -54,8 +57,22 @@ export default function OutfitsPage(): JSX.Element {
 
       {/* Grid de Outfits Recomendados */}
       <section aria-label="Combinaciones recomendadas">
-        <OutfitsView />
+        <Suspense fallback={<OutfitsSkeleton />}>
+          <OutfitsView />
+        </Suspense>
       </section>
+    </div>
+  );
+}
+
+function OutfitsSkeleton(): JSX.Element {
+  return (
+    <div className="space-y-6">
+      <div className="h-14 w-full animate-pulse rounded-2xl bg-muted/40" />
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <div className="lg:col-span-7 h-96 animate-pulse rounded-3xl bg-muted/40" />
+        <div className="lg:col-span-5 h-96 animate-pulse rounded-3xl bg-muted/40" />
+      </div>
     </div>
   );
 }
