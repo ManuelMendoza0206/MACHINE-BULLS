@@ -59,7 +59,7 @@ def trigger_slo_alert(
                 f"SLO Breach en {endpoint}: {metric}={observed_value:.3f}s (umbral: {threshold:.3f}s)",
                 level="error" if severity in ("P1", "P2") else "warning",
             )
-    except Exception:
+    except Exception:  # noqa: BLE001, S110
         # Si Sentry no está configurado, el log estructurado garantiza la trazabilidad
         pass
 

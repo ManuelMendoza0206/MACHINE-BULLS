@@ -43,9 +43,8 @@ class ResNetFallbackClassifier:
 
         try:
             import torch
-            import torch.nn as nn
-            import torchvision.models as models
-            import torchvision.transforms as transforms
+            from torch import nn
+            from torchvision import models, transforms
 
             self._transform = transforms.Compose(
                 [
@@ -65,13 +64,13 @@ class ResNetFallbackClassifier:
                     state_dict = torch.load(self.model_path, map_location=self.device)
                     resnet.load_state_dict(state_dict)
                     logger.info("ResNet-50 fallback cargado desde %s", self.model_path)
-                except Exception as exc:
+                except Exception as exc:  # noqa: BLE001
                     logger.warning("No se pudo cargar checkpoint de ResNet-50 (%s): %s", self.model_path, exc)
 
             resnet.eval()
             resnet.to(self.device)
             self._model = resnet
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001
             logger.warning("Torch/Torchvision no disponible para ResNet-50 fallback: %s", exc)
             self._model = None
 
@@ -116,7 +115,7 @@ class ResNetFallbackClassifier:
                     }
                     for aesthetic, prob in top
                 ]
-            except Exception as exc:
+            except Exception as exc:  # noqa: BLE001
                 logger.error("Error durante inferencia ResNet-50 fallback: %s", exc)
 
         # Fallback determinista si el modelo no está disponible en memoria

@@ -30,9 +30,9 @@ def test_config_invalida_reporta_errores(tmp_path) -> None:
     assert any("seed" in e for e in errors)
 
 
-def test_train_no_implementado() -> None:
-    with pytest.raises(NotImplementedError):
-        train({})
+def test_train_implementado_y_retorna_metricas() -> None:
+    res = train({"epochs": 1, "batch_size": 4})
+    assert "final_val_acc" in res or "final_train_loss" in res
 
 
 def test_train_main_dry_run_ok(capsys) -> None:
@@ -45,10 +45,10 @@ def test_train_main_dry_run_ok(capsys) -> None:
     assert "dry-run OK" in capsys.readouterr().out
 
 
-def test_train_main_run_falla_honesto() -> None:
+def test_train_main_run_ejecuta_ok() -> None:
     from ml.training.train import DEFAULT_CONFIG
 
-    assert train_main(["--config", str(DEFAULT_CONFIG), "--run"]) == 2
+    assert train_main(["--config", str(DEFAULT_CONFIG), "--run"]) == 0
 
 
 def test_eval_accuracy_y_cli(tmp_path) -> None:

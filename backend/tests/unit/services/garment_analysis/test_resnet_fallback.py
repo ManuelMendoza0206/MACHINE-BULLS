@@ -13,8 +13,6 @@ from PIL import Image
 
 from services.garment_analysis.analyzer import classify_aesthetics
 from services.garment_analysis.resnet_fallback_classifier import (
-    IMAGENET_MEAN,
-    IMAGENET_STD,
     ResNetFallbackClassifier,
     get_resnet_fallback_classifier,
 )

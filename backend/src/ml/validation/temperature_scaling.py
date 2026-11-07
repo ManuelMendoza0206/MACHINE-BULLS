@@ -7,8 +7,7 @@ para que softmax(z / T) refleje la confianza real del modelo.
 from __future__ import annotations
 
 import torch
-import torch.nn as nn
-import torch.optim as optim
+from torch import nn, optim
 
 
 class ModelWithTemperature(nn.Module):

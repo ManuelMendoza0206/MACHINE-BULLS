@@ -15,7 +15,6 @@ import torch
 from dotenv import load_dotenv
 
 from ml.metrics.evaluator import Evaluator
-from ml.models.adapter import AestheticProjectionHead
 from ml.models.prompts import ESTETICAS_AMPLIADAS
 from ml.validation.evaluate_fitb import evaluate_fitb
 from ml.validation.temperature_scaling import ModelWithTemperature
@@ -253,7 +252,7 @@ def log_to_mlflow_dagshub(baseline_metrics: dict[str, Any], adapter_metrics: dic
             })
             print("[MLFLOW] Run 2 (Fine-Tuned Adapter) registrado con éxito en DagsHub.")
 
-    except Exception as ex:
+    except Exception as ex:  # noqa: BLE001
         print(f"[WARN] Error registrando en MLflow: {ex}")
 
 

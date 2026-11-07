@@ -13,7 +13,7 @@ import enum
 import logging
 import time
 from collections.abc import Callable
-from typing import Any, TypeVar
+from typing import TypeVar
 
 logger = logging.getLogger(__name__)
 
@@ -146,7 +146,7 @@ class CircuitBreaker:
         self._half_open_trials = 0
 
 
-def retry_with_backoff(
+def retry_with_backoff(  # noqa: UP047
     operation: Callable[[], T],
     max_retries: int = 3,
     base_delay: float = 1.0,

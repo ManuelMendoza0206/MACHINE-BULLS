@@ -10,13 +10,12 @@ from __future__ import annotations
 
 import random
 from collections import Counter
-from collections.abc import Iterable, Sequence
+from collections.abc import Sequence
 from typing import Any
 
 from PIL import Image
 
 try:
-    import torch
     from torchvision import transforms
     HAS_TORCHVISION = True
 except ImportError:

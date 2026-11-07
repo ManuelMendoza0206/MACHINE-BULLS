@@ -95,12 +95,12 @@ def _procesar(session, job: VtonJob, human_image_path: str, provider: VtonInfere
         cb.check_call()
         try:
             resultado = retry_with_backoff(
-                lambda: provider.try_on(
-                    human_image=resultado,
-                    garment_image=prenda_bytes,
-                    garment_description=descripcion,
-                    category=categoria,
-                    mask_type=mask_type,
+                lambda r=resultado, p=prenda_bytes, d=descripcion, c=categoria, m=mask_type: provider.try_on(
+                    human_image=r,
+                    garment_image=p,
+                    garment_description=d,
+                    category=c,
+                    mask_type=m,
                 ),
                 max_retries=3,
                 base_delay=0.1,

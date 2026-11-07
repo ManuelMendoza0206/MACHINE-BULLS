@@ -14,10 +14,9 @@ from pathlib import Path
 from typing import Any
 
 import torch
-import torch.nn as nn
-import torch.optim as optim
-from torch.utils.data import DataLoader
 import yaml
+from torch import nn, optim
+from torch.utils.data import DataLoader
 
 from ml.models.adapter import AestheticProjectionHead, ContrastiveCompatibilityLoss
 from ml.training.dataset import SyntheticPairDataset
@@ -108,7 +107,6 @@ def train(
 
     # Iniciar MLflow si está habilitado
     mlflow_active = False
-    active_run = None
     if use_mlflow:
         try:
             from dotenv import load_dotenv
@@ -124,7 +122,7 @@ def train(
 
             # Inicializar DagsHub si hay credenciales
             dagshub.init(repo_owner="jesusrodrigov", repo_name="machine-bulls", mlflow=True)
-            active_run = mlflow.start_run(run_name=run_name)
+            mlflow.start_run(run_name=run_name)
             mlflow.log_params({
                 "model_type": "fashion-clip-adapter",
                 "backbone": "patrickjohncyh/fashion-clip (frozen)",
@@ -137,7 +135,7 @@ def train(
                 "num_train_samples": len(train_dataset),
             })
             mlflow_active = True
-        except Exception as ex:
+        except Exception as ex:  # noqa: BLE001
             print(f"[WARN] No se pudo inicializar MLflow/DagsHub: {ex}. Continuando localmente.")
 
     history: dict[str, list[float]] = {

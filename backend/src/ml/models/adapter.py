@@ -7,8 +7,8 @@ a un espacio métrico calibrado D=128 (contrato CompatibilityEmbeddingModel del 
 from __future__ import annotations
 
 import torch
-import torch.nn as nn
 import torch.nn.functional as F
+from torch import nn
 
 
 class AestheticProjectionHead(nn.Module):

@@ -3,7 +3,7 @@
 import pytest
 
 from middleware.metrics import MetricsCollector
-from monitoring.alerting import clear_alerts, get_recent_alerts, trigger_slo_alert
+from monitoring.alerting import clear_alerts, get_recent_alerts
 
 
 @pytest.fixture(autouse=True)

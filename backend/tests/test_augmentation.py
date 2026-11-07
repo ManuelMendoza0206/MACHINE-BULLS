@@ -2,7 +2,11 @@
 
 from PIL import Image
 
-from ml.augmentation import aplicar_aumentacion_pil, calcular_pesos_balanceo, verificar_splits_anti_fuga
+from ml.augmentation import (
+    aplicar_aumentacion_pil,
+    calcular_pesos_balanceo,
+    verificar_splits_anti_fuga,
+)
 
 
 def test_verificar_splits_detecta_splits_limpios():
