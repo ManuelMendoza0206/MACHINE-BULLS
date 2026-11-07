@@ -25,6 +25,8 @@ __pycache__/
 /test-results
 /playwright-report
 .nyc_output
+coverage.xml
+backend/coverage.xml
 
 # Next.js
 /.next/

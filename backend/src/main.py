@@ -22,6 +22,7 @@ from api import garments, me, outfits, vton
 from config import settings
 from db.session import init_db
 from domain.exceptions import EXCEPTION_STATUS_MAP, StyleMeException
+from middleware.metrics import MetricsMiddleware, metrics_router
 from middleware.rate_limit import RateLimitMiddleware
 
 logging.basicConfig(level=logging.INFO)
@@ -32,7 +33,10 @@ app = FastAPI(
     description="Backend del MVP: analisis CLIP, recomendador cromatico y VTON real.",
 )
 
-# 1. Rate Limit Middleware: protege endpoints de mutacion costosa (B5 / api-gateway spec §2.3)
+# 1. Metrics Middleware: computa latencias, percentiles y alertas SLO (86e302a5f, 86e302a61)
+app.add_middleware(MetricsMiddleware)
+
+# 2. Rate Limit Middleware: protege endpoints de mutacion costosa (B5 / api-gateway spec §2.3)
 app.add_middleware(
     RateLimitMiddleware,
     limits={
@@ -41,7 +45,7 @@ app.add_middleware(
     },
 )
 
-# 2. CORS Middleware: orígenes permitidos
+# 3. CORS Middleware: orígenes permitidos
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins,
@@ -65,6 +69,7 @@ app.include_router(garments.router)
 app.include_router(me.router)
 app.include_router(outfits.router)
 app.include_router(vton.router)
+app.include_router(metrics_router)
 
 # Imagenes servidas desde el disco local (reemplazo barato de Cloudinary).
 settings.media_dir.mkdir(parents=True, exist_ok=True)

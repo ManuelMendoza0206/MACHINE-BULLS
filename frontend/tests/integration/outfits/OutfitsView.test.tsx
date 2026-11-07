@@ -101,4 +101,16 @@ describe('OutfitsView', () => {
     // Vuelve a mostrar el outfit
     expect(await screen.findByRole('button', { name: /probar puesto/i })).toBeInTheDocument();
   });
+
+  it('permite calificar outfits con like/dislike y persiste la preferencia (86e31bceh)', async () => {
+    renderWithProviders(<OutfitsView />);
+
+    const likeBtn = await screen.findByRole('button', { name: /^me gusta la combinación/i });
+    expect(likeBtn).toBeInTheDocument();
+
+    await userEvent.click(likeBtn);
+
+    const stored = window.localStorage.getItem(`styleme:outfit-feedback:${ME_UUID}`);
+    expect(stored).toContain('"8c7f8b1a-1234-4567-8901-abcdef123456":"like"');
+  });
 });

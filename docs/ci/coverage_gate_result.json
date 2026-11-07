@@ -1,0 +1,18 @@
+{
+  "gate": "coverage_gate",
+  "all_passed": true,
+  "checks": [
+    {
+      "target": "Backend Overall",
+      "rate": 80.83,
+      "threshold": 80.0,
+      "passed": true
+    },
+    {
+      "target": "Backend Domain (src/domain/)",
+      "rate": 99.44,
+      "threshold": 90.0,
+      "passed": true
+    }
+  ]
+}
