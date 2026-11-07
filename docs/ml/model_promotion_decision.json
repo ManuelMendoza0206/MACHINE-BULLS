@@ -1,0 +1,34 @@
+{
+  "gate": "model_promotion_gate",
+  "decision": "APPROVED",
+  "passed": true,
+  "metrics_source": "docs/ml/comparativa_baseline_vs_adapter.json",
+  "details": {
+    "candidate_name": "fashion-clip-aesthetic-adapter",
+    "candidate_f1_macro": 0.8889,
+    "candidate_fitb": 0.82,
+    "baseline_f1_macro": 0.8134,
+    "checks": {
+      "f1_category_ge_threshold": {
+        "threshold": 0.82,
+        "value": 0.8889,
+        "passed": true
+      },
+      "f1_aesthetic_ge_threshold": {
+        "threshold": 0.75,
+        "value": 0.8889,
+        "passed": true
+      },
+      "fitb_ge_threshold": {
+        "threshold": 0.7,
+        "value": 0.82,
+        "passed": true
+      },
+      "no_f1_regression_vs_baseline": {
+        "baseline_value": 0.8134,
+        "candidate_value": 0.8889,
+        "passed": true
+      }
+    }
+  }
+}

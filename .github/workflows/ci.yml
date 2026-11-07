@@ -54,6 +54,17 @@ jobs:
       - run: npm ci
       - run: npm run build
 
+  lighthouse:
+    name: lighthouse ci budget
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - name: Verify Lighthouse performance budgets
+        run: ./scripts/ci/run_lighthouse_ci.sh
+
   e2e:
     name: playwright e2e
     runs-on: ubuntu-latest
@@ -72,7 +83,7 @@ jobs:
       - run: npm run test:e2e
 
   backend:
-    name: lint · unit tests (backend)
+    name: lint · unit tests · gates (backend)
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -89,8 +100,28 @@ jobs:
       - run: uv sync --frozen --group dev
       - run: uv run ruff check .
       - run: uv run pytest -q --cov=src --cov-report=xml
+      - name: Enforce code coverage gate
+        run: uv run python ../scripts/ci/coverage_gate.py --backend-xml coverage.xml --backend-min 80.0 --domain-min 90.0
+      - name: Enforce model promotion gate
+        run: uv run python ../scripts/ci/model_promotion_gate.py --metrics-path ../docs/ml/comparativa_baseline_vs_adapter.json
       - uses: codecov/codecov-action@v7
         with:
           files: ./backend/coverage.xml
           fail_ci_if_error: false
           token: ${{ secrets.CODECOV_TOKEN }}
+
+  smoke-and-deploy-gate:
+    name: deploy rollback & smoke tests verification
+    runs-on: ubuntu-latest
+    needs: [backend, quality, build]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+          cache-dependency-path: backend/uv.lock
+      - run: uv sync --frozen --group dev
+        working-directory: backend
+      - name: Verify deploy rollback and smoke tests suites
+        run: uv run pytest tests/unit/ci/ -v
+        working-directory: backend

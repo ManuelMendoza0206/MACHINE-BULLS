@@ -95,14 +95,18 @@ def recommend_outfits(
     garments: list[dict[str, Any]],
     target_aesthetic: str | None = None,
     limit: int = 6,
+    disliked_combinations: list[set[str]] | None = None,
+    preferred_aesthetics: list[str] | None = None,
 ) -> list[dict[str, Any]]:
-    """Devuelve los mejores outfits armados con `garments`.
+    """Devuelve los mejores outfits armados con `garments`, aplicando personalizacion segun feedback.
 
     Cada garment dict esperado:
         {id, position, colors, embedding, aesthetic}
 
     `target_aesthetic` filtra por estetica dominante antes de combinar; si
     empieza vacio, ignina el filtro y prioriza variedad (dedupe por score).
+    `disliked_combinations`: conjuntos de IDs de prendas que el usuario rechazo.
+    `preferred_aesthetics`: esteticas aprobadas previamente con Like (reciben boost).
     """
     disponibles = garments
     if target_aesthetic:
@@ -117,13 +121,25 @@ def recommend_outfits(
 
     rankeados: list[dict[str, Any]] = []
     for capas in combos:
+        capa_ids = {g["id"] for g in capas if "id" in g}
+        if disliked_combinations and any(
+            capa_ids == d_set or (len(d_set) > 1 and d_set.issubset(capa_ids))
+            for d_set in disliked_combinations
+        ):
+            continue
+
         chroma = score_outfit(capas)
         emb = embedding_score([g["embedding"] for g in capas if g.get("embedding")])
         score = WEIGHTS["chromatic"] * chroma + WEIGHTS["embedding"] * emb
         capas_ordenadas = _ordenar_capas(capas)
+        estetica = _estetica_dominante(capas_ordenadas)
+
+        if preferred_aesthetics and estetica in preferred_aesthetics:
+            score = min(1.0, score + 0.10)
+
         rankeados.append(
             {
-                "aesthetic": _estetica_dominante(capas_ordenadas),
+                "aesthetic": estetica,
                 "garments": capas_ordenadas,
                 "chromatic_score": round(chroma, 4),
                 "embedding_score": round(emb, 4),

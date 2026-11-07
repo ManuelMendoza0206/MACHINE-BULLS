@@ -9,8 +9,18 @@ from sqlalchemy.orm import Session
 
 from db.session import get_session
 from domain.enums import CATEGORY_TO_POSITION
-from domain.models import Garment, GarmentOwnership, Outfit, OutfitGarment, User, new_uuid
+from domain.models import (
+    Garment,
+    GarmentOwnership,
+    Outfit,
+    OutfitFeedback,
+    OutfitGarment,
+    User,
+    new_uuid,
+)
 from domain.schemas import (
+    OutfitFeedbackCreate,
+    OutfitFeedbackOut,
     OutfitGarmentRef,
     OutfitOut,
     OutfitRecommendRequest,
@@ -49,6 +59,74 @@ def get_outfit(outfit_id: str, session: SessionDep) -> OutfitOut:
     return _outfit_a_schema(session, outfit)
 
 
+@router.post("/{outfit_id}/feedback", response_model=OutfitFeedbackOut)
+def submit_feedback(
+    outfit_id: str,
+    payload: OutfitFeedbackCreate,
+    session: SessionDep,
+) -> OutfitFeedbackOut:
+    """Registra feedback (like/dislike) del usuario sobre un outfit para personalizar el recomendador."""
+    outfit = session.get(Outfit, outfit_id)
+    if outfit is None:
+        raise HTTPException(status_code=404, detail="outfit no existe")
+
+    feedback = (
+        session.query(OutfitFeedback)
+        .filter(
+            OutfitFeedback.user_id == outfit.user_id,
+            OutfitFeedback.outfit_id == outfit_id,
+        )
+        .first()
+    )
+    if feedback is None:
+        feedback = OutfitFeedback(
+            user_id=outfit.user_id,
+            outfit_id=outfit_id,
+            rating=payload.rating,
+            feedback_type=payload.feedback_type or ("like" if payload.rating > 0 else "dislike"),
+            notes=payload.notes,
+        )
+        session.add(feedback)
+    else:
+        feedback.rating = payload.rating
+        feedback.feedback_type = payload.feedback_type or ("like" if payload.rating > 0 else "dislike")
+        feedback.notes = payload.notes
+
+    session.commit()
+    session.refresh(feedback)
+    return OutfitFeedbackOut(
+        id=feedback.id,
+        user_id=feedback.user_id,
+        outfit_id=feedback.outfit_id,
+        rating=feedback.rating,
+        feedback_type=feedback.feedback_type,
+        created_at=feedback.created_at,
+    )
+
+
+@router.get("/{outfit_id}/feedback", response_model=OutfitFeedbackOut | None)
+def get_outfit_feedback(
+    outfit_id: str,
+    session: SessionDep,
+) -> OutfitFeedbackOut | None:
+    """Obtiene el feedback registrado de un outfit."""
+    feedback = (
+        session.query(OutfitFeedback)
+        .filter(OutfitFeedback.outfit_id == outfit_id)
+        .first()
+    )
+    if feedback is None:
+        return None
+    return OutfitFeedbackOut(
+        id=feedback.id,
+        user_id=feedback.user_id,
+        outfit_id=feedback.outfit_id,
+        rating=feedback.rating,
+        feedback_type=feedback.feedback_type,
+        created_at=feedback.created_at,
+    )
+
+
 @router.post("/recommend", response_model=OutfitRecommendResponse)
 def recommend(
     req: OutfitRecommendRequest,
@@ -75,7 +153,34 @@ def recommend(
 
     prendas = session.query(Garment).filter(Garment.id.in_(garment_ids)).all()
     dicts = [_a_dict(g) for g in prendas]
-    crudos = recommend_outfits(dicts, target_aesthetic=req.target_aesthetic)
+
+    # Cargar historial de feedback del usuario para personalizar recomendaciones
+    user_feedbacks = (
+        session.query(OutfitFeedback)
+        .filter(OutfitFeedback.user_id == req.user_id)
+        .all()
+    )
+    disliked_combinations: list[set[str]] = []
+    preferred_aesthetics: list[str] = []
+    for fb in user_feedbacks:
+        if fb.rating < 0:
+            sub_ids = {
+                og.garment_id
+                for og in session.query(OutfitGarment).filter(OutfitGarment.outfit_id == fb.outfit_id).all()
+            }
+            if sub_ids:
+                disliked_combinations.append(sub_ids)
+        elif fb.rating > 0:
+            outfit_rel = session.get(Outfit, fb.outfit_id)
+            if outfit_rel and outfit_rel.aesthetic:
+                preferred_aesthetics.append(outfit_rel.aesthetic)
+
+    crudos = recommend_outfits(
+        dicts,
+        target_aesthetic=req.target_aesthetic,
+        disliked_combinations=disliked_combinations,
+        preferred_aesthetics=preferred_aesthetics,
+    )
 
     outfits: list[OutfitOut] = []
     for crudo in crudos:

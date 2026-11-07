@@ -14,9 +14,9 @@ from __future__ import annotations
 
 import json
 import sys
-import xml.dom.minidom as minidom
 from dataclasses import dataclass, field
 from pathlib import Path
+from xml.dom import minidom
 
 try:
     sys.stdout.reconfigure(encoding="utf-8")
@@ -152,7 +152,7 @@ def validate_svgs() -> None:
         content = path.read_text(encoding="utf-8")
         try:
             minidom.parseString(content)
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             raise ValueError(f"SVG inválido en {path}: {exc}") from exc
 
 

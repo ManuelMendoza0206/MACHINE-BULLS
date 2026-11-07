@@ -64,6 +64,10 @@ class Settings:
     supabase_url: str | None
     # Modelo CLIP para clasificacion y embedding de prendas
     clip_model_name: str
+    # Umbral de confianza minima de CLIP para disparar fallback ResNet-50 (86e3122f7)
+    clip_confidence_threshold: float
+    resnet_fallback_enabled: bool
+    vton_failover_enabled: bool
 
     @property
     def media_url_base(self) -> str:
@@ -100,6 +104,9 @@ def load_settings() -> Settings:
         supabase_jwt_secret=os.environ.get("SUPABASE_JWT_SECRET") or None,
         supabase_url=os.environ.get("SUPABASE_URL") or None,
         clip_model_name=os.environ.get("CLIP_MODEL_NAME", "patrickjohncyh/fashion-clip"),
+        clip_confidence_threshold=float(os.environ.get("CLIP_CONFIDENCE_THRESHOLD", "0.40")),
+        resnet_fallback_enabled=os.environ.get("RESNET_FALLBACK_ENABLED", "1").lower() in ("1", "true", "yes"),
+        vton_failover_enabled=os.environ.get("VTON_FAILOVER_ENABLED", "1").lower() in ("1", "true", "yes"),
     )
 
 

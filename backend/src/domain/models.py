@@ -116,6 +116,26 @@ class OutfitGarment(Base):
     outfit: Mapped[Outfit] = relationship(back_populates="garments")
 
 
+class OutfitFeedback(Base):
+    """Feedback explícito del usuario (like/dislike) sobre un outfit generado."""
+
+    __tablename__ = "outfit_feedbacks"
+    __table_args__ = (
+        UniqueConstraint("user_id", "outfit_id", name="uq_user_outfit_feedback"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_uuid)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), nullable=False)
+    outfit_id: Mapped[str] = mapped_column(ForeignKey("outfits.id"), nullable=False)
+    rating: Mapped[int] = mapped_column(Integer, nullable=False)  # +1 (like), -1 (dislike)
+    feedback_type: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    notes: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+    outfit: Mapped[Outfit] = relationship()
+    user: Mapped[User] = relationship()
+
+
 class VtonJob(Base):
     """Job asincrono de try-on: estado, error y resultado."""
 

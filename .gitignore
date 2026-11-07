@@ -25,6 +25,8 @@ __pycache__/
 /test-results
 /playwright-report
 .nyc_output
+coverage.xml
+backend/coverage.xml
 
 # Next.js
 /.next/
@@ -123,6 +125,7 @@ backend/media/
 backend/*.db
 backend/.coverage
 backend/.pytest_cache/
+models/*.pt
 
 # Runtime junk del try-on y DB dev (se regeneran)
 densepose_/

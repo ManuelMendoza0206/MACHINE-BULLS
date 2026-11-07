@@ -404,3 +404,32 @@ def build_provider() -> VtonInferenceProvider:
         return ReplicateVtonProvider(settings.replicate_api_token)
     logger.warning("VTON en modo auto sin VTON_HTTP_URL ni token: usando MockVtonProvider")
     return MockVtonProvider()
+
+
+def get_provider_fallback_chain(
+    primary: VtonInferenceProvider | None = None,
+) -> list[VtonInferenceProvider]:
+    """Genera la cadena de proveedores ordenada para failover en tiempo de ejecucion.
+
+    Si `vton_failover_enabled` esta activo:
+    - Primario: CatVTON / HttpVtonProvider
+    - Fallback 1: ReplicateVtonProvider (si hay token configurado)
+    - Fallback 2: MockVtonProvider (composicion determinista PIL)
+    """
+    prov = primary if primary is not None else build_provider()
+    if not getattr(settings, "vton_failover_enabled", True):
+        return [prov]
+
+    if isinstance(prov, MockVtonProvider) or "Mock" in type(prov).__name__:
+        return [prov]
+
+    chain: list[VtonInferenceProvider] = [prov]
+    if isinstance(prov, HttpVtonProvider):
+        if settings.replicate_api_token:
+            chain.append(ReplicateVtonProvider(settings.replicate_api_token))
+        chain.append(MockVtonProvider())
+    elif isinstance(prov, ReplicateVtonProvider):
+        chain.append(MockVtonProvider())
+
+    return chain
+

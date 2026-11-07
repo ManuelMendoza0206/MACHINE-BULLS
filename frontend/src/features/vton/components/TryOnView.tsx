@@ -470,7 +470,7 @@ export function TryOnView(): JSX.Element {
               MediaPipe A-Pose
             </span>
           </div>
-          <PhotoConsentGate>
+          <PhotoConsentGate variant="vton">
             <div className="space-y-4">
               {previewUrl ? (
                 <div className="space-y-3">

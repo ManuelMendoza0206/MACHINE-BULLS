@@ -1,0 +1,11 @@
+{
+  "samples": 2,
+  "ssim_mean": 0.6765,
+  "ssim_min": 0.353,
+  "ssim_max": 1.0,
+  "psnr_mean_db": 54.29,
+  "psnr_min_db": 8.59,
+  "target_ssim": 0.7,
+  "target_psnr_db": 20.0,
+  "status": "ACTION_REQUIRED"
+}

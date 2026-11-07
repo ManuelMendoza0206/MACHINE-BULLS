@@ -26,7 +26,16 @@ from db.session import SessionLocal
 from domain.enums import STAGE_TO_STATUS, VtonJobStatus, VtonStage
 from domain.models import Garment, Outfit, OutfitGarment, VtonJob
 from services import storage
-from services.vton.provider import VtonInferenceProvider, build_provider
+from services.vton.circuit_breaker import (
+    CircuitBreakerOpenError,
+    get_circuit_breaker,
+    retry_with_backoff,
+)
+from services.vton.provider import (
+    VtonInferenceProvider,
+    build_provider,
+    get_provider_fallback_chain,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -34,9 +43,14 @@ logger = logging.getLogger(__name__)
 _SOPORTADAS = {"top", "bottom", "dress", "outerwear"}
 
 
-def run_job(job_id: str, human_image_path: str) -> None:
-    """Ejecuta el try-on encadenado de todas las capas del job. Corre en background."""
-    provider = build_provider()
+def run_job(
+    job_id: str,
+    human_image_path: str,
+    provider: VtonInferenceProvider | None = None,
+) -> None:
+    """Ejecuta el try-on encadenado de todas las capas del job con failover automatico. Corre en background."""
+    primary = provider or build_provider()
+    providers = get_provider_fallback_chain(primary)
     session = SessionLocal()
     try:
         job = session.get(VtonJob, job_id)
@@ -44,16 +58,40 @@ def run_job(job_id: str, human_image_path: str) -> None:
             logger.error("VTON job %s no existe", job_id)
             return
 
-        try:
-            _set_stage(session, job, VtonStage.VALIDATING)
-            resultado_path = _procesar(session, job, human_image_path, provider)
-            job.result_path = resultado_path
-            _set_stage(session, job, VtonStage.COMPLETED)
-        except Exception as exc:  # noqa: BLE001 - el fallo va al job, no revienta el server
-            logger.error("VTON job %s fallo: %s\n%s", job_id, exc, traceback.format_exc())
-            job.status = VtonJobStatus.FAILED.value
-            job.stage = VtonStage.FAILED.value
-            job.error_message = str(exc)[:1000]
+        last_error = None
+        for prov in providers:
+            try:
+                cb = get_circuit_breaker(prov.name)
+                if cb.is_open():
+                    raise CircuitBreakerOpenError(
+                        f"Circuit breaker abierto para {prov.name}: proveedor temporalmente no disponible"
+                    )
+                _set_stage(session, job, VtonStage.VALIDATING)
+                resultado_path = _procesar(session, job, human_image_path, prov)
+                job.result_path = resultado_path
+                job.error_message = None
+                _set_stage(session, job, VtonStage.COMPLETED)
+                session.commit()
+                return
+            except Exception as exc:  # noqa: BLE001
+                last_error = exc
+                logger.warning(
+                    "Fallo en ejecucion de proveedor VTON '%s' para job %s: %s. Evaluando failover...",
+                    prov.name,
+                    job_id,
+                    exc,
+                )
+                continue
+
+        logger.error(
+            "Todos los proveedores VTON fallaron para job %s: %s\n%s",
+            job_id,
+            last_error,
+            traceback.format_exc(),
+        )
+        job.status = VtonJobStatus.FAILED.value
+        job.stage = VtonStage.FAILED.value
+        job.error_message = str(last_error)[:1000] if last_error else "Fallo en proveedores VTON"
         session.commit()
     finally:
         session.close()
@@ -81,13 +119,25 @@ def _procesar(session, job: VtonJob, human_image_path: str, provider: VtonInfere
             "VTON job %s: capa %d/%d (%s -> %s, mask=%s) con %s",
             job.id, i + 1, len(capas), posicion, categoria, mask_type, provider.name,
         )
-        resultado = provider.try_on(
-            human_image=resultado,
-            garment_image=prenda_bytes,
-            garment_description=descripcion,
-            category=categoria,
-            mask_type=mask_type,
-        )
+        cb = get_circuit_breaker(provider.name)
+        cb.check_call()
+        try:
+            resultado = retry_with_backoff(
+                lambda r=resultado, p=prenda_bytes, d=descripcion, c=categoria, m=mask_type: provider.try_on(
+                    human_image=r,
+                    garment_image=p,
+                    garment_description=d,
+                    category=c,
+                    mask_type=m,
+                ),
+                max_retries=3,
+                base_delay=0.1,
+                factor=2.0,
+            )
+            cb.record_success()
+        except Exception as exc:
+            cb.record_failure(exc)
+            raise
 
     # Guardado del compuesto (subida a la version publicada de la imagen).
     _set_stage(session, job, VtonStage.UPLOADING)
