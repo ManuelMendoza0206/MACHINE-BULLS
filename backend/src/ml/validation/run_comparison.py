@@ -19,7 +19,18 @@ from ml.models.prompts import ESTETICAS_AMPLIADAS
 from ml.validation.evaluate_fitb import evaluate_fitb
 from ml.validation.temperature_scaling import ModelWithTemperature
 
-REPO_ROOT = Path(__file__).resolve().parents[4]
+def _find_repo_root() -> Path:
+    p = Path(__file__).resolve()
+    for parent in p.parents:
+        if (parent / "sample_data").exists():
+            return parent
+    colab_drive = Path("/content/drive/MyDrive/MACHINE-BULLS")
+    if (colab_drive / "sample_data").exists():
+        return colab_drive
+    return p.parents[4] if len(p.parents) > 4 else p.parent
+
+
+REPO_ROOT = _find_repo_root()
 
 
 def setup_env() -> None:

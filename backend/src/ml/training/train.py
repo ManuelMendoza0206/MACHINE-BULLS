@@ -31,12 +31,15 @@ REQUIRED_TOP_KEYS = ("model", "dataset", "training", "seed")
 
 
 def get_repo_root() -> Path:
-    """Encuentra la raiz del repositorio MACHINE-BULLS de forma robusta."""
+    """Encuentra la raiz del repositorio MACHINE-BULLS de forma robusta (local, Docker o Colab Drive)."""
     p = Path(__file__).resolve()
     for parent in p.parents:
         if (parent / "sample_data").exists() or (parent / ".git").exists():
             return parent
-    return p.parents[4]
+    colab_drive = Path("/content/drive/MyDrive/MACHINE-BULLS")
+    if colab_drive.exists():
+        return colab_drive
+    return p.parents[4] if len(p.parents) > 4 else p.parent
 
 
 def load_config(path: str | Path) -> dict[str, Any]:
