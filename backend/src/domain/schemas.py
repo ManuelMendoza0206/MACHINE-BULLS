@@ -99,6 +99,25 @@ class OutfitRecommendResponse(BaseModel):
     outfits: list[OutfitOut]
 
 
+class OutfitFeedbackCreate(BaseModel):
+    """Payload para registrar feedback (like/dislike) de un outfit."""
+
+    rating: int = Field(..., description="+1 para like, -1 para dislike")
+    feedback_type: str | None = Field(default=None, description="like, dislike, etc.")
+    notes: str | None = None
+
+
+class OutfitFeedbackOut(BaseModel):
+    """Respuesta del feedback registrado."""
+
+    id: str
+    user_id: str
+    outfit_id: str
+    rating: int
+    feedback_type: str | None = None
+    created_at: datetime
+
+
 class MeResponse(BaseModel):
     """GET /api/v1/me: identidad del usuario demo.
 

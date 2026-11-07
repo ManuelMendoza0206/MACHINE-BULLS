@@ -13,6 +13,11 @@ import sys
 from pathlib import Path
 from typing import Any
 
+# Asegurar resolucion de modulo 'ml' desde backend/src
+_SRC_DIR = Path(__file__).resolve().parent.parent.parent
+if str(_SRC_DIR) not in sys.path:
+    sys.path.insert(0, str(_SRC_DIR))
+
 import torch
 import yaml
 from torch import nn, optim
@@ -23,6 +28,15 @@ from ml.training.dataset import SyntheticPairDataset
 
 DEFAULT_CONFIG = Path(__file__).resolve().parent.parent / "config.yaml"
 REQUIRED_TOP_KEYS = ("model", "dataset", "training", "seed")
+
+
+def get_repo_root() -> Path:
+    """Encuentra la raiz del repositorio MACHINE-BULLS de forma robusta."""
+    p = Path(__file__).resolve()
+    for parent in p.parents:
+        if (parent / "sample_data").exists() or (parent / ".git").exists():
+            return parent
+    return p.parents[4]
 
 
 def load_config(path: str | Path) -> dict[str, Any]:
@@ -86,7 +100,7 @@ def train(
     print(f"[TRAIN] Dispositivo detectado: {device} | Épocas: {epochs} | Batch: {batch_size} | LR: {lr}")
 
     # Cargar datasets
-    repo_root = Path(__file__).resolve().parent.parent.parent.parent
+    repo_root = get_repo_root()
     train_jsonl = repo_root / "sample_data" / "clip_pairs_train.jsonl"
     val_jsonl = repo_root / "sample_data" / "clip_pairs_val.jsonl"
 

@@ -29,6 +29,15 @@ beforeEach(() => {
       HttpResponse.json({ user_id: ME_UUID, email: 'demo@styleme.test' })
     ),
     http.post('*/api/v1/outfits/recommend', () => HttpResponse.json(recommendFixture)),
+    http.post('*/api/v1/outfits/:id/feedback', () =>
+      HttpResponse.json({
+        id: 'fb-test-id',
+        user_id: ME_UUID,
+        outfit_id: 'test-outfit',
+        rating: 1,
+        created_at: new Date().toISOString(),
+      })
+    ),
     http.get('*/api/v1/garments/capsule', () => HttpResponse.json(capsuleFixture))
   );
 });

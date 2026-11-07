@@ -13,6 +13,7 @@ import { Sparkles, ArrowRight, X, RotateCcw, ThumbsUp, ThumbsDown } from 'lucide
 import { useMe } from '@/features/auth/hooks/useMe';
 import { listCapsuleGarments } from '@/features/garments/api/listCapsuleGarments';
 import { recommendOutfits } from '@/features/outfits/api/recommendOutfits';
+import { submitOutfitFeedback } from '@/features/outfits/api/submitOutfitFeedback';
 import { mapStatusToUserMessage } from '@/lib/api/mapStatusToUserMessage';
 import { ApiError } from '@/lib/errors';
 import type { Outfit, OutfitPosition } from '@/schemas/api/outfits';
@@ -260,6 +261,12 @@ export function OutfitsView(): JSX.Element {
           // ignore storage error
         }
         return next;
+      });
+
+      // Persistir en backend (PostgreSQL) para aprendizaje del recomendador
+      const rating = type === 'like' ? 1 : -1;
+      submitOutfitFeedback(id, { rating, feedback_type: type }).catch(() => {
+        // En caso de error de red, el estado local ya mantiene la reactividad visual
       });
     },
     [userId]

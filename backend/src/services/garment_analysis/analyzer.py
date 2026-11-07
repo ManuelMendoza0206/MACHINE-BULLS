@@ -60,6 +60,37 @@ _CATEGORY_PROMPTS: dict[str, str] = {
 
 _lock = threading.Lock()
 _classifier: ClipClassifier | None = None
+_adapter_model: Any = None
+_adapter_checked: bool = False
+
+
+def get_aesthetic_adapter() -> Any:
+    """Carga el adaptador de 128-D entrenado si existe en `models/fashion_clip_adapter.pt`."""
+    global _adapter_model, _adapter_checked
+    if not _adapter_checked:
+        with _lock:
+            if not _adapter_checked:
+                _adapter_checked = True
+                from pathlib import Path
+                import torch
+                from ml.models.adapter import AestheticProjectionHead
+
+                repo_root = Path(__file__).resolve().parents[4]
+                ckpt1 = repo_root / "models" / "fashion_clip_adapter.pt"
+                ckpt2 = repo_root / "backend" / "models" / "fashion_clip_adapter.pt"
+                ckpt = ckpt1 if ckpt1.exists() else ckpt2
+                if ckpt.exists():
+                    try:
+                        head = AestheticProjectionHead(
+                            input_dim=512, hidden_dim=256, output_dim=128, num_aesthetics=12
+                        )
+                        state = torch.load(ckpt, map_location="cpu")
+                        head.load_state_dict(state)
+                        head.eval()
+                        _adapter_model = head
+                    except Exception:  # noqa: BLE001
+                        _adapter_model = None
+    return _adapter_model
 
 
 def get_classifier() -> ClipClassifier:
@@ -191,4 +222,9 @@ def _image_embedding(clf: ClipClassifier, image: Image.Image) -> list[float]:
         vec = vec.unsqueeze(0)
 
     vec = vec / vec.norm(dim=-1, keepdim=True)
+    adapter = get_aesthetic_adapter()
+    if adapter is not None:
+        with torch.no_grad():
+            proj, _ = adapter(vec.to(dtype=torch.float32, device="cpu"))
+            return [round(float(x), 6) for x in proj[0].tolist()]
     return [round(float(x), 6) for x in vec[0].tolist()]

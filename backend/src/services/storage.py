@@ -15,6 +15,7 @@ Soporta dos modos de operacion:
 from __future__ import annotations
 
 import logging
+import time
 import uuid
 from pathlib import Path
 from typing import Any
@@ -151,3 +152,46 @@ def read_bytes(relative_path: str) -> bytes:
             logger.warning("Fallo al descargar blob de Azure (%s): %s", relative_path, exc)
 
     raise FileNotFoundError(f"Archivo no encontrado en storage: {relative_path}")
+
+
+def purge_expired_human_photos(
+    max_age_hours: float = 24.0,
+    base_dir: Path | None = None,
+) -> list[str]:
+    """Elimina del almacenamiento local las fotos de usuarios con mas de `max_age_hours`.
+
+    Garantiza el cumplimiento estricto de la politica de privacidad de 24 horas:
+    las fotos de personas en pose ('humanos') no deben persistir mas alla de su ventana
+    autorizada de procesamiento en disco local.
+    """
+    media_path = base_dir if base_dir is not None else settings.media_dir
+    carpeta = FOLDER_MAP.get("humans", "humanos")
+    humanos_dir = media_path / carpeta
+
+    if not humanos_dir.exists() or not humanos_dir.is_dir():
+        logger.debug("Directorio de fotos humanas %s no existe. Nada que purgar.", humanos_dir)
+        return []
+
+    ahora = time.time()
+    limite_segundos = max_age_hours * 3600.0
+    eliminados: list[str] = []
+
+    for archivo in sorted(humanos_dir.iterdir()):
+        if not archivo.is_file():
+            continue
+        try:
+            mtime = archivo.stat().st_mtime
+            if (ahora - mtime) >= limite_segundos:
+                archivo.unlink(missing_ok=True)
+                eliminados.append(archivo.name)
+                logger.info(
+                    "Foto humana expirada purgada (>%sh): %s",
+                    max_age_hours,
+                    archivo.name,
+                )
+        except OSError as exc:
+            logger.warning("No se pudo purgar archivo expirado %s: %s", archivo.name, exc)
+
+    logger.info("Purga de fotos humanas completada: %d archivo(s) eliminados.", len(eliminados))
+    return eliminados
+

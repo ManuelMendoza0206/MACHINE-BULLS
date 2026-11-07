@@ -31,7 +31,11 @@ from services.vton.circuit_breaker import (
     get_circuit_breaker,
     retry_with_backoff,
 )
-from services.vton.provider import VtonInferenceProvider, build_provider
+from services.vton.provider import (
+    VtonInferenceProvider,
+    build_provider,
+    get_provider_fallback_chain,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -39,9 +43,14 @@ logger = logging.getLogger(__name__)
 _SOPORTADAS = {"top", "bottom", "dress", "outerwear"}
 
 
-def run_job(job_id: str, human_image_path: str) -> None:
-    """Ejecuta el try-on encadenado de todas las capas del job. Corre en background."""
-    provider = build_provider()
+def run_job(
+    job_id: str,
+    human_image_path: str,
+    provider: VtonInferenceProvider | None = None,
+) -> None:
+    """Ejecuta el try-on encadenado de todas las capas del job con failover automatico. Corre en background."""
+    primary = provider or build_provider()
+    providers = get_provider_fallback_chain(primary)
     session = SessionLocal()
     try:
         job = session.get(VtonJob, job_id)
@@ -49,21 +58,40 @@ def run_job(job_id: str, human_image_path: str) -> None:
             logger.error("VTON job %s no existe", job_id)
             return
 
-        try:
-            cb = get_circuit_breaker(provider.name)
-            if cb.is_open():
-                raise CircuitBreakerOpenError(
-                    f"Circuit breaker abierto para {provider.name}: proveedor temporalmente no disponible"
+        last_error = None
+        for prov in providers:
+            try:
+                cb = get_circuit_breaker(prov.name)
+                if cb.is_open():
+                    raise CircuitBreakerOpenError(
+                        f"Circuit breaker abierto para {prov.name}: proveedor temporalmente no disponible"
+                    )
+                _set_stage(session, job, VtonStage.VALIDATING)
+                resultado_path = _procesar(session, job, human_image_path, prov)
+                job.result_path = resultado_path
+                job.error_message = None
+                _set_stage(session, job, VtonStage.COMPLETED)
+                session.commit()
+                return
+            except Exception as exc:  # noqa: BLE001
+                last_error = exc
+                logger.warning(
+                    "Fallo en ejecucion de proveedor VTON '%s' para job %s: %s. Evaluando failover...",
+                    prov.name,
+                    job_id,
+                    exc,
                 )
-            _set_stage(session, job, VtonStage.VALIDATING)
-            resultado_path = _procesar(session, job, human_image_path, provider)
-            job.result_path = resultado_path
-            _set_stage(session, job, VtonStage.COMPLETED)
-        except Exception as exc:  # noqa: BLE001 - el fallo va al job, no revienta el server
-            logger.error("VTON job %s fallo: %s\n%s", job_id, exc, traceback.format_exc())
-            job.status = VtonJobStatus.FAILED.value
-            job.stage = VtonStage.FAILED.value
-            job.error_message = str(exc)[:1000]
+                continue
+
+        logger.error(
+            "Todos los proveedores VTON fallaron para job %s: %s\n%s",
+            job_id,
+            last_error,
+            traceback.format_exc(),
+        )
+        job.status = VtonJobStatus.FAILED.value
+        job.stage = VtonStage.FAILED.value
+        job.error_message = str(last_error)[:1000] if last_error else "Fallo en proveedores VTON"
         session.commit()
     finally:
         session.close()

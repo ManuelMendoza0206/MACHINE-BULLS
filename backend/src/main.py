@@ -24,6 +24,7 @@ from db.session import init_db
 from domain.exceptions import EXCEPTION_STATUS_MAP, StyleMeException
 from middleware.metrics import MetricsMiddleware, metrics_router
 from middleware.rate_limit import RateLimitMiddleware
+from services import storage
 
 logging.basicConfig(level=logging.INFO)
 
@@ -80,6 +81,8 @@ app.mount("/media", StaticFiles(directory=settings.media_dir), name="media")
 def _startup() -> None:
     """Crea tablas al arrancar (SQLite). En Postgres lo hace Alembic."""
     init_db()
+    # Purga automatica de fotos humanas con mas de 24 horas (privacidad y compliance)
+    storage.purge_expired_human_photos(max_age_hours=24.0)
 
 
 @app.get("/health")
