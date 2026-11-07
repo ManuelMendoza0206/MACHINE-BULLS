@@ -11,13 +11,18 @@ import { OutfitsView } from '@/features/outfits/components/OutfitsView';
 const ME_UUID = 'aaaaaaaa-4567-4891-8901-abcdef123456';
 
 const { push } = vi.hoisted(() => ({ push: vi.fn() }));
-vi.mock('next/navigation', () => ({ useRouter: () => ({ push }) }));
+let mockSearchParams = new URLSearchParams();
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ push }),
+  useSearchParams: () => mockSearchParams,
+}));
 
 const originalEnv = process.env['NEXT_PUBLIC_API_BASE_URL'];
 
 beforeEach(() => {
   process.env['NEXT_PUBLIC_API_BASE_URL'] = 'https://api.example.com';
   push.mockClear();
+  mockSearchParams = new URLSearchParams();
   window.localStorage.clear();
   server.use(
     http.get('*/api/v1/me', () =>
@@ -112,5 +117,40 @@ describe('OutfitsView', () => {
 
     const stored = window.localStorage.getItem(`styleme:outfit-feedback:${ME_UUID}`);
     expect(stored).toContain('"8c7f8b1a-1234-4567-8901-abcdef123456":"like"');
+  });
+
+  it('prioriza el query param ?aesthetic sobre la preferencia del perfil y permite removerlo', async () => {
+    mockSearchParams = new URLSearchParams('aesthetic=formal');
+    let capturedBody: Record<string, unknown> | null = null;
+
+    server.use(
+      http.get('*/api/v1/me', () =>
+        HttpResponse.json({
+          user_id: ME_UUID,
+          email: 'demo@styleme.test',
+          preferred_aesthetic: 'casual',
+        })
+      ),
+      http.post('*/api/v1/outfits/recommend', async ({ request }) => {
+        capturedBody = (await request.json()) as Record<string, unknown>;
+        return HttpResponse.json(recommendFixture);
+      })
+    );
+
+    renderWithProviders(<OutfitsView />);
+
+    // Muestra el badge del filtro activo
+    expect(await screen.findByText(/filtro:\s*formal/i)).toBeInTheDocument();
+
+    // Comprueba que se envió al backend la estética del query param, ignorando la de 'me' ('casual')
+    expect(capturedBody).toMatchObject({
+      target_aesthetic: 'formal',
+      user_id: ME_UUID,
+    });
+
+    // Permite quitar el filtro navegando a /outfits
+    const clearBtn = screen.getByRole('button', { name: /quitar filtro de estética/i });
+    await userEvent.click(clearBtn);
+    expect(push).toHaveBeenCalledWith('/outfits');
   });
 });
