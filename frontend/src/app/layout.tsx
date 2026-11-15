@@ -11,7 +11,7 @@ export const metadata: Metadata = {
     template: '%s · StyleMe',
   },
   description:
-    'Digitaliza tus prendas, descubre combinaciones por armonía cromática y pruébatelas sobre tu propia foto con difusión multicapa.',
+    'Organiza tus prendas, descubre combinaciones con buen estilo y pruébatelas directamente sobre tu foto.',
 };
 
 export const viewport: Viewport = {

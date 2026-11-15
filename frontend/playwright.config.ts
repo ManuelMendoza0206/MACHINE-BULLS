@@ -33,6 +33,7 @@ export default defineConfig({
       // machines. Every e2e spec that hits the API mocks it via page.route(), so this origin
       // is never actually dialed — it only has to be a syntactically valid URL.
       NEXT_PUBLIC_API_BASE_URL: process.env['NEXT_PUBLIC_API_BASE_URL'] ?? 'http://localhost:8000',
+      PLAYWRIGHT_TEST: '1',
     },
   },
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],

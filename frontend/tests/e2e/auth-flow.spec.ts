@@ -15,7 +15,7 @@ test.describe('Flujo Crítico 2: Auth Flow', () => {
     await expect(submitBtn).toBeVisible();
 
     // Verify link to signup exists
-    const signupLink = page.getByRole('link', { name: /crear cuenta|regístrate/i });
+    const signupLink = page.getByRole('link', { name: /crear cuenta|regístrate/i }).first();
     await expect(signupLink).toBeVisible();
   });
 

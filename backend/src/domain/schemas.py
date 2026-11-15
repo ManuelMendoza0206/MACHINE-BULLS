@@ -9,6 +9,7 @@ en estado de error tipado. Si cambia un schema Zod, cambia este.
 from __future__ import annotations
 
 from datetime import datetime
+from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
@@ -58,6 +59,13 @@ class GarmentSummary(BaseModel):
     category: str
     dominant_aesthetic: str
     position: GarmentPosition | None = None
+    status: str = "AVAILABLE"
+
+
+class GarmentStatusUpdate(BaseModel):
+    """Payload para actualizar estado operativo de una prenda."""
+
+    status: str
 
 
 class CapsuleCatalogResponse(BaseModel):
@@ -81,6 +89,9 @@ class OutfitOut(BaseModel):
     garments: list[OutfitGarmentRef] = Field(min_length=1)
     chromatic_score: float = Field(ge=0.0, le=1.0)
     embedding_score: float = Field(ge=0.0, le=1.0)
+    occasion: str | None = None
+    weather: str | None = None
+    reason: str | None = None
 
 
 class OutfitRecommendRequest(BaseModel):
@@ -91,6 +102,20 @@ class OutfitRecommendRequest(BaseModel):
     user_id: str
     target_aesthetic: str | None = None
     available_garment_ids: list[str] | None = None
+    occasion: str | None = None
+    weather: str | None = None
+
+
+class OutfitRemixRequest(BaseModel):
+    """POST /api/v1/outfits/remix."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    user_id: str
+    pinned_garment_ids: list[str] = Field(min_length=1)
+    occasion: str | None = None
+    weather: str | None = None
+    target_aesthetic: str | None = None
 
 
 class OutfitRecommendResponse(BaseModel):
@@ -164,4 +189,96 @@ class VtonJobListResponse(BaseModel):
 
     jobs: list[VtonJobListItem]
     total: int
+
+
+class SmartShoppingRedundancy(BaseModel):
+    """Alerta de prenda similar en la misma categoría."""
+
+    is_redundant: bool
+    similar_garment_id: str | None = None
+    similarity: float = 0.0
+    message: str | None = None
+
+
+class SmartShoppingEvaluateResponse(BaseModel):
+    """Resultado del análisis Before You Buy de una prenda candidata."""
+
+    candidate_garment: GarmentUploadResponse
+    compatible_garments_count: int
+    potential_outfits_count: int
+    redundancy: SmartShoppingRedundancy
+    verdict: str
+    potential_outfits: list[OutfitOut]
+
+
+class OutfitUsageLogCreate(BaseModel):
+    """Registrar un outfit como usado."""
+
+    outfit_id: str
+    worn_date: str | None = None
+
+
+class OutfitUsageLogOut(BaseModel):
+    """Respuesta de registro de uso."""
+
+    id: str
+    user_id: str
+    outfit_id: str
+    worn_date: str
+    created_at: datetime
+
+
+class WardrobeAnalyticsResponse(BaseModel):
+    """Estadísticas de uso y salud del guardarropa."""
+
+    total_garments: int
+    utilization_rate: float
+    most_worn_garments: list[dict[str, Any]]
+    unworn_garments: list[dict[str, Any]]
+    wardrobe_gaps: list[str]
+
+
+class WeatherResponse(BaseModel):
+    """Clima actual detectado o manual."""
+
+    city: str
+    temp_c: float
+    condition: str
+    weather_type: str  # cold, mild, warm
+    is_raining: bool
+    source: str  # weatherapi, open-meteo, fallback, manual
+
+
+class OutfitPlanCreate(BaseModel):
+    """Creación de un plan de vestimenta."""
+
+    user_id: str
+    planned_date: str  # YYYY-MM-DD
+    garment_ids: list[str] = Field(min_length=1)
+    outfit_id: str | None = None
+    occasion: str | None = None
+    notes: str | None = None
+
+
+class OutfitPlanResponse(BaseModel):
+    """Representación de un plan de vestimenta."""
+
+    id: str
+    user_id: str
+    planned_date: str
+    garment_ids: list[str]
+    outfit_id: str | None = None
+    occasion: str | None = None
+    notes: str | None = None
+    status: str
+    created_at: datetime
+    updated_at: datetime
+
+
+class OutfitPlanConfirmResponse(BaseModel):
+    """Confirmación de uso de un plan agendado."""
+
+    plan: OutfitPlanResponse
+    usage_logged: bool
+    garments_marked_laundry: list[str] = []
 

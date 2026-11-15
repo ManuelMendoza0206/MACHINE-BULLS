@@ -25,6 +25,23 @@ class OwnershipSource(str, enum.Enum):
     UPLOAD = "upload"
 
 
+class GarmentStatus(str, enum.Enum):
+    """Estado operativo de la prenda en el guardarropa."""
+
+    AVAILABLE = "AVAILABLE"
+    LAUNDRY = "LAUNDRY"
+    REPAIR = "REPAIR"
+    INACTIVE = "INACTIVE"
+
+
+class OutfitPlanStatus(str, enum.Enum):
+    """Estado de planificación de un outfit en la agenda."""
+
+    PLANNED = "PLANNED"
+    COMPLETED = "COMPLETED"
+    CANCELLED = "CANCELLED"
+
+
 class VtonJobStatus(str, enum.Enum):
     """Estados del job de try-on; el frontend espera exactamente estos strings."""
 

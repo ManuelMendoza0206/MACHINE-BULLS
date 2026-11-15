@@ -54,7 +54,7 @@ export function ProfileView(): JSX.Element {
     const msg =
       error instanceof ApiError
         ? mapStatusToUserMessage(error.status, error.responseBody)
-        : 'No pudimos cargar tu perfil. ¿Está el backend levantado?';
+        : 'No pudimos cargar tus datos de perfil. Revisa tu conexión o inténtalo en unos momentos.';
     return (
       <div className="rounded-lg border border-border p-6 text-center">
         <p role="alert" className="text-sm text-muted-foreground">
@@ -116,7 +116,7 @@ export function ProfileView(): JSX.Element {
               <span className="text-xs text-muted-foreground">Estado</span>
               <span className="inline-flex items-center gap-1.5 text-xs font-medium">
                 <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                {authStatus === 'authenticated' ? 'Sesión activa' : 'Modo demostración'}
+                {authStatus === 'authenticated' ? 'Conectado' : 'Modo demostración'}
               </span>
             </div>
           </div>

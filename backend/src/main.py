@@ -12,13 +12,21 @@ Arranque local:
 from __future__ import annotations
 
 import logging
+import sys
+from pathlib import Path
+
+# Asegura que src/ esté en sys.path tanto si uvicorn se invoca como src.main:app,
+# con --app-dir src, o desde el contenedor Docker.
+_SRC_DIR = Path(__file__).resolve().parent
+if str(_SRC_DIR) not in sys.path:
+    sys.path.insert(0, str(_SRC_DIR))
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
-from api import garments, me, outfits, vton
+from api import garments, me, outfits, planner, shopping, vton
 from config import settings
 from db.session import init_db
 from domain.exceptions import EXCEPTION_STATUS_MAP, StyleMeException
@@ -42,14 +50,16 @@ app.add_middleware(
     RateLimitMiddleware,
     limits={
         "/garments/upload": "20/minute",
+        "/shopping/evaluate": "20/minute",
         "/vton/try-on": "10/minute",
     },
 )
 
-# 3. CORS Middleware: orígenes permitidos
+# 3. CORS Middleware: orígenes permitidos (soporta cualquier puerto localhost/127.0.0.1)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins,
+    allow_origin_regex=r"^https?://(localhost|127\.0\.0\.1)(:[0-9]+)?$",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -69,6 +79,8 @@ async def handle_styleme_exception(request: Request, exc: StyleMeException) -> J
 app.include_router(garments.router)
 app.include_router(me.router)
 app.include_router(outfits.router)
+app.include_router(planner.router)
+app.include_router(shopping.router)
 app.include_router(vton.router)
 app.include_router(metrics_router)
 

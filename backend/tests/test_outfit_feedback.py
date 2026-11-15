@@ -2,11 +2,15 @@
 
 from __future__ import annotations
 
-import pytest
 from fastapi.testclient import TestClient
 
 from db.session import SessionLocal
-from domain.models import Garment, GarmentOwnership, Outfit, OutfitFeedback, OutfitGarment, User, new_uuid
+from domain.models import (
+    Outfit,
+    OutfitFeedback,
+    User,
+    new_uuid,
+)
 from main import app
 from services.recommender.engine import recommend_outfits
 

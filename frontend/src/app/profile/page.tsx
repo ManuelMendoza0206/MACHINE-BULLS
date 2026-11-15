@@ -12,8 +12,17 @@ import { BentoCard, Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { KNOWN_AESTHETICS } from '@/config/aesthetics';
-import { Palette, Shield, ArrowRight, User as UserIcon, Sliders } from 'lucide-react';
+import {
+  Palette,
+  ArrowRight,
+  User as UserIcon,
+  Sliders,
+  ShieldCheck,
+  Trash2,
+  Loader2,
+} from 'lucide-react';
 import { ThemeToggle } from '@/components/shell/ThemeToggle';
+import { purgePhotos } from '@/features/profile/api/purgePhotos';
 
 /**
  * profile-flow/spec.md §3.1. `proxy.ts` already protects this route, so the redirect below is
@@ -25,6 +34,21 @@ export default function ProfilePage(): JSX.Element {
   const router = useRouter();
   const { defaultAesthetic, setDefaultAesthetic } = useProfilePreferences();
   const [activeTab, setActiveTab] = useState<'profile' | 'settings'>('profile');
+  const [isPurging, setIsPurging] = useState<boolean>(false);
+  const [purgeMsg, setPurgeMsg] = useState<string | null>(null);
+
+  const handlePurge = async () => {
+    setIsPurging(true);
+    setPurgeMsg(null);
+    try {
+      const res = await purgePhotos();
+      setPurgeMsg(`Fotos eliminadas con éxito (${res.purged_count} archivos removidos).`);
+    } catch {
+      setPurgeMsg('No se pudieron eliminar las fotos. Intenta de nuevo.');
+    } finally {
+      setIsPurging(false);
+    }
+  };
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -73,25 +97,13 @@ export default function ProfilePage(): JSX.Element {
         <BentoCard className="lg:col-span-12 p-6 sm:p-8 rounded-3xl justify-between border-border/80 bg-background/85 shadow-sm">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div className="space-y-2">
-              <div className="flex flex-wrap items-center gap-2">
-                <Badge
-                  variant="outline"
-                  className="rounded-full border-border/80 bg-muted/50 px-3 py-0.5 text-xs font-medium text-foreground"
-                >
-                  {activeTab === 'profile' ? 'Tu cuenta' : 'Configuración'}
-                </Badge>
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-accent/10 px-2.5 py-0.5 text-[11px] font-medium text-accent border border-accent/20">
-                  <Shield className="h-3 w-3" />
-                  Sesión activa
-                </span>
-              </div>
               <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-foreground">
                 {activeTab === 'profile' ? 'Perfil' : 'Configuración'}
               </h1>
               <p className="text-sm sm:text-base text-muted-foreground leading-relaxed max-w-2xl text-pretty">
                 {activeTab === 'profile'
-                  ? 'Gestiona tus datos de acceso, consulta las estadísticas de tu catálogo y revisa tu cuenta.'
-                  : 'Ajusta tus preferencias de estilo estético y la apariencia visual de la interfaz.'}
+                  ? 'Gestiona tus datos de acceso y revisa las prendas guardadas en tu armario.'
+                  : 'Ajusta tus preferencias de estilo y la apariencia visual de la aplicación.'}
               </p>
             </div>
 
@@ -202,6 +214,40 @@ export default function ProfilePage(): JSX.Element {
               <div className="pt-4 mt-4 border-t border-border/50 text-[11px] text-muted-foreground">
                 Aplica en todas las páginas de la aplicación
               </div>
+            </Card>
+          </div>
+
+          <div className="lg:col-span-12">
+            <Card className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-3xl border border-border/80 bg-background/85 shadow-sm p-6 sm:p-7">
+              <div className="space-y-1.5 max-w-xl">
+                <div className="flex items-center gap-2 text-foreground font-semibold">
+                  <ShieldCheck className="h-4 w-4 text-emerald-600" />
+                  <h2 className="text-base font-bold tracking-tight">Privacidad de tus fotos</h2>
+                </div>
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  Tus fotos para el probador virtual se eliminan automáticamente tras 24 horas.
+                  También puedes eliminarlas de inmediato en cualquier momento si deseas borrarlas
+                  ahora.
+                </p>
+                {purgeMsg && (
+                  <p className="text-xs font-medium text-emerald-600 pt-1">{purgeMsg}</p>
+                )}
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handlePurge}
+                disabled={isPurging}
+                className="rounded-full text-xs gap-2 shrink-0 border-destructive/30 hover:bg-destructive/10 hover:text-destructive"
+              >
+                {isPurging ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Trash2 className="h-3.5 w-3.5" />
+                )}
+                <span>Eliminar mis fotos de prueba ahora</span>
+              </Button>
             </Card>
           </div>
         </section>

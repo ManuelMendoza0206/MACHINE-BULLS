@@ -156,7 +156,7 @@ describe('TryOnView', () => {
     await uploadPhoto();
     await userEvent.click(await screen.findByRole('button', { name: /generar prueba virtual/i }));
 
-    expect(await screen.findByText(/inferencia asíncrona/i)).toBeInTheDocument();
+    expect(await screen.findByText(/generando tu prueba/i)).toBeInTheDocument();
 
     // Pestaña pasa a segundo plano
     await act(async () => {
@@ -236,7 +236,7 @@ describe('TryOnView', () => {
     await userEvent.click(await screen.findByRole('button', { name: /generar prueba virtual/i }));
 
     // Durante la fase de procesamiento, los spinners contienen la clase de adaptación a reduced motion
-    const tracker = await screen.findByText(/inferencia asíncrona/i);
+    const tracker = await screen.findByText(/generando tu prueba/i);
     expect(tracker).toBeInTheDocument();
     const spinningIcon = tracker.querySelector('svg');
     expect(spinningIcon).toHaveClass('motion-reduce:animate-none');

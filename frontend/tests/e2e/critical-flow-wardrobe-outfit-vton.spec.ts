@@ -73,7 +73,7 @@ test.describe('Flujo Crítico 1: Wardrobe -> Outfits -> VTON', () => {
     // 2. Navegar a Outfits
     await page.goto('/outfits');
     await expect(page).toHaveURL(/\/outfits/);
-    await expect(page.getByRole('heading', { name: /Outfits/i })).toBeVisible();
+    await expect(page.getByRole('heading', { name: /Outfits|Tus conjuntos/i })).toBeVisible();
 
     // 3. Navegar al Probador Virtual
     await page.goto('/try-on');

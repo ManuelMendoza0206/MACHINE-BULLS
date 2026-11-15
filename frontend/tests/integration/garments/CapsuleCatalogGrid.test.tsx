@@ -71,7 +71,7 @@ describe('CapsuleCatalogGrid', () => {
     renderWithProviders(<CapsuleCatalogGrid />);
 
     expect(await screen.findByText(/catálogo cápsula no disponible/i)).toBeInTheDocument();
-    expect(screen.getByText(/gap G1\/G4/i)).toBeInTheDocument();
+    expect(screen.getByText(/no pudimos conectar con el catálogo/i)).toBeInTheDocument();
   });
 
   it('shows a loading state before the catalog resolves', async () => {

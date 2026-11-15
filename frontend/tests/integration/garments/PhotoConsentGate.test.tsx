@@ -27,9 +27,7 @@ describe('PhotoConsentGate', () => {
       </PhotoConsentGate>
     );
     expect(screen.queryByText('Probador virtual activo')).not.toBeInTheDocument();
-    expect(
-      screen.getByText('Consentimiento informado para prueba virtual (VTON)')
-    ).toBeInTheDocument();
+    expect(screen.getByText('Permiso para usar tu foto en el probador')).toBeInTheDocument();
     expect(screen.getAllByText(/24 horas/i).length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText(/cero reentrenamiento/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /acepto/i })).toBeInTheDocument();

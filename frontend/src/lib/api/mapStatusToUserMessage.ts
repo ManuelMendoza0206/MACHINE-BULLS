@@ -3,10 +3,10 @@
  * Tested in isolation; no side-effects, no i18n yet — single language per spec §2.6.
  */
 export function mapStatusToUserMessage(status: number, body?: unknown): string {
-  if (status === 400) return 'Solicitud inválida. Revisa los datos enviados.';
+  if (status === 400) return 'Solicitud inválida. Revisa la información e intenta de nuevo.';
   if (status === 401 || status === 403)
-    return 'Sesión expirada o sin permiso. Inicia sesión nuevamente.';
-  if (status === 404) return 'Recurso no encontrado.';
+    return 'Sesión expirada. Por favor, inicia sesión de nuevo.';
+  if (status === 404) return 'Elemento no encontrado.';
   if (status === 422) {
     if (
       body !== null &&
@@ -28,9 +28,9 @@ export function mapStatusToUserMessage(status: number, body?: unknown): string {
     ) {
       return (body as { message: string }).message;
     }
-    return 'La solicitud no pudo ser procesada. Verifica los datos.';
+    return 'La solicitud no pudo ser procesada. Revisa los datos ingresados.';
   }
-  if (status === 429) return 'Demasiadas solicitudes, espera un momento e intenta nuevamente.';
+  if (status === 429) return 'Demasiadas solicitudes. Espera un momento e intenta nuevamente.';
   if (status >= 500) return 'Error del servidor. Intenta nuevamente en unos instantes.';
 
   return 'Ocurrió un error inesperado. Intenta nuevamente.';

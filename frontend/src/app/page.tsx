@@ -19,13 +19,13 @@ const STEPS = [
   {
     title: 'Sube tus prendas',
     body: 'Toma una foto de cada prenda. El sistema quita el fondo y detecta su categoría y colores principales.',
-    data: 'Corte de fondo y colorimetría',
+    data: 'Corte de fondo y detección de color',
     Icon: ScanLine,
   },
   {
     title: 'Arma combinaciones',
     body: 'Revisa el contraste tonal y la compatibilidad entre prendas antes de decidir qué ponerte.',
-    data: 'Armonía cromática y estilo',
+    data: 'Armonía de color y estilo',
     Icon: Palette,
   },
   {
@@ -61,11 +61,11 @@ export default function Home(): JSX.Element {
                 variant="outline"
                 className="rounded-full border-border/80 bg-muted/50 px-3.5 py-1 text-xs font-medium text-foreground"
               >
-                StyleMe · Probador virtual multicapa
+                StyleMe · Tu probador y estilista personal
               </Badge>
               <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-3 py-0.5 text-[11px] font-medium text-emerald-700 dark:text-emerald-400 border border-emerald-500/20">
                 <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                Difusión activa
+                Probador listo
               </span>
             </div>
 
@@ -117,15 +117,13 @@ export default function Home(): JSX.Element {
             <div className="flex items-center justify-between mb-4 pb-2 border-b border-border/50">
               <div className="flex items-center gap-2">
                 <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-                <span className="text-xs font-mono font-medium text-foreground">
-                  CatVTON sobre silueta
-                </span>
+                <span className="text-xs font-medium text-foreground">Ajuste sobre tu silueta</span>
               </div>
               <Badge
                 variant="outline"
-                className="text-[11px] font-mono text-accent border-accent/30"
+                className="text-[11px] font-medium text-accent border-accent/30"
               >
-                Hasta 6 capas
+                Hasta 6 prendas
               </Badge>
             </div>
 
@@ -133,7 +131,7 @@ export default function Home(): JSX.Element {
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src="/samples/usuario_canonico.jpg"
-                alt="Modelo en probador virtual VTON"
+                alt="Modelo en probador virtual"
                 className="h-full w-full object-cover object-top transition-transform duration-500 hover:scale-105"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-background/95 via-background/20 to-transparent" />
@@ -141,12 +139,12 @@ export default function Home(): JSX.Element {
                 <span className="rounded-full bg-accent px-2.5 py-1 text-[11px] font-semibold text-accent-foreground shadow-xs">
                   Prueba por capas
                 </span>
-                <span className="rounded-full bg-background/90 px-2.5 py-1 text-[11px] font-mono text-foreground backdrop-blur-md border border-border/50">
+                <span className="rounded-full bg-background/90 px-2.5 py-1 text-[11px] text-foreground backdrop-blur-md border border-border/50">
                   Alineación de postura
                 </span>
               </div>
-              <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between text-xs font-mono text-foreground backdrop-blur-md bg-background/85 px-3 py-1.5 rounded-xl border border-border/50 shadow-xs">
-                <span>Postura A-Pose</span>
+              <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between text-xs text-foreground backdrop-blur-md bg-background/85 px-3 py-1.5 rounded-xl border border-border/50 shadow-xs">
+                <span>Foto de frente</span>
                 <span className="text-emerald-600 dark:text-emerald-400 font-semibold">
                   100% Detectada
                 </span>
@@ -191,7 +189,7 @@ export default function Home(): JSX.Element {
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src="/samples/usuario_canonico.jpg"
-              alt="Modelo en probador virtual VTON"
+              alt="Modelo en probador virtual"
               className="h-full w-full object-cover object-top transition-transform duration-500 hover:scale-105"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-background/95 via-background/25 to-transparent" />
@@ -206,9 +204,9 @@ export default function Home(): JSX.Element {
             <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between text-xs font-mono text-foreground backdrop-blur-md bg-background/85 px-3.5 py-2 rounded-2xl border border-border/50 shadow-xs">
               <span className="flex items-center gap-2">
                 <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-                CatVTON sobre silueta
+                Ajuste sobre tu silueta
               </span>
-              <span className="text-accent font-semibold">Hasta 6 capas</span>
+              <span className="text-accent font-semibold">Hasta 6 prendas</span>
             </div>
           </div>
           <div className="p-6 sm:p-7 space-y-2">
@@ -230,8 +228,8 @@ export default function Home(): JSX.Element {
                 <Palette className="h-5 w-5 text-accent" />
                 <h2 className="text-lg font-bold tracking-tight">Armonía de color</h2>
               </div>
-              <Badge variant="outline" className="rounded-full text-xs font-mono">
-                HSV + CLIP
+              <Badge variant="outline" className="rounded-full text-xs font-medium">
+                Color y estilo
               </Badge>
             </div>
             <p className="text-sm text-muted-foreground leading-relaxed mb-4 text-pretty">
@@ -268,15 +266,15 @@ export default function Home(): JSX.Element {
               <div className="grid h-10 w-10 place-items-center rounded-2xl bg-accent/10 text-accent">
                 <ScanLine className="h-5 w-5" />
               </div>
-              <span className="text-xs font-mono text-muted-foreground">U2Net</span>
+              <span className="text-xs font-medium text-muted-foreground">Automático</span>
             </div>
             <h3 className="text-base font-bold text-foreground">Corte de fondo</h3>
             <p className="mt-1.5 text-xs text-muted-foreground leading-relaxed text-pretty">
               Separa la prenda del fondo para dejarla lista para combinar y probar.
             </p>
           </div>
-          <div className="mt-4 pt-3 border-t border-border/40 text-[11px] font-mono text-accent">
-            Precisión de máscara de silueta
+          <div className="mt-4 pt-3 border-t border-border/40 text-[11px] font-medium text-accent">
+            Recorte limpio sin fondo
           </div>
         </BentoCard>
 
@@ -287,15 +285,15 @@ export default function Home(): JSX.Element {
               <div className="grid h-10 w-10 place-items-center rounded-2xl bg-accent/10 text-accent">
                 <Layers className="h-5 w-5" />
               </div>
-              <span className="text-xs font-mono text-muted-foreground">CLIP</span>
+              <span className="text-xs font-medium text-muted-foreground">Inteligente</span>
             </div>
             <h3 className="text-base font-bold text-foreground">Categorización</h3>
             <p className="mt-1.5 text-xs text-muted-foreground leading-relaxed text-pretty">
               Identifica el tipo de prenda y su estilo a partir de la imagen sin carga manual.
             </p>
           </div>
-          <div className="mt-4 pt-3 border-t border-border/40 text-[11px] font-mono text-accent">
-            Clasificación zero-shot
+          <div className="mt-4 pt-3 border-t border-border/40 text-[11px] font-medium text-accent">
+            Reconocimiento automático
           </div>
         </BentoCard>
 

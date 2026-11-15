@@ -40,35 +40,31 @@ export function PhotoConsentGate({
         <CardHeader className="p-0 space-y-1.5">
           <div className="flex items-center gap-2 text-accent">
             <ShieldCheck className="h-5 w-5 shrink-0" aria-hidden="true" />
-            <span className="text-xs font-mono font-semibold uppercase tracking-wider">
-              Privacidad y Protección Biométrica
+            <span className="text-xs font-semibold uppercase tracking-wider">
+              Privacidad de tus fotos
             </span>
           </div>
           <h2 className="text-lg font-bold tracking-tight text-foreground">
-            Consentimiento informado para prueba virtual (VTON)
+            Permiso para usar tu foto en el probador
           </h2>
         </CardHeader>
         <CardContent className="p-0 space-y-2.5 text-xs sm:text-sm text-muted-foreground leading-relaxed">
           <p>
-            Tu fotografía de cuerpo entero se procesa de forma temporal y segura únicamente para
-            estimar la postura corporal mediante MediaPipe y proyectar las prendas del outfit
-            elegido.
+            Tu foto se procesa de forma temporal y segura únicamente para ajustar las prendas a tu
+            silueta en el probador virtual.
           </p>
           <div className="rounded-2xl border border-border/80 bg-muted/40 p-3.5 space-y-1.5 text-xs">
-            <p className="font-semibold text-foreground">Política de retención (24 horas):</p>
+            <p className="font-semibold text-foreground">Seguridad y retención de tus imágenes:</p>
             <ul className="list-disc pl-4 space-y-1 text-muted-foreground">
               <li>
-                La foto se almacena temporalmente en Azure Blob Storage y se elimina automáticamente
-                tras <strong>24 horas</strong>.
+                Tu foto se guarda de forma temporal y se elimina automáticamente tras{' '}
+                <strong>24 horas</strong>.
               </li>
               <li>
-                <strong>Cero reentrenamiento:</strong> Tus fotografías personales nunca se utilizan
-                para entrenar modelos de IA sin autorización expresa.
+                <strong>Cero reentrenamiento:</strong> Tus fotos nunca se utilizan para entrenar
+                modelos de inteligencia artificial.
               </li>
-              <li>
-                Puedes eliminar manualmente tus resultados en cualquier momento desde tu historial
-                de pruebas.
-              </li>
+              <li>Puedes eliminar tus fotos de prueba en cualquier momento desde tu historial.</li>
             </ul>
           </div>
         </CardContent>

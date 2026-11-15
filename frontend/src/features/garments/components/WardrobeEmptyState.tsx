@@ -51,8 +51,7 @@ export function WardrobeEmptyState(): JSX.Element {
               <div className="space-y-1.5">
                 <h3 className="text-base font-bold text-foreground">Catálogo Cápsula</h3>
                 <p className="text-xs text-muted-foreground leading-relaxed text-pretty">
-                  Prendas básicas ya digitalizadas y calibradas por colorimetría para probar el
-                  recomendador al instante.
+                  Prendas básicas listas para que puedas probar combinaciones al instante.
                 </p>
               </div>
             </div>

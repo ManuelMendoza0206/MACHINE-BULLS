@@ -18,7 +18,7 @@ function renderNav(): void {
 }
 
 describe('TopNav', () => {
-  it('renders exactly the 4 NAV_ITEMS', () => {
+  it('renders all NAV_ITEMS', () => {
     renderNav();
     for (const item of NAV_ITEMS) {
       expect(screen.getByRole('link', { name: new RegExp(item.label) })).toBeInTheDocument();

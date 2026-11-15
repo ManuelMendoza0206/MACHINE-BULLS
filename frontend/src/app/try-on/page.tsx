@@ -29,15 +29,15 @@ export default function ProbadorPage(): JSX.Element {
                 </Badge>
                 <span className="inline-flex items-center gap-1.5 rounded-full bg-accent/10 px-2.5 py-0.5 text-[11px] font-medium text-accent border border-accent/20">
                   <Sparkles className="h-3 w-3" />
-                  CatVTON asíncrono
+                  Ajuste inteligente
                 </span>
               </div>
               <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-foreground">
                 Probador
               </h1>
               <p className="text-sm sm:text-base text-muted-foreground leading-relaxed max-w-2xl text-pretty">
-                Sube una foto tuya para probar el outfit elegido sobre tu silueta respetando el
-                orden por capas.
+                Sube una foto tuya para probar el conjunto elegido sobre tu silueta respetando el
+                orden de cada prenda.
               </p>
             </div>
 

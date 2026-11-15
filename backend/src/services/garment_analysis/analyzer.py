@@ -72,7 +72,9 @@ def get_aesthetic_adapter() -> Any:
             if not _adapter_checked:
                 _adapter_checked = True
                 from pathlib import Path
+
                 import torch
+
                 from ml.models.adapter import AestheticProjectionHead
 
                 repo_root = Path(__file__).resolve().parents[4]

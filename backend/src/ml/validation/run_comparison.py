@@ -19,6 +19,7 @@ from ml.models.prompts import ESTETICAS_AMPLIADAS
 from ml.validation.evaluate_fitb import evaluate_fitb
 from ml.validation.temperature_scaling import ModelWithTemperature
 
+
 def _find_repo_root() -> Path:
     p = Path(__file__).resolve()
     for parent in p.parents:
