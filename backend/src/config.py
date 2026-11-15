@@ -15,9 +15,10 @@ from pathlib import Path
 BASE_DIR = Path(__file__).resolve().parent
 MEDIA_DIR = BASE_DIR.parent / "media"
 
-# El frontend corre en localhost:3000 y el backend en 8000; CORS se abre para
-# ambos hosts en la demo. En produccion esto va detras del mismo origen.
-DEFAULT_CORS_ORIGINS = "http://localhost:3000,http://127.0.0.1:3000"
+# El frontend corre en localhost:3000 (o 3001 si 3000 esta ocupado) y el backend en 8000.
+# CORS permite origenes locales para desarrollo y demo.
+DEFAULT_CORS_ORIGINS = "http://localhost:3000,http://127.0.0.1:3000,http://localhost:3001,http://127.0.0.1:3001"
+
 
 
 def _load_dotenv(path: Path) -> None:

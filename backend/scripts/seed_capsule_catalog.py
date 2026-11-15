@@ -112,6 +112,91 @@ def verify_coverage(rows: list[dict]) -> None:
         )
 
 
+def _render_capsule_png(position: str, hex_color: str, transparent: bool) -> bytes:
+    """Genera un PNG minimalista (512x512) acorde a la posicion y color de la prenda."""
+    import io
+
+    from PIL import Image, ImageDraw
+
+    bg = (0, 0, 0, 0) if transparent else (246, 245, 242, 255)
+    img = Image.new("RGBA", (512, 512), bg)
+    draw = ImageDraw.Draw(img)
+
+    r = int(hex_color[1:3], 16)
+    g = int(hex_color[3:5], 16)
+    b = int(hex_color[5:7], 16)
+    fill = (r, g, b, 255)
+    outline = (max(0, r - 35), max(0, g - 35), max(0, b - 35), 255)
+
+    if position == "top":
+        pts = [
+            (166, 96), (210, 118), (302, 118), (346, 96),
+            (432, 158), (396, 232), (350, 204), (350, 424),
+            (162, 424), (162, 204), (116, 232), (80, 158),
+        ]
+        draw.polygon(pts, fill=fill, outline=outline)
+    elif position == "outerwear":
+        pts = [
+            (150, 82), (216, 112), (296, 112), (362, 82),
+            (446, 162), (424, 344), (370, 344), (368, 212),
+            (362, 434), (150, 434), (144, 212), (142, 344),
+            (88, 344), (66, 162),
+        ]
+        draw.polygon(pts, fill=fill, outline=outline)
+        draw.line([(256, 116), (256, 434)], fill=outline, width=4)
+    elif position == "bottom":
+        pts = [
+            (156, 76), (356, 76), (384, 438), (288, 438),
+            (256, 224), (224, 438), (128, 438),
+        ]
+        draw.polygon(pts, fill=fill, outline=outline)
+    else:  # footwear
+        draw.rounded_rectangle([(96, 250), (416, 360)], radius=38, fill=fill, outline=outline, width=4)
+        draw.polygon([(140, 254), (225, 168), (320, 240), (402, 266)], fill=fill, outline=outline)
+        draw.rounded_rectangle([(92, 336), (420, 372)], radius=12, fill=(242, 242, 242, 255), outline=outline, width=3)
+
+    buf = io.BytesIO()
+    img.save(buf, format="PNG")
+    return buf.getvalue()
+
+
+def _upload_capsule_assets(rows: list[dict]) -> int:
+    """Guarda localmente y sube a Azure Blob Storage los PNG del catalogo capsula."""
+    from config import settings
+    from services import storage
+
+    container = None
+    if settings.azure_storage_connection_string:
+        container = storage.ensure_azure_container()
+
+    uploaded = 0
+    for r in rows:
+        hex_color = r["dominant_colors"][0]["hex"]
+        pos = r["position"]
+        for rel_path, transparent in (
+            (r["image_path"], False),
+            (r["processed_image_path"], True),
+        ):
+            png_bytes = _render_capsule_png(pos, hex_color, transparent=transparent)
+            local_file = settings.media_dir / rel_path
+            local_file.parent.mkdir(parents=True, exist_ok=True)
+            if not local_file.is_file():
+                local_file.write_bytes(png_bytes)
+
+            if container is not None:
+                from azure.storage.blob import ContentSettings
+
+                blob_client = container.get_blob_client(rel_path)
+                if not blob_client.exists():
+                    blob_client.upload_blob(
+                        png_bytes,
+                        overwrite=True,
+                        content_settings=ContentSettings(content_type="image/png"),
+                    )
+                    uploaded += 1
+    return uploaded
+
+
 def _insert_rows(session: Session, rows: list[dict]) -> int:
     from domain.models import Garment
 
@@ -148,13 +233,17 @@ def _insert_rows(session: Session, rows: list[dict]) -> int:
     return inserted
 
 
-def run(database_url: str | None = None, session: Session | None = None) -> int:
+def run(database_url: str | None = None, session: Session | None = None, upload_assets: bool = False) -> int:
     """Ejecuta el seed en la base de datos con verificación previa de cobertura."""
     rows = build_seed_rows()
     verify_coverage(rows)
 
     if session is not None:
         return _insert_rows(session, rows)
+
+    if upload_assets:
+        uploaded = _upload_capsule_assets(rows)
+        print(f"[OK] Assets capsula en Azure/local verificados (nuevos blobs subidos: {uploaded}).")
 
     from db.session import SessionLocal
 
@@ -164,7 +253,7 @@ def run(database_url: str | None = None, session: Session | None = None) -> int:
 
 def main() -> int:
     try:
-        run(os.getenv("DATABASE_URL"))
+        run(os.getenv("DATABASE_URL"), upload_assets=True)
     except SeedCoverageError as exc:
         print(f"[ERR] Seed abortado por falta de cobertura: {exc}", file=sys.stderr)
         return 1

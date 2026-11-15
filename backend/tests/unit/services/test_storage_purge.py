@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 import time
+from datetime import UTC
 from pathlib import Path
 from unittest.mock import MagicMock
 
@@ -41,3 +42,35 @@ def test_purge_expired_human_photos_directory_not_exists(tmp_path: Path) -> None
     inexistente = tmp_path / "no_existe"
     eliminados = storage.purge_expired_human_photos(max_age_hours=24.0, base_dir=inexistente)
     assert eliminados == []
+
+
+def test_purge_azure_human_blobs_respects_ttl_and_demand(tmp_path: Path, monkeypatch) -> None:
+    """Verifica purga selectiva (>24h) y purga total bajo demanda en Azure Blob Storage."""
+    import dataclasses
+    from datetime import datetime, timedelta
+
+    now = datetime.now(UTC)
+    blob_old = MagicMock(name="humanos/old.jpg", last_modified=now - timedelta(hours=26))
+    blob_old.name = "humanos/old.jpg"
+    blob_new = MagicMock(name="humanos/new.jpg", last_modified=now - timedelta(hours=2))
+    blob_new.name = "humanos/new.jpg"
+
+    mock_container = MagicMock()
+    mock_container.list_blobs.return_value = [blob_old, blob_new]
+
+    cfg = dataclasses.replace(
+        base_settings,
+        media_dir=tmp_path,
+        azure_storage_connection_string="DefaultEndpointsProtocol=https;AccountName=test;...",
+    )
+    monkeypatch.setattr(storage, "settings", cfg)
+    monkeypatch.setattr(storage, "ensure_azure_container", lambda: mock_container)
+
+    eliminados_ttl = storage.purge_expired_human_photos(max_age_hours=24.0)
+    assert eliminados_ttl == ["old.jpg"]
+    mock_container.delete_blob.assert_called_once_with("humanos/old.jpg")
+
+    mock_container.delete_blob.reset_mock()
+    eliminados_all = storage.purge_all_human_photos()
+    assert eliminados_all == ["old.jpg", "new.jpg"]
+    assert mock_container.delete_blob.call_count == 2

@@ -17,6 +17,7 @@ from __future__ import annotations
 import logging
 import time
 import uuid
+from datetime import UTC
 from pathlib import Path
 from typing import Any
 
@@ -154,44 +155,108 @@ def read_bytes(relative_path: str) -> bytes:
     raise FileNotFoundError(f"Archivo no encontrado en storage: {relative_path}")
 
 
+def _purge_azure_human_blobs(
+    carpeta: str,
+    max_age_seconds: float | None = None,
+) -> list[str]:
+    """Elimina blobs en Azure bajo `carpeta/` (todos si max_age_seconds es None, o los expirados)."""
+    if not settings.azure_storage_connection_string:
+        return []
+
+    eliminados: list[str] = []
+    try:
+        from datetime import datetime
+
+        container = ensure_azure_container()
+        if container is None:
+            return []
+
+        ahora = datetime.now(UTC)
+        prefix = f"{carpeta.rstrip('/')}/"
+        for blob in container.list_blobs(name_starts_with=prefix):
+            nombre = getattr(blob, "name", None) or blob["name"]
+            if max_age_seconds is not None:
+                last_modified = getattr(blob, "last_modified", None) or blob.get("last_modified")
+                if last_modified is None:
+                    continue
+                if last_modified.tzinfo is None:
+                    last_modified = last_modified.replace(tzinfo=UTC)
+                if (ahora - last_modified).total_seconds() < max_age_seconds:
+                    continue
+            container.delete_blob(nombre)
+            eliminados.append(nombre.rsplit("/", 1)[-1])
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("Fallo al purgar blobs humanos en Azure (%s): %s", carpeta, exc)
+
+    return eliminados
+
+
 def purge_expired_human_photos(
     max_age_hours: float = 24.0,
     base_dir: Path | None = None,
 ) -> list[str]:
-    """Elimina del almacenamiento local las fotos de usuarios con mas de `max_age_hours`.
+    """Elimina del almacenamiento local y Azure las fotos de usuarios con mas de `max_age_hours`.
 
     Garantiza el cumplimiento estricto de la politica de privacidad de 24 horas:
     las fotos de personas en pose ('humanos') no deben persistir mas alla de su ventana
-    autorizada de procesamiento en disco local.
+    autorizada de procesamiento.
     """
     media_path = base_dir if base_dir is not None else settings.media_dir
     carpeta = FOLDER_MAP.get("humans", "humanos")
     humanos_dir = media_path / carpeta
-
-    if not humanos_dir.exists() or not humanos_dir.is_dir():
-        logger.debug("Directorio de fotos humanas %s no existe. Nada que purgar.", humanos_dir)
-        return []
-
-    ahora = time.time()
     limite_segundos = max_age_hours * 3600.0
     eliminados: list[str] = []
 
-    for archivo in sorted(humanos_dir.iterdir()):
-        if not archivo.is_file():
-            continue
-        try:
-            mtime = archivo.stat().st_mtime
-            if (ahora - mtime) >= limite_segundos:
-                archivo.unlink(missing_ok=True)
-                eliminados.append(archivo.name)
-                logger.info(
-                    "Foto humana expirada purgada (>%sh): %s",
-                    max_age_hours,
-                    archivo.name,
-                )
-        except OSError as exc:
-            logger.warning("No se pudo purgar archivo expirado %s: %s", archivo.name, exc)
+    if humanos_dir.exists() and humanos_dir.is_dir():
+        ahora = time.time()
+        for archivo in sorted(humanos_dir.iterdir()):
+            if not archivo.is_file():
+                continue
+            try:
+                mtime = archivo.stat().st_mtime
+                if (ahora - mtime) >= limite_segundos:
+                    archivo.unlink(missing_ok=True)
+                    eliminados.append(archivo.name)
+                    logger.info(
+                        "Foto humana expirada purgada (>%sh): %s",
+                        max_age_hours,
+                        archivo.name,
+                    )
+            except OSError as exc:
+                logger.warning("No se pudo purgar archivo expirado %s: %s", archivo.name, exc)
+
+    if base_dir is None:
+        for nombre in _purge_azure_human_blobs(carpeta, max_age_seconds=limite_segundos):
+            if nombre not in eliminados:
+                eliminados.append(nombre)
 
     logger.info("Purga de fotos humanas completada: %d archivo(s) eliminados.", len(eliminados))
     return eliminados
+
+
+def purge_all_human_photos(base_dir: Path | None = None) -> list[str]:
+    """Elimina inmediatamente todas las fotos temporales de usuarios en local y Azure."""
+    media_path = base_dir if base_dir is not None else settings.media_dir
+    carpeta = FOLDER_MAP.get("humans", "humanos")
+    humanos_dir = media_path / carpeta
+    eliminados: list[str] = []
+
+    if humanos_dir.exists() and humanos_dir.is_dir():
+        for archivo in sorted(humanos_dir.iterdir()):
+            if not archivo.is_file():
+                continue
+            try:
+                archivo.unlink(missing_ok=True)
+                eliminados.append(archivo.name)
+                logger.info("Foto humana purgada bajo demanda: %s", archivo.name)
+            except OSError as exc:
+                logger.warning("No se pudo purgar archivo %s: %s", archivo.name, exc)
+
+    if base_dir is None:
+        for nombre in _purge_azure_human_blobs(carpeta, max_age_seconds=None):
+            if nombre not in eliminados:
+                eliminados.append(nombre)
+
+    return eliminados
+
 

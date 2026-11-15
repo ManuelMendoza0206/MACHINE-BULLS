@@ -14,3 +14,21 @@ CREATE TABLE IF NOT EXISTS public.outfit_feedbacks (
 
 CREATE INDEX IF NOT EXISTS idx_outfit_feedbacks_user ON public.outfit_feedbacks(user_id);
 CREATE INDEX IF NOT EXISTS idx_outfit_feedbacks_outfit ON public.outfit_feedbacks(outfit_id);
+
+-- Seguridad RLS para outfit_feedbacks
+ALTER TABLE public.outfit_feedbacks ENABLE ROW LEVEL SECURITY;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies
+        WHERE tablename = 'outfit_feedbacks' AND policyname = 'Users can manage own outfit feedback'
+    ) THEN
+        CREATE POLICY "Users can manage own outfit feedback" ON public.outfit_feedbacks
+            TO authenticated
+            USING ((select auth.uid())::text = user_id)
+            WITH CHECK ((select auth.uid())::text = user_id);
+    END IF;
+END $$;
+
+GRANT ALL ON public.outfit_feedbacks TO authenticated;
