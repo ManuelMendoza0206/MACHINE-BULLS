@@ -36,6 +36,8 @@ _TEST_MEDIA = "/tmp/opencode/styleme_test_media"
 Path(_TEST_DB).parent.mkdir(parents=True, exist_ok=True)
 Path(_TEST_DB).unlink(missing_ok=True)
 os.environ.setdefault("DATABASE_URL", f"sqlite:///{_TEST_DB}")
+os.environ.setdefault("AZURE_STORAGE_CONNECTION_STRING", "")
+os.environ.setdefault("AZURE_STORAGE_PUBLIC_URL_BASE", "")
 os.environ.setdefault("VTON_PROVIDER", "mock")
 os.environ.setdefault("MEDIA_DIR", _TEST_MEDIA)
 # Cola ARQ: puerto muerto para que los tests SIEMPRE ejerzan el fallback a

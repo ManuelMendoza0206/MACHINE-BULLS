@@ -33,7 +33,7 @@ async function pushPastBlurWarnings(page: Page, maxClicks = 10): Promise<void> {
   const button = page.getByRole('button', { name: /subir de todas formas/i }).first();
   for (let i = 0; i < maxClicks; i += 1) {
     try {
-      await button.click({ timeout: 1000 });
+      await button.click({ timeout: i === 0 ? 5000 : 1500 });
     } catch {
       return; // no (more) blur-warning buttons appeared within the wait window
     }

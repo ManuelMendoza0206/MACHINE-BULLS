@@ -13,6 +13,13 @@ import { GarmentPositionSchema, type GarmentUploadResponse } from '@/schemas/api
 import { describeGarmentError } from '@/features/garments/lib/describeGarmentError';
 import { cn } from '@/lib/utils/cn';
 
+const POSITION_LABELS: Record<string, string> = {
+  top: 'Parte superior',
+  bottom: 'Parte inferior',
+  footwear: 'Calzado',
+  outerwear: 'Abrigo',
+};
+
 export interface GarmentAnalysisResultProps {
   file: File;
   /** Called with the (possibly edited) confirmed result. */
@@ -225,7 +232,7 @@ export function GarmentAnalysisResult({
             <option value="">Sin especificar</option>
             {GarmentPositionSchema.options.map(opt => (
               <option key={opt} value={opt}>
-                {opt}
+                {POSITION_LABELS[opt] ?? opt}
               </option>
             ))}
           </select>

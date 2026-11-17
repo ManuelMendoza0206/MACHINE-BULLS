@@ -62,8 +62,8 @@ export function TopNav(): JSX.Element {
         </ul>
 
         <div className="flex items-center gap-3">
-          <span className="hidden text-xs font-mono text-muted-foreground xl:block bg-muted/50 px-2.5 py-1 rounded-full border border-border/40">
-            VTON Multicapa
+          <span className="hidden text-xs text-muted-foreground xl:block bg-muted/50 px-2.5 py-1 rounded-full border border-border/40">
+            Probador virtual
           </span>
           <ThemeToggle className="rounded-full border-border/70 hover:bg-muted" />
         </div>

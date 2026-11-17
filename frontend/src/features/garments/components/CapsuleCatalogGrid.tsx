@@ -11,6 +11,7 @@ import { cn } from '@/lib/utils/cn';
 import { GarmentCard } from '@/features/garments/components/GarmentCard';
 import { listCapsuleGarments } from '@/features/garments/api/listCapsuleGarments';
 import { adoptCapsuleGarment } from '@/features/garments/api/adoptCapsuleGarment';
+import { updateGarmentStatus } from '@/features/garments/api/updateGarmentStatus';
 import { describeGarmentError } from '@/features/garments/lib/describeGarmentError';
 import { CheckCircle2 } from 'lucide-react';
 
@@ -76,6 +77,16 @@ export function CapsuleCatalogGrid(): JSX.Element {
     }
   };
 
+  const handleToggleStatus = async (id: string, currentStatus?: string) => {
+    const nextStatus = currentStatus === 'LAUNDRY' ? 'AVAILABLE' : 'LAUNDRY';
+    try {
+      await updateGarmentStatus(id, nextStatus);
+      await query.refetch();
+    } catch {
+      // Ignorar fallo en mock
+    }
+  };
+
   if (query.isPending) {
     return (
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4" aria-busy="true">
@@ -93,9 +104,8 @@ export function CapsuleCatalogGrid(): JSX.Element {
           <Badge variant="warning">Catálogo cápsula no disponible</Badge>
           <p className="text-muted-foreground">{describeGarmentError(query.error)}</p>
           <p className="text-xs text-muted-foreground">
-            Bloqueo conocido: el endpoint de catálogo cápsula (gap G1/G4,
-            openspec/specs/frontend/api-contract-gaps/spec.md) todavía no está publicado por el
-            backend.
+            No pudimos conectar con el catálogo de prendas básicas. Inténtalo de nuevo en unos
+            minutos.
           </p>
         </CardContent>
       </Card>
@@ -226,11 +236,34 @@ export function CapsuleCatalogGrid(): JSX.Element {
               selected={selectedIds.has(garment.id)}
               onToggleSelect={() => toggle(garment.id)}
               footer={
-                state === 'adopted' ? (
-                  <Badge variant="success">Adoptada</Badge>
-                ) : state === 'error' ? (
-                  <Badge variant="warning">Error al adoptar</Badge>
-                ) : null
+                <div className="flex flex-col gap-1 w-full">
+                  {state === 'adopted' ? (
+                    <Badge variant="success">Adoptada</Badge>
+                  ) : state === 'error' ? (
+                    <Badge variant="warning">Error al adoptar</Badge>
+                  ) : null}
+                  <div className="flex items-center justify-between text-[10px] text-muted-foreground pt-1 border-t border-border/30">
+                    <span
+                      className={
+                        garment.status === 'LAUNDRY'
+                          ? 'text-amber-500 font-medium'
+                          : 'text-emerald-500 font-medium'
+                      }
+                    >
+                      {garment.status === 'LAUNDRY' ? 'En lavado' : 'Disponible'}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={e => {
+                        e.stopPropagation();
+                        void handleToggleStatus(garment.id, garment.status);
+                      }}
+                      className="hover:text-foreground underline cursor-pointer"
+                    >
+                      {garment.status === 'LAUNDRY' ? 'Limpia' : 'Lavar'}
+                    </button>
+                  </div>
+                </div>
               }
             />
           );

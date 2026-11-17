@@ -38,7 +38,7 @@ export default function WardrobeCapsulePage(): JSX.Element {
               </Badge>
               <span className="inline-flex items-center gap-1.5 rounded-full bg-accent/10 px-2.5 py-0.5 text-[11px] font-medium text-accent border border-accent/20">
                 <Sparkles className="h-3 w-3" />
-                Colorimetría calibrada
+                Prendas básicas listas
               </span>
             </div>
             <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-foreground">

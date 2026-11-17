@@ -14,15 +14,17 @@ Fecha: 2026-08-26 · **Corregido:** 2026-09-24
 
 ## Contexto
 
-El proyecto resuelve "qué me pongo" para hombres jóvenes. Necesitamos una web que muestre prendas, outfits y prueba virtual, con un catálogo público y páginas autenticadas. El equipo es de cuatro personas y el taller dura 18 semanas.
+El proyecto resuelve "qué me pongo" para hombres jóvenes. Necesitamos una interfaz ágil que muestre prendas, outfits y prueba virtual, con un catálogo público y páginas autenticadas. El plan conceptual preliminar (Feature 001) contemplaba una aplicación móvil desarrollada en React Native respaldada por microservicios en AWS (Cognito, S3, API Gateway). El equipo es de cuatro personas y el taller dura 18 semanas exactas.
 
-## Decision (original, Sprint 0)
+## Decision (original, Sprint 0 — Pivote a Next.js Web)
 
-Usamos Next.js **14.2** con App Router, React **18.3** y TypeScript en modo estricto, Tailwind CSS y Supabase para autenticación y base de datos. El frontend consume contratos HTTP definidos en plan-base.md sección 11 y valida cada respuesta con Zod. Next 14.2/React 18.3 se fijó explícitamente sobre las versiones más nuevas disponibles en ese momento (Next 15/React 19) por estabilidad — el equipo no quería depender de un release candidate durante las 18 semanas del taller.
+Pivoteamos la arquitectura de aplicación móvil a plataforma web moderna: usamos Next.js **14.2** con App Router, React **18.3** y TypeScript en modo estricto, Tailwind CSS y Supabase para autenticación y base de datos (descartando el stack móvil React Native/AWS). El frontend consume contratos HTTP definidos en plan-base.md sección 11 y valida cada respuesta con Zod. Next 14.2/React 18.3 se fijó explícitamente sobre las versiones más nuevas disponibles en ese momento (Next 15/React 19) por estabilidad — el equipo no quería depender de un release candidate durante las 18 semanas del taller.
 
 ## Alternativas
 
-Vite más React como SPA pura queda descartada. Obliga a configurar routing, code splitting y optimización de imágenes de forma manual y deja todo el renderizado en el cliente. React Native queda descartado porque duplica el esfuerzo en iOS y Android y exige compilar y probar en dos plataformas dentro del mismo plazo. Con Next.js obtenemos renderizado híbrido, rutas por archivos y optimización de imágenes sin trabajo adicional, y podemos exponer la misma web como PWA en el móvil sin mantener dos bases de código.
+Vite más React como SPA pura queda descartada. Obliga a configurar routing, code splitting y optimización de imágenes de forma manual y deja todo el renderizado en el cliente. 
+
+React Native sobre AWS (plan preliminar de Feature 001) queda formalmente descartado porque duplicaba el esfuerzo en iOS y Android, exigía compilar y probar en dos plataformas móviles nativas dentro del mismo plazo, y añadía una sobrecarga excesiva en configuración de IAM, Cognito y Lambda. Con el pivote a Next.js web obtenemos renderizado híbrido, rutas por archivos y optimización de imágenes sin trabajo adicional, y podemos exponer la misma web como PWA en el móvil sin mantener dos bases de código ni lidiar con tiendas de aplicaciones.
 
 ## Consecuencias
 

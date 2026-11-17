@@ -17,7 +17,7 @@ export function BottomTabBar(): JSX.Element {
   return (
     <nav
       aria-label="Navegación principal"
-      className="fixed inset-x-4 bottom-3 z-40 mx-auto max-w-sm grid grid-cols-4 rounded-2xl border border-border/80 bg-background/90 p-1.5 shadow-lg backdrop-blur-md lg:hidden"
+      className="fixed inset-x-2 bottom-3 z-40 mx-auto max-w-md grid grid-cols-6 rounded-2xl border border-border/80 bg-background/90 p-1 shadow-lg backdrop-blur-md lg:hidden"
     >
       {NAV_ITEMS.map(item => {
         const active = isNavItemActive(pathname, item.href);

@@ -20,7 +20,24 @@ from collections.abc import Sequence
 
 NIVEL_CATEGORIA = "CATEGORIA"
 NIVEL_SUBCATEGORIA = "SUBCATEGORIA"
-NIVELES = (NIVEL_CATEGORIA, NIVEL_SUBCATEGORIA)
+NIVEL_ESTETICA = "ESTETICA"
+NIVELES = (NIVEL_CATEGORIA, NIVEL_SUBCATEGORIA, NIVEL_ESTETICA)
+
+# Catálogo ampliado de estéticas de moda (abierto y extensible)
+ESTETICAS_AMPLIADAS: tuple[str, ...] = (
+    "old money",
+    "streetwear",
+    "minimalist",
+    "casual",
+    "formal",
+    "gorpcore",
+    "dark academia",
+    "y2k",
+    "soft boy",
+    "starboy",
+    "grunge",
+    "vintage",
+)
 
 TEMPLATES: dict[str, list[str]] = {
     NIVEL_CATEGORIA: [
@@ -32,6 +49,11 @@ TEMPLATES: dict[str, list[str]] = {
         "a photo of a {c} bag",
         "a studio product photo of a {c} bag",
         "a close-up photo of a {c} bag",
+    ],
+    NIVEL_ESTETICA: [
+        "a photo of an outfit with {c} style and aesthetic",
+        "a fashionable clothing item in {c} aesthetic",
+        "a studio lookbook photo embodying {c} style",
     ],
 }
 

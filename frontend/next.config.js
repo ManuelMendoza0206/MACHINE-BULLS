@@ -12,12 +12,9 @@ const csp = [
   "default-src 'self'",
   `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ''}`,
   "style-src 'self' 'unsafe-inline'",
-  // `${apiOrigin}` is required: the backend serves garment/VTON images itself at
-  // `<PUBLIC_BASE_URL>/media/...` (backend/src/services/storage.py) and returns absolute
-  // URLs, so without it the browser silently blocked every backend image.
-  // (Cloudinary entry removed: dead config, no code referenced it. Object storage
-  // plugs back in here when §8 of the constitution lands an actual provider.)
-  `img-src 'self' data: blob: ${apiOrigin}`,
+  // `${apiOrigin}` y Azure Blob Storage (`*.blob.core.windows.net`) son requeridos
+  // para renderizar imagenes de prendas, capsula y resultados VTON.
+  `img-src 'self' data: blob: ${apiOrigin} https://*.blob.core.windows.net`,
   "font-src 'self' data:",
   `connect-src 'self' ${apiOrigin} https://*.supabase.co`,
   "frame-ancestors 'none'",

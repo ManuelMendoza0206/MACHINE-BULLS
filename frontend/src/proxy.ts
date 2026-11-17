@@ -8,6 +8,10 @@ export const config = {
 export async function proxy(request: NextRequest): Promise<NextResponse> {
   const response = NextResponse.next({ request: { headers: request.headers } });
 
+  if (process.env['PLAYWRIGHT_TEST'] === '1') {
+    return response;
+  }
+
   const supabaseUrl = process.env['NEXT_PUBLIC_SUPABASE_URL'];
   const supabaseKey =
     process.env['NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY'] ||

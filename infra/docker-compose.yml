@@ -30,6 +30,7 @@ services:
       timeout: 3s
       retries: 10
   db:
+    profiles: ["local-db"]
     image: pgvector/pgvector:pg16
     container_name: styleme-db
     restart: unless-stopped
@@ -53,11 +54,10 @@ services:
     container_name: styleme-backend
     restart: unless-stopped
     env_file:
-      - path: ../backend/.env # REPLICATE_API_TOKEN (opcional; no rompe si falta)
+      - path: ../backend/.env # DATABASE_URL (Supabase), AZURE_STORAGE_*, REPLICATE_API_TOKEN
         required: false
     environment:
-      # Postgres obligatorio en compose (SQLite es solo el default de dev local).
-      DATABASE_URL: postgresql+psycopg://styleme:styleme_mvp@db:5432/styleme
+      # Usa DATABASE_URL de backend/.env (Supabase Postgres por defecto).
       # Cola ARQ (el endpoint encola; worker service consume).
       REDIS_URL: redis://redis:6379/0
       # URLs absolutas de /media para el navegador (localhost:8000 publicado).
@@ -78,8 +78,6 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
     depends_on:
-      db:
-        condition: service_healthy
       redis:
         condition: service_healthy
 
@@ -97,7 +95,6 @@ services:
       - path: ../backend/.env
         required: false
     environment:
-      DATABASE_URL: postgresql+psycopg://styleme:styleme_mvp@db:5432/styleme
       REDIS_URL: redis://redis:6379/0
       PUBLIC_BASE_URL: http://localhost:8000
       VTON_PROVIDER: ${VTON_PROVIDER:-mock}
@@ -111,8 +108,6 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
     depends_on:
-      db:
-        condition: service_healthy
       redis:
         condition: service_healthy
     # La imagen comparte el HEALTHCHECK del backend (curl /health de uvicorn,

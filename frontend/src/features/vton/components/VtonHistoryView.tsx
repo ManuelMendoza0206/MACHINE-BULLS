@@ -53,19 +53,16 @@ export function VtonHistoryView(): JSX.Element {
 
   if (query.isError) {
     return (
-      <Card className="border-destructive/30 bg-destructive/5">
-        <CardContent className="space-y-3 p-6 text-sm">
-          <div className="flex items-center gap-2 text-destructive font-medium">
-            <AlertCircle className="h-5 w-5" />
-            <span>No pudimos cargar el historial de pruebas</span>
-          </div>
+      <Card className="border-border/80 bg-background/85">
+        <CardContent className="space-y-3 p-6 text-sm text-center">
+          <p className="font-semibold text-foreground">No pudimos cargar el historial de pruebas</p>
           <p className="text-muted-foreground">{describeGarmentError(query.error)}</p>
           <Button
             type="button"
             variant="outline"
             size="sm"
             onClick={() => void query.refetch()}
-            className="mt-2"
+            className="mt-2 rounded-full"
           >
             Reintentar
           </Button>

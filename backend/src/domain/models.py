@@ -9,15 +9,18 @@ cuando haya Postgres; el contrato de la API no cambia.
 from __future__ import annotations
 
 import uuid
-from datetime import datetime
+from datetime import date, datetime
 
 from sqlalchemy import (
     JSON,
+    Boolean,
+    Date,
     DateTime,
     Float,
     ForeignKey,
     Integer,
     String,
+    Text,
     UniqueConstraint,
 )
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
@@ -60,6 +63,8 @@ class Garment(Base):
     dominant_colors: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
     top_aesthetics: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
     embedding: Mapped[list | None] = mapped_column(JSON, nullable=True)
+    is_candidate: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    status: Mapped[str] = mapped_column(String(20), default="AVAILABLE", nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
     owner: Mapped[User | None] = relationship(back_populates="garments")
@@ -92,6 +97,9 @@ class Outfit(Base):
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_uuid)
     user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), nullable=False)
     aesthetic: Mapped[str] = mapped_column(String(50), nullable=False, default="casual")
+    occasion: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    weather: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    reason: Mapped[str | None] = mapped_column(Text, nullable=True)
     chromatic_score: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
     embedding_score: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
@@ -116,6 +124,26 @@ class OutfitGarment(Base):
     outfit: Mapped[Outfit] = relationship(back_populates="garments")
 
 
+class OutfitFeedback(Base):
+    """Feedback explícito del usuario (like/dislike) sobre un outfit generado."""
+
+    __tablename__ = "outfit_feedbacks"
+    __table_args__ = (
+        UniqueConstraint("user_id", "outfit_id", name="uq_user_outfit_feedback"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_uuid)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), nullable=False)
+    outfit_id: Mapped[str] = mapped_column(ForeignKey("outfits.id"), nullable=False)
+    rating: Mapped[int] = mapped_column(Integer, nullable=False)  # +1 (like), -1 (dislike)
+    feedback_type: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    notes: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+    outfit: Mapped[Outfit] = relationship()
+    user: Mapped[User] = relationship()
+
+
 class VtonJob(Base):
     """Job asincrono de try-on: estado, error y resultado."""
 
@@ -136,3 +164,43 @@ class VtonJob(Base):
     updated_at: Mapped[datetime] = mapped_column(
         DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
     )
+
+
+class OutfitUsageLog(Base):
+    """Registro de uso de un outfit en una fecha determinada."""
+
+    __tablename__ = "outfit_usage_logs"
+    __table_args__ = (
+        UniqueConstraint("user_id", "outfit_id", "worn_date", name="uq_user_outfit_worn_date"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_uuid)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), nullable=False)
+    outfit_id: Mapped[str] = mapped_column(ForeignKey("outfits.id"), nullable=False)
+    worn_date: Mapped[date] = mapped_column(Date, default=date.today)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+    outfit: Mapped[Outfit] = relationship()
+    user: Mapped[User] = relationship()
+
+
+class OutfitPlan(Base):
+    """Plan de vestimenta en la agenda/calendario (Outfit Planner)."""
+
+    __tablename__ = "outfit_plans"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_uuid)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), nullable=False)
+    outfit_id: Mapped[str | None] = mapped_column(ForeignKey("outfits.id"), nullable=True)
+    garment_ids: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
+    planned_date: Mapped[date] = mapped_column(Date, nullable=False)
+    occasion: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    status: Mapped[str] = mapped_column(String(20), nullable=False, default="PLANNED")
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
+    )
+
+    outfit: Mapped[Outfit | None] = relationship()
+    user: Mapped[User] = relationship()

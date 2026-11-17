@@ -34,6 +34,7 @@ dependencies = [
   "azure-storage-blob>=12.19",
   "pyjwt>=2.8",
   "dagshub>=0.7.3",
+  "dvc>=3.67.1",
 ]
 
 [tool.ruff]

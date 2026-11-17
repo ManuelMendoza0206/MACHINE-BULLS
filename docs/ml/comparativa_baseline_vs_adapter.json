@@ -1,0 +1,25 @@
+{
+  "baseline": {
+    "model_name": "patrickjohncyh/fashion-clip",
+    "model_type": "zero_shot_baseline",
+    "num_samples": 200,
+    "accuracy": 0.815,
+    "f1_macro": 0.8134,
+    "f1_micro": 0.815,
+    "fitb_accuracy": 0.92,
+    "fitb_threshold_passed": true,
+    "num_aesthetics_evaluated": 12
+  },
+  "adapter": {
+    "model_name": "fashion-clip-aesthetic-adapter",
+    "model_type": "fine_tuned_projection_head",
+    "num_samples": 200,
+    "accuracy": 0.89,
+    "f1_macro": 0.8889,
+    "f1_micro": 0.89,
+    "fitb_accuracy": 0.82,
+    "fitb_threshold_passed": true,
+    "calibrated_temperature": 1.094,
+    "output_embedding_dim": 128
+  }
+}

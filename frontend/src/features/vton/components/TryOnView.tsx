@@ -411,7 +411,7 @@ export function TryOnView(): JSX.Element {
 
           {/* Secuencia anatómica por capas */}
           <div className="space-y-2.5 rounded-2xl border border-border/60 bg-muted/30 p-4">
-            <p className="text-xs font-semibold text-foreground">Secuencia anatómica CatVTON:</p>
+            <p className="text-xs font-semibold text-foreground">Orden de prueba por prenda:</p>
             <div className="space-y-2 text-xs text-muted-foreground">
               <div className="flex items-center justify-between text-[11px]">
                 <span className="flex items-center gap-1.5">
@@ -470,7 +470,7 @@ export function TryOnView(): JSX.Element {
               MediaPipe A-Pose
             </span>
           </div>
-          <PhotoConsentGate>
+          <PhotoConsentGate variant="vton">
             <div className="space-y-4">
               {previewUrl ? (
                 <div className="space-y-3">
@@ -540,12 +540,12 @@ export function TryOnView(): JSX.Element {
                     <div className="space-y-2 rounded-xl border border-destructive/40 bg-destructive/10 p-3.5 text-left">
                       <div className="flex items-center gap-2 text-xs font-semibold text-destructive">
                         <ShieldAlert className="h-4 w-4 shrink-0" />
-                        <span>Alerta Biomecánica: Postura No Canónica</span>
+                        <span>Revisa tu postura en la foto</span>
                       </div>
-                      <p className="font-mono text-xs text-destructive/90">{createError}</p>
+                      <p className="text-xs text-destructive/90">{createError}</p>
                       <p className="text-[11px] text-muted-foreground leading-relaxed">
-                        MediaPipe exige una postura frontal A-Pose para proteger el cómputo de GPU y
-                        evitar distorsiones en la prenda.
+                        Para que la ropa se ajuste correctamente, tómate la foto de frente, de
+                        cuerpo entero y con los brazos ligeramente separados.
                       </p>
                       <Button
                         type="button"
@@ -556,7 +556,7 @@ export function TryOnView(): JSX.Element {
                           void loadSample('/samples/usuario_canonico.jpg', 'usuario_canonico.jpg')
                         }
                       >
-                        ✓ Cambiar a Modelo A-Pose Canónico
+                        ✓ Probar con modelo de ejemplo
                       </Button>
                     </div>
                   ) : null}
@@ -573,7 +573,7 @@ export function TryOnView(): JSX.Element {
               <div className="flex items-center justify-between text-xs font-mono text-muted-foreground">
                 <span className="flex items-center gap-1.5 font-semibold text-accent">
                   <RefreshCw className="h-3.5 w-3.5 animate-spin motion-reduce:animate-none" />{' '}
-                  Inferencia asíncrona
+                  Generando tu prueba
                 </span>
                 <span>{elapsedSec}s transcurridos</span>
               </div>
@@ -583,9 +583,7 @@ export function TryOnView(): JSX.Element {
                 <div className="flex items-center gap-2 rounded-xl border border-border/60 bg-background/90 p-2.5 shadow-2xs">
                   <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
                   <div className="flex-1">
-                    <p className="font-medium text-foreground">
-                      1. Validación anatómica (MediaPipe A-Pose)
-                    </p>
+                    <p className="font-medium text-foreground">1. Validación de postura</p>
                     <p className="text-[11px] text-muted-foreground">Postura correcta verificada</p>
                   </div>
                 </div>
@@ -593,9 +591,7 @@ export function TryOnView(): JSX.Element {
                 <div className="flex items-center gap-2 rounded-xl border border-border/60 bg-background/90 p-2.5 shadow-2xs">
                   <RefreshCw className="h-4 w-4 shrink-0 animate-spin motion-reduce:animate-none text-accent" />
                   <div className="flex-1">
-                    <p className="font-medium text-foreground">
-                      2. Segmentación & SCHP Human Parsing
-                    </p>
+                    <p className="font-medium text-foreground">2. Ajuste a tu silueta</p>
                     <p className="text-[11px] text-muted-foreground">
                       Alineación de prendas y silueta
                     </p>
@@ -606,10 +602,10 @@ export function TryOnView(): JSX.Element {
                   <Layers className="h-4 w-4 shrink-0 text-muted-foreground" />
                   <div className="flex-1">
                     <p className="font-medium text-muted-foreground">
-                      3. Difusión multicapa (CatVTON)
+                      3. Colocación de prendas por capas
                     </p>
                     <p className="text-[11px] text-muted-foreground">
-                      Renderizado y mezcla por capas
+                      Renderizado y combinación final
                     </p>
                   </div>
                 </div>

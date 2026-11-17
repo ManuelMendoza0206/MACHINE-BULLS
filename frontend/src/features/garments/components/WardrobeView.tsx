@@ -53,9 +53,9 @@ export function WardrobeView(): JSX.Element {
           ))}
         </div>
 
-        <div className="hidden sm:flex items-center gap-2 pr-3 text-xs text-muted-foreground font-mono">
+        <div className="hidden sm:flex items-center gap-2 pr-3 text-xs text-muted-foreground">
           <span className="h-2 w-2 rounded-full bg-emerald-500" />
-          <span>{section === 'upload' ? 'Modo subida activa' : 'Catálogo cápsula activo'}</span>
+          <span>{section === 'upload' ? 'Subir prendas' : 'Catálogo cápsula'}</span>
         </div>
       </div>
 
@@ -95,7 +95,7 @@ export function WardrobeView(): JSX.Element {
                   <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
                   <span>
                     <strong className="text-foreground">Buena luz:</strong> Luz natural diurna o
-                    lámpara frontal para una detección cromática precisa.
+                    lámpara frontal para captar el color real de tu ropa.
                   </span>
                 </li>
               </ul>

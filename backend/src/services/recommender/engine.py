@@ -91,48 +91,214 @@ def _ordenar_capas(garment_dicts: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return sorted(garment_dicts, key=clave)
 
 
-def recommend_outfits(
-    garments: list[dict[str, Any]],
-    target_aesthetic: str | None = None,
+def _rankear_y_explicar_combos(
+    combos: list[list[dict[str, Any]]],
+    disliked_combinations: list[set[str]] | None = None,
+    preferred_aesthetics: list[str] | None = None,
+    occasion: str | None = None,
+    weather: str | None = None,
     limit: int = 6,
 ) -> list[dict[str, Any]]:
-    """Devuelve los mejores outfits armados con `garments`.
-
-    Cada garment dict esperado:
-        {id, position, colors, embedding, aesthetic}
-
-    `target_aesthetic` filtra por estetica dominante antes de combinar; si
-    empieza vacio, ignina el filtro y prioriza variedad (dedupe por score).
-    """
-    disponibles = garments
-    if target_aesthetic:
-        filtradas = [g for g in garments if g.get("aesthetic") == target_aesthetic]
-        # Si el filtro vacia todo, no devolvemos nada mejor que romper la demo:
-        # se cae al catalogo completo con una nota en el log del server.
-        if filtradas:
-            disponibles = filtradas
-
-    agrupadas = _por_posicion(disponibles)
-    combos = _combinaciones(agrupadas)
-
+    """Aplica scoring multimodal (cromático + embedding + contexto + feedback) y explicabilidad."""
     rankeados: list[dict[str, Any]] = []
     for capas in combos:
+        capa_ids = {g["id"] for g in capas if "id" in g}
+        if disliked_combinations and any(
+            capa_ids == d_set or (len(d_set) > 1 and d_set.issubset(capa_ids))
+            for d_set in disliked_combinations
+        ):
+            continue
+
         chroma = score_outfit(capas)
         emb = embedding_score([g["embedding"] for g in capas if g.get("embedding")])
         score = WEIGHTS["chromatic"] * chroma + WEIGHTS["embedding"] * emb
         capas_ordenadas = _ordenar_capas(capas)
+        estetica = _estetica_dominante(capas_ordenadas)
+
+        # 1. Modulación por feedback previo (Memoria de estilo)
+        if preferred_aesthetics and estetica in preferred_aesthetics:
+            score = min(1.0, score + 0.10)
+
+        # 2. Modulación por contexto térmico (Clima)
+        has_outer = any(g.get("position") in (GarmentPosition.OUTERWEAR.value, GarmentPosition.OUTERWEAR) for g in capas)
+        if weather == "cold":
+            if has_outer:
+                score = min(1.0, score + 0.12)
+            else:
+                score = max(0.0, score - 0.15)
+        elif weather == "warm":
+            if has_outer:
+                score = max(0.0, score - 0.20)
+            else:
+                score = min(1.0, score + 0.08)
+
+        # 3. Modulación por ocasión
+        if occasion:
+            occ_lower = occasion.lower()
+            if occ_lower in ("formal", "work") and estetica in ("formal", "minimalist", "old money") or occ_lower in ("sport", "outdoor") and estetica in ("gorpcore", "casual") or occ_lower in ("party", "night") and estetica in ("starboy", "y2k", "streetwear"):
+                score = min(1.0, score + 0.15)
+            elif occ_lower in ("university", "casual") and estetica in ("casual", "vintage", "soft boy"):
+                score = min(1.0, score + 0.10)
+
+        # Generación de explicación explicable para el usuario
+        explicacion_partes = []
+        if chroma >= 0.75:
+            explicacion_partes.append(f"Alta armonía de color ({round(chroma * 100)}%)")
+        else:
+            explicacion_partes.append(f"Contraste tonal equilibrado ({round(chroma * 100)}%)")
+
+        if weather == "cold" and has_outer:
+            explicacion_partes.append("capa exterior térmica para bajas temperaturas")
+        elif weather == "warm" and not has_outer:
+            explicacion_partes.append("composición ligera y fresca para clima cálido")
+
+        if occasion:
+            explicacion_partes.append(f"adecuado para ocasión {occasion}")
+        else:
+            explicacion_partes.append(f"estilo {estetica}")
+
+        reason = ", ".join(explicacion_partes).capitalize() + "."
+
         rankeados.append(
             {
-                "aesthetic": _estetica_dominante(capas_ordenadas),
+                "aesthetic": estetica,
                 "garments": capas_ordenadas,
                 "chromatic_score": round(chroma, 4),
                 "embedding_score": round(emb, 4),
+                "occasion": occasion,
+                "weather": weather,
+                "reason": reason,
                 "_score": round(score, 4),
             }
         )
 
     rankeados.sort(key=lambda r: -r["_score"])
     return rankeados[:limit]
+
+
+def recommend_outfits(
+    garments: list[dict[str, Any]],
+    target_aesthetic: str | None = None,
+    limit: int = 6,
+    disliked_combinations: list[set[str]] | None = None,
+    preferred_aesthetics: list[str] | None = None,
+    occasion: str | None = None,
+    weather: str | None = None,
+) -> list[dict[str, Any]]:
+    """Devuelve los mejores outfits armados con `garments`, aplicando personalizacion y contexto.
+
+    Descarta automáticamente prendas cuyo status sea diferente de 'AVAILABLE'.
+    """
+    # Excluir prendas en lavandería, reparación o inactivas
+    disponibles = [g for g in garments if g.get("status", "AVAILABLE") == "AVAILABLE"]
+    if not disponibles:
+        return []
+
+    if target_aesthetic:
+        filtradas = [g for g in disponibles if g.get("aesthetic") == target_aesthetic]
+        if filtradas:
+            disponibles = filtradas
+
+    agrupadas = _por_posicion(disponibles)
+    combos = _combinaciones(agrupadas)
+    return _rankear_y_explicar_combos(
+        combos,
+        disliked_combinations=disliked_combinations,
+        preferred_aesthetics=preferred_aesthetics,
+        occasion=occasion,
+        weather=weather,
+        limit=limit,
+    )
+
+
+def remix_outfit(
+    garments: list[dict[str, Any]],
+    pinned_garment_ids: list[str],
+    target_aesthetic: str | None = None,
+    limit: int = 6,
+    disliked_combinations: list[set[str]] | None = None,
+    preferred_aesthetics: list[str] | None = None,
+    occasion: str | None = None,
+    weather: str | None = None,
+) -> list[dict[str, Any]]:
+    """Genera alternativas de outfit anclando estrictamente las prendas fijadas en `pinned_garment_ids`.
+
+    Las prendas no ancladas se completan con prendas del guardarropa que estén 'AVAILABLE'.
+    """
+    pinned_set = set(pinned_garment_ids)
+    pinned_garments = [g for g in garments if g.get("id") in pinned_set]
+    if not pinned_garments:
+        return recommend_outfits(
+            garments,
+            target_aesthetic=target_aesthetic,
+            limit=limit,
+            disliked_combinations=disliked_combinations,
+            preferred_aesthetics=preferred_aesthetics,
+            occasion=occasion,
+            weather=weather,
+        )
+
+    # Identificar prendas ancladas por posición
+    pinned_by_pos: dict[str, dict[str, Any]] = {}
+    for g in pinned_garments:
+        pos = g.get("position")
+        if pos:
+            # Si pos es un enum, extraer .value
+            pos_str = pos.value if hasattr(pos, "value") else str(pos)
+            pinned_by_pos[pos_str] = g
+
+    # Prendas disponibles para las posiciones restantes
+    libres = [
+        g for g in garments
+        if g.get("id") not in pinned_set and g.get("status", "AVAILABLE") == "AVAILABLE"
+    ]
+    if target_aesthetic:
+        filtradas = [g for g in libres if g.get("aesthetic") == target_aesthetic]
+        if filtradas:
+            libres = filtradas
+
+    agrupadas = _por_posicion(libres)
+
+    # Armado condicional de capas respetando las fijadas
+    if GarmentPosition.TOP.value in pinned_by_pos:
+        tops = [pinned_by_pos[GarmentPosition.TOP.value]]
+    else:
+        tops = agrupadas[GarmentPosition.TOP]
+
+    if GarmentPosition.BOTTOM.value in pinned_by_pos:
+        bottoms = [pinned_by_pos[GarmentPosition.BOTTOM.value]]
+    else:
+        bottoms = agrupadas[GarmentPosition.BOTTOM]
+
+    if GarmentPosition.FOOTWEAR.value in pinned_by_pos:
+        shoes = [pinned_by_pos[GarmentPosition.FOOTWEAR.value]]
+    else:
+        shoes = agrupadas[GarmentPosition.FOOTWEAR] or [None]
+
+    if GarmentPosition.OUTERWEAR.value in pinned_by_pos:
+        outers = [pinned_by_pos[GarmentPosition.OUTERWEAR.value]]
+    else:
+        outers = agrupadas[GarmentPosition.OUTERWEAR] or [None]
+
+    combos: list[list[dict[str, Any]]] = []
+    for bottom in bottoms:
+        for top in tops:
+            for shoe in shoes:
+                for outer in outers:
+                    capas = [c for c in (bottom, top, outer, shoe) if c is not None]
+                    capas_ids = {g["id"] for g in capas if "id" in g}
+                    # Verificar que todas las prendas ancladas estén en el combo
+                    if pinned_set.issubset(capas_ids):
+                        combos.append(capas)
+
+    return _rankear_y_explicar_combos(
+        combos,
+        disliked_combinations=disliked_combinations,
+        preferred_aesthetics=preferred_aesthetics,
+        occasion=occasion,
+        weather=weather,
+        limit=limit,
+    )
 
 
 def _estetica_dominante(capas: list[dict[str, Any]]) -> str:
