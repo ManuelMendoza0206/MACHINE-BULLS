@@ -11,11 +11,11 @@ test.describe('Visual Regression - Design System Components', () => {
   });
 
   test('verifies base UI tokens in light mode', async ({ page }) => {
-    await page.goto('/');
-    await page.evaluate(() => {
-      document.documentElement.classList.remove('dark');
-      document.documentElement.classList.add('light');
+    await page.addInitScript(() => {
+      window.localStorage.setItem('theme', 'light');
     });
+    await page.goto('/');
+    await expect(page.locator('html')).toHaveClass(/light/);
 
     const bodyBg = await page.evaluate(() => getComputedStyle(document.body).backgroundColor);
     expect(bodyBg).toBeDefined();
@@ -27,11 +27,10 @@ test.describe('Visual Regression - Design System Components', () => {
   });
 
   test('verifies base UI tokens in dark mode', async ({ page }) => {
-    await page.goto('/');
-    await page.evaluate(() => {
-      document.documentElement.classList.remove('light');
-      document.documentElement.classList.add('dark');
+    await page.addInitScript(() => {
+      window.localStorage.setItem('theme', 'dark');
     });
+    await page.goto('/');
 
     await expect(page.locator('html')).toHaveClass(/dark/);
     const darkBg = await page.evaluate(() => {
