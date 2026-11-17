@@ -425,8 +425,9 @@ def get_provider_fallback_chain(
 
     chain: list[VtonInferenceProvider] = [prov]
     if isinstance(prov, HttpVtonProvider):
-        if settings.replicate_api_token:
-            chain.append(ReplicateVtonProvider(settings.replicate_api_token))
+        replicate_token = os.environ.get("REPLICATE_API_TOKEN") or settings.replicate_api_token
+        if replicate_token:
+            chain.append(ReplicateVtonProvider(replicate_token))
         chain.append(MockVtonProvider())
     elif isinstance(prov, ReplicateVtonProvider):
         chain.append(MockVtonProvider())
