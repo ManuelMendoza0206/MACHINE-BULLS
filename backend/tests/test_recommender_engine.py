@@ -73,14 +73,24 @@ def test_sin_bottom_no_inventa_outfit() -> None:
 
 
 def test_target_aesthetic_filtra() -> None:
-    """Con target_aesthetic solo salen outfits de esa estetica."""
-    outfits = recommend_outfits(
-        _prendas_fixture(), target_aesthetic="streetwear"
-    )
-    # La estetica dominante del outfit es la del top; el fixture no tiene top
-    # streetwear, asi que o filtra a vacio o cae al catalogo completo.
-    # Lo que no debe pasar: crashear. Verificamos que corrio y devolvio lista.
-    assert isinstance(outfits, list)
+    """Con target_aesthetic solo salen outfits compuestos por esa estetica."""
+    # El fixture tiene top/bottom/footwear "casual" y un outerwear "streetwear":
+    # filtrando por casual, la campera streetwear queda FUERA de todo outfit.
+    outfits = recommend_outfits(_prendas_fixture(), target_aesthetic="casual")
+    assert outfits, "con ancla casual debe haber al menos un outfit"
+    for o in outfits:
+        assert o["aesthetic"] == "casual"
+        assert o["garments"], "outfit sin prendas"
+        assert all(g.get("aesthetic") == "casual" for g in o["garments"])
+
+    # streetwear solo tiene outerwear: sin ancla top+bottom no se inventa outfit.
+    assert recommend_outfits(_prendas_fixture(), target_aesthetic="streetwear") == []
+
+    # Estetica sin ninguna coincidencia: fallback al catalogo completo
+    # (comportamiento documentado del motor), identico a no filtrar.
+    assert recommend_outfits(
+        _prendas_fixture(), target_aesthetic="goth"
+    ) == recommend_outfits(_prendas_fixture())
 
 
 def test_limit_respeta_tope() -> None:

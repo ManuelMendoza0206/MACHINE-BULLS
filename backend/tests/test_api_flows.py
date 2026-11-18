@@ -7,6 +7,7 @@ provider VTON en mock + media en tmp. Aca se valida el contrato de la API
 
 from __future__ import annotations
 
+import time
 from io import BytesIO
 from typing import Any
 
@@ -35,6 +36,24 @@ def _upload(
     )
     assert r.status_code == 200, r.text
     return r.json()
+
+
+def _esperar_job_terminal(client: Any, job_id: str, timeout_s: float = 5.0) -> dict:
+    """Espera activa a que el job llegue a estado terminal (completed/failed).
+
+    Espera por CONDICION con tope de reloj, no un numero fijo de dormidas:
+    si el job termina antes no pierde tiempo, y si no termina devuelve el
+    ultimo estado para que el assert del caller lo muestre completo (E0-T5).
+    """
+    deadline = time.monotonic() + timeout_s
+    sj: dict = {}
+    while True:
+        sj = client.get(f"/api/v1/vton/status/{job_id}").json()
+        if sj["status"] in {"completed", "failed"}:
+            return sj
+        if time.monotonic() >= deadline:
+            return sj
+        time.sleep(0.05)
 
 
 def test_health(client: Any) -> None:
@@ -165,8 +184,6 @@ def test_get_outfit_inexistente_da_404(client: Any) -> None:
 
 def test_vton_flujo_completo_mock(client: Any, demo_user_id: str) -> None:
     """Try-on (mock provider) -> polling hasta completed con result_url."""
-    import time
-
     _upload(client, nombre="remera")  # azul -> top
     _upload(client, nombre="pantalon", color=(200, 30, 30))  # rojo -> bottom
     r = client.post("/api/v1/outfits/recommend", json={"user_id": demo_user_id})
@@ -185,11 +202,7 @@ def test_vton_flujo_completo_mock(client: Any, demo_user_id: str) -> None:
 
     # BackgroundTasks de Starlette corre el job sincronamente tras la respuesta;
     # el polling igual debe funcionar (el job ya esta completed).
-    for _ in range(40):
-        sj = client.get(f"/api/v1/vton/status/{body['job_id']}").json()
-        if sj["status"] in {"completed", "failed"}:
-            break
-        time.sleep(0.05)
+    sj = _esperar_job_terminal(client, body["job_id"])
     assert sj["status"] == "completed", sj
     assert sj["result_url"].startswith("http")
     assert sj["error_message"] is None
@@ -205,7 +218,6 @@ def test_vton_fallback_sin_redis_completa_igual(
 ) -> None:
     """Redis caido: el endpoint cae a BackgroundTasks y el job igual termina."""
     import dataclasses
-    import time
 
     import services.queue as queue_module
     from config import settings as base
@@ -229,11 +241,7 @@ def test_vton_fallback_sin_redis_completa_igual(
     )
     assert rv.status_code == 200, rv.text
 
-    for _ in range(40):
-        sj = client.get(f"/api/v1/vton/status/{rv.json()['job_id']}").json()
-        if sj["status"] in {"completed", "failed"}:
-            break
-        time.sleep(0.05)
+    sj = _esperar_job_terminal(client, rv.json()["job_id"])
     assert sj["status"] == "completed", sj
     assert sj["result_url"].startswith("http")
 
@@ -249,6 +257,8 @@ def test_vton_sin_outfit_ni_layers_da_400(client: Any) -> None:
 
 def test_vton_pose_invalida_da_422_con_causa(client: Any, demo_user_id: str, monkeypatch: Any) -> None:
     """Protocolo 4.1.5: sin A-Pose rechaza 422 con razon actionable en detalle."""
+    # POSE_VALIDATION se lee EN RUNTIME por pose_check (services/pose_check.py),
+    # no via `settings` frozen: por eso monkeypatch.setenv es efectivo aca.
     monkeypatch.setenv("POSE_VALIDATION", "on")
 
     _upload(client, nombre="remera")  # azul -> top
@@ -279,7 +289,9 @@ def test_vton_historial_jobs_vacio(client: Any) -> None:
 
 def test_vton_historial_jobs_lista_ordenada(client: Any, demo_user_id: str, monkeypatch: Any) -> None:
     """GET /vton/jobs lista los jobs del usuario ordenados por fecha desc (G3)."""
-    monkeypatch.setenv("VTON_PROVIDER", "mock")
+    # POSE_VALIDATION es env en runtime (efectivo). El provider NO se setea por
+    # env: `settings` ya esta resuelto al importar (frozen) y el conftest lo
+    # fuerza en mock; un setenv("VTON_PROVIDER") aca seria un no-op silencioso.
     monkeypatch.setenv("POSE_VALIDATION", "off")
 
     _upload(client, nombre="remera")

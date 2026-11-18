@@ -44,6 +44,10 @@ target-version = "py312"
 [tool.pytest.ini_options]
 testpaths = ["tests", "src/ml"]
 pythonpath = ["src"]
+# E0-T2: cualquier test que se cuelgue (red, cola, deadlock) falla en vez de
+# congelar la corrida completa. 120s es un techo generoso: la suite completa
+# tarda ~170s, asi que ningun test sano se acerca.
+timeout = 120
 
 [dependency-groups]
 # Un solo grupo dev. Antes convivían `[project.optional-dependencies].dev`
@@ -52,6 +56,7 @@ pythonpath = ["src"]
 dev = [
     "pytest>=8",
     "pytest-cov>=5",
+    "pytest-timeout>=2.3",
     "ruff>=0.3",
     "httpx>=0.27",
     # Los notebooks corren en Colab con su propio runtime; se incluye acá para

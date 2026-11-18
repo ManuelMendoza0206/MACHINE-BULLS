@@ -34,10 +34,12 @@ def _jpg(color: tuple[int, int, int] = (10, 20, 30)) -> bytes:
 
 
 class _FakeResponse:
-    def __init__(self, payload: dict, status_code: int = 200) -> None:
+    def __init__(self, payload: dict, status_code: int = 200, content: bytes | None = None) -> None:
         self._payload = payload
         self.status_code = status_code
-        self.content = json.dumps(payload).encode()
+        # `content` permite simular la descarga binaria del output (bytes de
+        # imagen reales); por defecto es el JSON del payload.
+        self.content = content if content is not None else json.dumps(payload).encode()
 
     def json(self) -> dict:
         return self._payload
@@ -50,9 +52,14 @@ class _FakeResponse:
 class _FakeClient:
     """Captura la ultima peticion POST y devuelve la prediccion succeeded."""
 
-    def __init__(self, result_url: str = "https://replicate.delivery/x.jpg") -> None:
+    def __init__(
+        self,
+        result_url: str = "https://replicate.delivery/x.jpg",
+        image_bytes: bytes | None = None,
+    ) -> None:
         self.last_post: dict[str, Any] | None = None
         self._result_url = result_url
+        self._image_bytes = image_bytes
 
     def __enter__(self) -> Self:
         return self
@@ -72,13 +79,16 @@ class _FakeClient:
 
     def get(self, url: str, headers: dict | None = None) -> _FakeResponse:
         if url.startswith("https://replicate.delivery"):
-            return _FakeResponse({}, status_code=200)
+            # Descarga del output: bytes de imagen reales (no JSON basura),
+            # para que el test pueda afirmar el contenido devuelto.
+            return _FakeResponse({}, content=self._image_bytes or b"")
         return _FakeResponse({"status": "succeeded", "output": self._result_url})
 
 
 def test_replicate_payload_correcto(monkeypatch: pytest.MonkeyPatch) -> None:
     """Version fijada, inputs con data-URI y Prefer: wait (para respuesta sincrona)."""
-    fake = _FakeClient()
+    resultado = _jpg((77, 88, 99))
+    fake = _FakeClient(image_bytes=resultado)
     monkeypatch.setattr("services.vton.provider.httpx.Client", lambda **kw: fake)
 
     p = ReplicateVtonProvider(api_token="tok-abc")
@@ -88,7 +98,10 @@ def test_replicate_payload_correcto(monkeypatch: pytest.MonkeyPatch) -> None:
         garment_description="a red t-shirt",
         category="upper",
     )
-    assert out  # devolvio bytes
+    # El retorno es EXACTAMENTE lo descargado del output (antes el fake
+    # devolvia bytes arbitrarios y `assert out` pasaba con cualquiera).
+    assert out == resultado
+    assert out.startswith(b"\xff\xd8")  # es JPEG de verdad
 
     assert fake.last_post is not None
     body = fake.last_post["json"]
@@ -197,7 +210,6 @@ def test_http_provider_devuelve_imagen_cruda(monkeypatch: pytest.MonkeyPatch) ->
 
 def test_http_provider_json_con_output(monkeypatch: pytest.MonkeyPatch) -> None:
     """Acepta la alternativa JSON: {"output": "<url>"}."""
-    import io
     import json as _json
 
     resultado = _jpg((7, 7, 7))
@@ -221,7 +233,6 @@ def test_http_provider_json_con_output(monkeypatch: pytest.MonkeyPatch) -> None:
     assert delivered  # bajo la URL del output
     assert fake.last is not None
     assert fake.last["headers"]["Authorization"] == "Bearer sec"
-    assert io.BytesIO is not None  # sin import ruff
 
 
 def test_http_provider_rechaza_footwear() -> None:

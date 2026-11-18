@@ -23,6 +23,10 @@ vi.mock('next/navigation', () => ({
 
 const originalEnv = process.env['NEXT_PUBLIC_API_BASE_URL'];
 const originalTimeoutEnv = process.env['NEXT_PUBLIC_VTON_POLL_TIMEOUT_MS'];
+// Descriptor original de visibilityState: los tests lo redefinen para simular
+// la pestana en segundo plano; sin restaurarlo, el estado se filtra a los
+// demas tests de la suite (E0-T3).
+const originalVisibilityDescriptor = Object.getOwnPropertyDescriptor(document, 'visibilityState');
 
 function happyHandlers(): void {
   server.use(
@@ -66,6 +70,9 @@ afterEach(() => {
     delete process.env['NEXT_PUBLIC_VTON_POLL_TIMEOUT_MS'];
   } else {
     process.env['NEXT_PUBLIC_VTON_POLL_TIMEOUT_MS'] = originalTimeoutEnv;
+  }
+  if (originalVisibilityDescriptor) {
+    Object.defineProperty(document, 'visibilityState', originalVisibilityDescriptor);
   }
 });
 
@@ -168,8 +175,19 @@ describe('TryOnView', () => {
       document.dispatchEvent(new Event('visibilitychange'));
     });
 
+    // Corta cualquier request en vuelo de antes del hide para que el conteo
+    // quede estable desde ya.
+    await act(async () => {
+      await new Promise(r => setTimeout(r, 50));
+    });
     const callsWhileHidden = statusCalls;
-    await new Promise(r => setTimeout(r, 600));
+
+    // Espera MAS de un intervalo completo de polling (el inicial es 2000ms):
+    // con menos, el "no hubo llamadas" pasaria de arriba aunque el hook no
+    // pausara nada (E0-T5: asercion que prueba el comportamiento real).
+    await act(async () => {
+      await new Promise(r => setTimeout(r, 2_400));
+    });
 
     // No se ejecutan llamadas adicionales mientras está en background
     expect(statusCalls).toBe(callsWhileHidden);
@@ -184,10 +202,13 @@ describe('TryOnView', () => {
       document.dispatchEvent(new Event('visibilitychange'));
     });
 
-    // Al volver, se reanuda el polling
-    await vi.waitFor(() => {
-      expect(statusCalls).toBeGreaterThan(callsWhileHidden);
-    });
+    // Al volver, se reanuda el polling (próximo tick dentro de ~2s)
+    await vi.waitFor(
+      () => {
+        expect(statusCalls).toBeGreaterThan(callsWhileHidden);
+      },
+      { timeout: 5_000 }
+    );
   });
 
   it('checkCachedVtonResult evita una llamada de red duplicada para el mismo par (outfit, foto) en la misma sesión', async () => {

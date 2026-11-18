@@ -37,6 +37,10 @@ describe('ProfileView', () => {
     expect(await screen.findByText('demo@styleme.test')).toBeInTheDocument();
     // Stats derivadas del fixture capsule (3 prendas: top/bottom/footwear).
     expect(screen.getByText('Prendas digitizadas')).toBeInTheDocument();
+    // El total mostrado es `garments.length`, no solo la etiqueta (E0-T5):
+    // si la vista dejara de renderizar el conteo, este assert falla.
+    const totalEl = screen.getByText('Prendas digitizadas').nextElementSibling;
+    expect(totalEl).toHaveTextContent(/^3$/);
     expect(screen.getByText('Parte superior')).toBeInTheDocument();
     // Proveedor VTON desde /health — clave para la demo (mock hoy, VM mañana).
     expect(await screen.findByTestId('vton-provider')).toHaveTextContent('mock');

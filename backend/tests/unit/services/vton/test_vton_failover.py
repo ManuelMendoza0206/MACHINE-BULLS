@@ -25,6 +25,9 @@ from services.vton.provider import (
 
 def test_get_provider_fallback_chain_order(monkeypatch) -> None:
     """Verifica el orden GPU real sin fallback a mock (CatVTON -> Replicate)."""
+    # `get_provider_fallback_chain` lee REPLICATE_API_TOKEN EN RUNTIME
+    # (os.environ.get(...) or settings...): por eso setenv/delenv de aca
+    # son efectivos aunque `settings` este frozen.
     monkeypatch.setenv("REPLICATE_API_TOKEN", "dummy-token")
     http_prov = HttpVtonProvider("http://127.0.0.1:7861/tryon")
     chain = get_provider_fallback_chain(http_prov)
@@ -47,6 +50,8 @@ def test_get_provider_fallback_chain_order(monkeypatch) -> None:
 
 def test_run_job_failover_catvton_to_replicate(monkeypatch) -> None:
     """Verifica que si CatVTON falla, el pipeline conmuta a Replicate GPU (nunca a mock)."""
+    # La cadena de fallback se arma con el env leido en runtime (ver test de
+    # arriba): el token se setea aca para no depender del `.env` de la maquina.
     monkeypatch.setenv("REPLICATE_API_TOKEN", "dummy-token")
     db_session = SessionLocal()
     try:

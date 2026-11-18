@@ -5,6 +5,10 @@ import { useVtonJobStatus, useManualVtonStatusCheck } from '@/features/vton/hook
 import { VtonJobTimeoutError } from '@/lib/errors';
 import type { VtonJobStatusResponse } from '@/schemas/api/vton';
 
+// Descriptor original de visibilityState: los tests de visibilidad lo
+// redefinen; hay que restaurarlo para no filtrar estado a otros tests (E0-T3).
+const originalVisibilityDescriptor = Object.getOwnPropertyDescriptor(document, 'visibilityState');
+
 describe('useVtonJobStatus', () => {
   beforeEach(() => {
     vi.useFakeTimers();
@@ -13,6 +17,9 @@ describe('useVtonJobStatus', () => {
   afterEach(() => {
     vi.useRealTimers();
     vi.restoreAllMocks();
+    if (originalVisibilityDescriptor) {
+      Object.defineProperty(document, 'visibilityState', originalVisibilityDescriptor);
+    }
   });
 
   it('permanece en idle si jobId es null o enabled es false', () => {
