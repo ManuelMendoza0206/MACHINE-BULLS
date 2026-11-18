@@ -4,10 +4,7 @@ import * as getVtonJobStatusModule from '@/features/vton/api/getVtonJobStatus';
 import { useVtonJobStatus, useManualVtonStatusCheck } from '@/features/vton/hooks/useVtonJobStatus';
 import { VtonJobTimeoutError } from '@/lib/errors';
 import type { VtonJobStatusResponse } from '@/schemas/api/vton';
-
-// Descriptor original de visibilityState: los tests de visibilidad lo
-// redefinen; hay que restaurarlo para no filtrar estado a otros tests (E0-T3).
-const originalVisibilityDescriptor = Object.getOwnPropertyDescriptor(document, 'visibilityState');
+import { restoreVisibilityState, setVisibilityState } from '../../../utils/visibility';
 
 describe('useVtonJobStatus', () => {
   beforeEach(() => {
@@ -17,9 +14,7 @@ describe('useVtonJobStatus', () => {
   afterEach(() => {
     vi.useRealTimers();
     vi.restoreAllMocks();
-    if (originalVisibilityDescriptor) {
-      Object.defineProperty(document, 'visibilityState', originalVisibilityDescriptor);
-    }
+    restoreVisibilityState();
   });
 
   it('permanece en idle si jobId es null o enabled es false', () => {
@@ -156,13 +151,8 @@ describe('useVtonJobStatus', () => {
 
     renderHook(() => useVtonJobStatus({ jobId: '11111111-1111-1111-1111-111111111111' }));
 
-    // Simular que la pestaña se oculta antes de dispararse el intervalo
-    Object.defineProperty(document, 'visibilityState', {
-      value: 'hidden',
-      writable: true,
-      configurable: true,
-    });
-    document.dispatchEvent(new Event('visibilitychange'));
+    // Se oculta antes de dispararse el intervalo
+    setVisibilityState('hidden');
 
     await act(async () => {
       vi.advanceTimersByTime(2000);
@@ -172,12 +162,7 @@ describe('useVtonJobStatus', () => {
     expect(getStatusSpy).toHaveBeenCalledTimes(0);
 
     // Al volver a visible se reanuda
-    Object.defineProperty(document, 'visibilityState', {
-      value: 'visible',
-      writable: true,
-      configurable: true,
-    });
-    document.dispatchEvent(new Event('visibilitychange'));
+    setVisibilityState('visible');
 
     await act(async () => {
       vi.advanceTimersByTime(2000);

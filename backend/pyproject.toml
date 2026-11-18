@@ -43,11 +43,19 @@ target-version = "py312"
 
 [tool.pytest.ini_options]
 testpaths = ["tests", "src/ml"]
-pythonpath = ["src"]
+# "tests" en el path para que los modulos anidados (tests/unit/...) puedan
+# hacer `from factories import ...` sin paquete ni rutas relativas (E1-T2).
+pythonpath = ["src", "tests"]
 # E0-T2: cualquier test que se cuelgue (red, cola, deadlock) falla en vez de
 # congelar la corrida completa. 120s es un techo generoso: la suite completa
 # tarda ~170s, asi que ningun test sano se acerca.
 timeout = 120
+markers = [
+    "unit: servicios puros, sin red/DB/cola reales",
+    "integration: wiring real (DB, cola, pipeline VTON, cliente HTTP interno)",
+    "contract: contrato HTTP que consume el frontend (routers)",
+    "slow: tarda segundos de verdad (entrenamiento, modelos); excluible con -m 'not slow'",
+]
 
 [dependency-groups]
 # Un solo grupo dev. Antes convivían `[project.optional-dependencies].dev`

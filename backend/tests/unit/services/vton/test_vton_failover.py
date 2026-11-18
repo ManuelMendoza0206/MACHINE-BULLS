@@ -1,4 +1,8 @@
-"""Tests unitarios para el failover de proveedores VTON (CatVTON -> Replicate -> Mock)."""
+"""Tests del failover de proveedores VTON (CatVTON -> Replicate -> Mock).
+
+No son unitarios puros: tocan DB, storage y el cliente HTTP de la app
+(wiring real) — van marcados como `integration` (E1-T4).
+"""
 
 from __future__ import annotations
 
@@ -6,6 +10,7 @@ import io
 from dataclasses import replace
 from unittest.mock import patch
 
+import pytest
 from fastapi.testclient import TestClient
 from PIL import Image
 
@@ -21,6 +26,8 @@ from services.vton.provider import (
     ReplicateVtonProvider,
     get_provider_fallback_chain,
 )
+
+pytestmark = pytest.mark.integration
 
 
 def test_get_provider_fallback_chain_order(monkeypatch) -> None:

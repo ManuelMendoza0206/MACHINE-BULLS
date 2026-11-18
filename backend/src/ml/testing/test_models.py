@@ -12,6 +12,10 @@ from ml.training.train import main as train_main
 from ml.validation.eval import accuracy
 from ml.validation.eval import main as eval_main
 
+# Entrena de verdad: los dos tests de train/correr tardan ~120s en total.
+# Excluible con `pytest -m "not slow"` para un gate rapido.
+pytestmark = pytest.mark.slow
+
 
 def test_config_default_carga_y_valida(tmp_path=None) -> None:
     from ml.training.train import DEFAULT_CONFIG

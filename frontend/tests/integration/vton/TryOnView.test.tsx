@@ -4,6 +4,7 @@ import { screen, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { renderWithProviders } from '../../utils/renderWithProviders';
 import { server } from '../../fixtures/msw/server';
+import { restoreVisibilityState, setVisibilityState } from '../../utils/visibility';
 import recommendFixture from '../../fixtures/api/outfitRecommendationResponse.json';
 import capsuleFixture from '../../fixtures/api/capsuleCatalogResponse.json';
 import { TryOnView } from '@/features/vton/components/TryOnView';
@@ -23,10 +24,6 @@ vi.mock('next/navigation', () => ({
 
 const originalEnv = process.env['NEXT_PUBLIC_API_BASE_URL'];
 const originalTimeoutEnv = process.env['NEXT_PUBLIC_VTON_POLL_TIMEOUT_MS'];
-// Descriptor original de visibilityState: los tests lo redefinen para simular
-// la pestana en segundo plano; sin restaurarlo, el estado se filtra a los
-// demas tests de la suite (E0-T3).
-const originalVisibilityDescriptor = Object.getOwnPropertyDescriptor(document, 'visibilityState');
 
 function happyHandlers(): void {
   server.use(
@@ -71,9 +68,7 @@ afterEach(() => {
   } else {
     process.env['NEXT_PUBLIC_VTON_POLL_TIMEOUT_MS'] = originalTimeoutEnv;
   }
-  if (originalVisibilityDescriptor) {
-    Object.defineProperty(document, 'visibilityState', originalVisibilityDescriptor);
-  }
+  restoreVisibilityState();
 });
 
 describe('TryOnView', () => {
@@ -167,12 +162,7 @@ describe('TryOnView', () => {
 
     // Pestaña pasa a segundo plano
     await act(async () => {
-      Object.defineProperty(document, 'visibilityState', {
-        value: 'hidden',
-        writable: true,
-        configurable: true,
-      });
-      document.dispatchEvent(new Event('visibilitychange'));
+      setVisibilityState('hidden');
     });
 
     // Corta cualquier request en vuelo de antes del hide para que el conteo
@@ -194,12 +184,7 @@ describe('TryOnView', () => {
 
     // Pestaña vuelve a primer plano
     await act(async () => {
-      Object.defineProperty(document, 'visibilityState', {
-        value: 'visible',
-        writable: true,
-        configurable: true,
-      });
-      document.dispatchEvent(new Event('visibilitychange'));
+      setVisibilityState('visible');
     });
 
     // Al volver, se reanuda el polling (próximo tick dentro de ~2s)
