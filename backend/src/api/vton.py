@@ -28,12 +28,13 @@ from domain.schemas import (
     VtonJobStatusResponse,
 )
 from services import storage
-from services.auth import DEMO_USER_EMAIL
+from services.auth import get_current_user
 from services.vton import pipeline
 
 router = APIRouter(prefix="/api/v1/vton", tags=["vton"])
 
 SessionDep = Annotated[Session, Depends(get_session)]
+UserDep = Annotated[User, Depends(get_current_user)]
 
 logger = logging.getLogger(__name__)
 
@@ -43,6 +44,7 @@ async def create_try_on(
     background_tasks: BackgroundTasks,
     user_image: UploadFile,
     session: SessionDep,
+    user: UserDep,
     outfit_id: Annotated[str | None, Form()] = None,
     garment_layers: Annotated[str | None, Form()] = None,
 ) -> VtonJobCreateResponse:
@@ -71,10 +73,6 @@ async def create_try_on(
     pose = validate_apose(contenido)
     if not pose.ok:
         raise HTTPException(status_code=422, detail=f"A-Pose invalida: {pose.reason}")
-
-    user = session.query(User).filter(User.email == DEMO_USER_EMAIL).first()
-    if user is None:
-        raise HTTPException(status_code=400, detail="no hay usuario demo; sube una prenda primero")
 
     # Resolver el outfit: outfit_id directo, o garment_layers -> outfit sintetico.
     if outfit_id:
@@ -118,11 +116,13 @@ async def create_try_on(
 
 
 @router.get("/status/{job_id}", response_model=VtonJobStatusResponse)
-def job_status(job_id: str, session: SessionDep) -> VtonJobStatusResponse:
+def job_status(job_id: str, session: SessionDep, user: UserDep) -> VtonJobStatusResponse:
     """Estado del job. completed incluye result_url absoluto (lo exige Zod)."""
     job = session.get(VtonJob, job_id)
     if job is None:
         raise HTTPException(status_code=404, detail="job no existe")
+    if job.user_id != user.id:
+        raise HTTPException(status_code=403, detail="no tienes permiso para consultar este job")
 
     result_url = None
     if job.status == VtonJobStatus.COMPLETED.value and job.result_path:
@@ -137,15 +137,15 @@ def job_status(job_id: str, session: SessionDep) -> VtonJobStatusResponse:
 
 
 @router.get("/jobs", response_model=VtonJobListResponse)
-def list_vton_jobs(session: SessionDep, limit: int = 50) -> VtonJobListResponse:
-    """Historial de jobs VTON del usuario demo (G3).
+def list_vton_jobs(
+    session: SessionDep,
+    user: UserDep,
+    limit: int = 50,
+) -> VtonJobListResponse:
+    """Historial de jobs VTON del usuario autenticado (o demo en dev local).
 
     Ordenados por fecha de creación desc (más recientes primero).
     """
-    user = session.query(User).filter(User.email == DEMO_USER_EMAIL).first()
-    if user is None:
-        return VtonJobListResponse(jobs=[], total=0)
-
     query = (
         session.query(VtonJob)
         .filter(VtonJob.user_id == user.id)

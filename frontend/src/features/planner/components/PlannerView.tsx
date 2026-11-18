@@ -18,6 +18,7 @@ import {
   deleteOutfitPlan,
   getOutfitPlans,
 } from '@/features/planner/api/plannerApi';
+import { listCapsuleGarments } from '@/features/garments/api/listCapsuleGarments';
 import type { OutfitPlanResponse } from '@/schemas/api/outfits';
 import type { GarmentSummary } from '@/schemas/api/garments';
 
@@ -75,7 +76,7 @@ export function PlannerView(): React.JSX.Element {
     try {
       const [fetchedPlans, capsuleRes] = await Promise.all([
         getOutfitPlans(),
-        fetch('/api/v1/garments/capsule').then(r => (r.ok ? r.json() : { garments: [] })),
+        listCapsuleGarments().catch(() => ({ garments: [] })),
       ]);
       setPlans(fetchedPlans);
       setGarments(capsuleRes.garments || []);

@@ -5,7 +5,7 @@ import { createBrowserSupabaseClient, isSupabaseConfigured } from '@/lib/supabas
 
 export interface RequestConfig {
   path: string;
-  method: 'GET' | 'POST';
+  method: 'GET' | 'POST' | 'PATCH' | 'DELETE';
   body?: FormData | Record<string, unknown>;
   timeoutMs: number;
   signal?: AbortSignal;

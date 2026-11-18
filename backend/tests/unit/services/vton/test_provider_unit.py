@@ -130,6 +130,7 @@ def test_build_provider_modes(monkeypatch):
     with pytest.raises(RuntimeError, match="falta VTON_HTTP_URL"):
         vton_provider.build_provider()
 
+    monkeypatch.delenv("REPLICATE_API_TOKEN", raising=False)
     monkeypatch.setattr(
         vton_provider,
         "settings",
@@ -144,4 +145,4 @@ def test_build_provider_modes(monkeypatch):
         replace(vton_provider.settings, vton_provider="auto", vton_http_url="", replicate_api_token=""),
     )
     with patch("services.vton.provider.is_catvton_server_reachable", return_value=False):
-        assert isinstance(vton_provider.build_provider(), vton_provider.MockVtonProvider)
+        assert isinstance(vton_provider.build_provider(), vton_provider.HttpVtonProvider)

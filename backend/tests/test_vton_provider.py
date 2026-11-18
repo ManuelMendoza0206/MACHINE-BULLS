@@ -231,11 +231,12 @@ def test_http_provider_rechaza_footwear() -> None:
 
 
 def test_build_provider_seleccion(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Orden de prioridad: mock explicito > http explicito > auto(http>replicate>mock)."""
+    """Orden de prioridad: mock explicito > http explicito > auto(http>replicate>catvton)."""
     import dataclasses
 
     from config import settings as base
 
+    monkeypatch.setattr("services.vton.provider.is_catvton_server_reachable", lambda url: False)
     actual = base
 
     def _set(**kwargs: Any) -> None:
@@ -260,9 +261,9 @@ def test_build_provider_seleccion(monkeypatch: pytest.MonkeyPatch) -> None:
     _set(vton_http_url=None)
     assert build_provider().name == "replicate"
 
-    # auto sin nada -> mock (fallback local que siempre funciona)
+    # auto sin nada -> http (CatVTON GPU por defecto, sin fallback a mock en runtime)
     _set(replicate_api_token=None)
-    assert build_provider().name == "mock"
+    assert build_provider().name == "http"
 
 
 def test_http_provider_reenvia_mask_type_al_payload(monkeypatch: pytest.MonkeyPatch) -> None:

@@ -376,15 +376,17 @@ def build_provider() -> VtonInferenceProvider:
             api_token=settings.replicate_api_token,
             timeout_s=settings.vton_http_timeout_s,
         )
+    replicate_token = settings.replicate_api_token
     if modo == "replicate":
-        if not settings.replicate_api_token:
+        if not replicate_token:
             raise RuntimeError("VTON_PROVIDER=replicate pero falta REPLICATE_API_TOKEN")
-        return ReplicateVtonProvider(settings.replicate_api_token)
-    # auto
+        return ReplicateVtonProvider(replicate_token)
+    # auto: 1° GPU CatVTON (explicit VTON_HTTP_URL or local 7861), 2° Replicate GPU,
+    # 3° CatVTON por defecto (sin caer a MockVtonProvider en runtime).
     if settings.vton_http_url:
         return HttpVtonProvider(
-            settings.vton_http_url,
-            api_token=settings.replicate_api_token,
+            resolve_catvton_url(settings.vton_http_url),
+            api_token=replicate_token or None,
             timeout_s=settings.vton_http_timeout_s,
         )
     # Autodeteccion del server CatVTON nativo en el puerto 7861
@@ -400,21 +402,29 @@ def build_provider() -> VtonInferenceProvider:
             timeout_s=settings.vton_http_timeout_s,
         )
 
-    if settings.replicate_api_token:
-        return ReplicateVtonProvider(settings.replicate_api_token)
-    logger.warning("VTON en modo auto sin VTON_HTTP_URL ni token: usando MockVtonProvider")
-    return MockVtonProvider()
+    if replicate_token:
+        return ReplicateVtonProvider(replicate_token)
+    logger.info(
+        "Usando CatVTON GPU por defecto en %s (sin fallback a mock en runtime)",
+        candidate_catvton,
+    )
+    return HttpVtonProvider(
+        candidate_catvton,
+        api_token=None,
+        timeout_s=settings.vton_http_timeout_s,
+    )
 
 
 def get_provider_fallback_chain(
     primary: VtonInferenceProvider | None = None,
 ) -> list[VtonInferenceProvider]:
-    """Genera la cadena de proveedores ordenada para failover en tiempo de ejecucion.
+    """Genera la cadena de proveedores GPU ordenada para failover en runtime.
 
     Si `vton_failover_enabled` esta activo:
     - Primario: CatVTON / HttpVtonProvider
-    - Fallback 1: ReplicateVtonProvider (si hay token configurado)
-    - Fallback 2: MockVtonProvider (composicion determinista PIL)
+    - Fallback: ReplicateVtonProvider (si hay token configurado)
+    En runtime real nunca cae silenciosamente a MockVtonProvider (solo existe para tests
+    cuando se fuerza `VTON_PROVIDER=mock`).
     """
     prov = primary if primary is not None else build_provider()
     if not getattr(settings, "vton_failover_enabled", True):
@@ -428,9 +438,6 @@ def get_provider_fallback_chain(
         replicate_token = os.environ.get("REPLICATE_API_TOKEN") or settings.replicate_api_token
         if replicate_token:
             chain.append(ReplicateVtonProvider(replicate_token))
-        chain.append(MockVtonProvider())
-    elif isinstance(prov, ReplicateVtonProvider):
-        chain.append(MockVtonProvider())
 
     return chain
 
