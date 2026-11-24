@@ -4,7 +4,7 @@
 # Next inlinea las NEXT_PUBLIC_* en BUILD time (van al bundle del navegador),
 # así que van como ARG/ENV antes de `next build`. El navegador habla con
 # http://localhost:8000 directamente: no hay proxy ni runtime rewriting.
-FROM node:20-alpine
+FROM node:24-alpine
 
 WORKDIR /app
 

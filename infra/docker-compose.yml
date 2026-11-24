@@ -51,6 +51,7 @@ services:
   backend:
     build: ../backend
     image: styleme-backend # tag reutilizado por el servicio worker (misma imagen)
+    pull_policy: never
     container_name: styleme-backend
     restart: unless-stopped
     env_file:
@@ -87,7 +88,9 @@ services:
   # worker; la serialidad entre modos (nativo/compose) depende de un solo
   # worker en el stack.
   worker:
+    build: ../backend
     image: styleme-backend
+    pull_policy: never
     container_name: styleme-worker
     restart: unless-stopped
     command: ["arq", "services.vton.worker.WorkerSettings"]

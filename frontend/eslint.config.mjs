@@ -1,16 +1,16 @@
 import { defineConfig, globalIgnores } from 'eslint/config';
-import nextVitals from 'eslint-config-next/core-web-vitals';
-import nextTypescript from 'eslint-config-next/typescript';
+import js from '@eslint/js';
+import globals from 'globals';
+import tseslint from 'typescript-eslint';
+import reactHooks from 'eslint-plugin-react-hooks';
+import nextPlugin from '@next/eslint-plugin-next';
 import prettier from 'eslint-config-prettier/flat';
 
 /**
- * ESLint 9 flat config. Rules mirror the previous `.eslintrc.json` (Next 16 removed
- * `next lint`, so the ESLint CLI drives linting now — see `package.json` scripts).
+ * ESLint 10 flat config using native ESLint 10 compatible plugins directly
+ * (@eslint/js, typescript-eslint, eslint-plugin-react-hooks, @next/eslint-plugin-next).
  */
 export default defineConfig([
-  ...nextVitals,
-  ...nextTypescript,
-  prettier,
   globalIgnores([
     '.next/',
     'node_modules/',
@@ -21,7 +21,18 @@ export default defineConfig([
     'test-results/',
     'next-env.d.ts',
   ]),
+  js.configs.recommended,
+  ...tseslint.configs.recommended,
+  reactHooks.configs.flat['recommended-latest'],
+  nextPlugin.configs['core-web-vitals'],
+  prettier,
   {
+    languageOptions: {
+      globals: {
+        ...globals.browser,
+        ...globals.node,
+      },
+    },
     rules: {
       '@typescript-eslint/no-explicit-any': 'error',
       '@typescript-eslint/no-unused-vars': [
