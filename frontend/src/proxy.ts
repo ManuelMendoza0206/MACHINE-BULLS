@@ -1,8 +1,18 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
+import { sanitizeRedirectPath } from '@/features/auth/api/auth';
 
 export const config = {
-  matcher: ['/wardrobe/:path*', '/outfits/:path*', '/try-on/:path*', '/profile/:path*'],
+  matcher: [
+    '/wardrobe/:path*',
+    '/outfits/:path*',
+    '/planner/:path*',
+    '/shopping/:path*',
+    '/try-on/:path*',
+    '/profile/:path*',
+    '/login',
+    '/signup',
+  ],
 };
 
 export async function proxy(request: NextRequest): Promise<NextResponse> {
@@ -37,6 +47,20 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
   const {
     data: { user },
   } = await supabase.auth.getUser();
+
+  const pathname = request.nextUrl.pathname;
+  const isAuthRoute = pathname === '/login' || pathname === '/signup';
+
+  if (isAuthRoute) {
+    if (user) {
+      const target = sanitizeRedirectPath(
+        request.nextUrl.searchParams.get('redirectTo'),
+        '/wardrobe'
+      );
+      return NextResponse.redirect(new URL(target, request.url));
+    }
+    return response;
+  }
 
   if (!user) {
     const redirectTo = request.nextUrl.pathname + request.nextUrl.search;

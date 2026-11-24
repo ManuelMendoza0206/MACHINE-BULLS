@@ -13,7 +13,7 @@ describe('DefaultAestheticSelector', () => {
       <DefaultAestheticSelector value={null} onChange={onChange} availableAesthetics={aesthetics} />
     );
 
-    await user.selectOptions(screen.getByLabelText(/estética por defecto/i), 'streetwear');
+    await user.click(screen.getByRole('radio', { name: /urbano \/ streetwear/i }));
 
     expect(onChange).toHaveBeenCalledWith('streetwear');
   });
@@ -29,7 +29,7 @@ describe('DefaultAestheticSelector', () => {
       />
     );
 
-    await user.selectOptions(screen.getByLabelText(/estética por defecto/i), 'Sin preferencia');
+    await user.click(screen.getByRole('radio', { name: /sin preferencia/i }));
 
     expect(onChange).toHaveBeenCalledWith(null);
   });
@@ -43,6 +43,9 @@ describe('DefaultAestheticSelector', () => {
       />
     );
 
-    expect(screen.getByLabelText(/estética por defecto/i)).toHaveValue('gorpcore');
+    expect(screen.getByRole('radio', { name: /outdoor \/ gorpcore/i })).toHaveAttribute(
+      'aria-checked',
+      'true'
+    );
   });
 });

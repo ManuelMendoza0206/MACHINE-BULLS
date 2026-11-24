@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { renderWithProviders } from '../../utils/renderWithProviders';
@@ -39,5 +39,18 @@ describe('WardrobeView', () => {
     renderWithProviders(<WardrobeView />);
     await userEvent.click(screen.getByRole('button', { name: /acepto/i }));
     expect(screen.getByText(/arrastr[aá] tus prendas/i)).toBeInTheDocument();
+  });
+
+  it('switching to Mi armario shows owned garments and supports deleting one', async () => {
+    renderWithProviders(<WardrobeView />);
+    await userEvent.click(screen.getByRole('button', { name: /mi armario/i }));
+
+    expect(await screen.findByText('shirt')).toBeInTheDocument();
+    expect(screen.getByText('pants')).toBeInTheDocument();
+
+    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
+    await userEvent.click(screen.getByRole('button', { name: /eliminar shirt/i }));
+    expect(confirmSpy).toHaveBeenCalled();
+    confirmSpy.mockRestore();
   });
 });

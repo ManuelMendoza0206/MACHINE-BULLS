@@ -1,25 +1,29 @@
 'use client';
 
-import React, { useEffect, useState, useTransition } from 'react';
+import React, { useMemo, useState, useTransition } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
+  AlertCircle,
+  Briefcase,
   Calendar as CalendarIcon,
   CheckCircle2,
   Clock,
   Plus,
-  Trash2,
   Shirt,
-  AlertCircle,
+  Trash2,
   WashingMachine,
 } from 'lucide-react';
 import { PageHeader } from '@/components/shell/PageHeader';
+import { useMe } from '@/features/auth/hooks/useMe';
 import {
   confirmOutfitPlan,
   createOutfitPlan,
   deleteOutfitPlan,
   getOutfitPlans,
 } from '@/features/planner/api/plannerApi';
+import { PackingAssistantModal } from '@/features/planner/components/PackingAssistantModal';
+import { listGarments } from '@/features/garments/api/listGarments';
 import { listCapsuleGarments } from '@/features/garments/api/listCapsuleGarments';
-import type { OutfitPlanResponse } from '@/schemas/api/outfits';
 import type { GarmentSummary } from '@/schemas/api/garments';
 
 function formatDateHeading(dateStr: string): string {
@@ -48,14 +52,14 @@ function getNext7Days(): string[] {
 }
 
 export function PlannerView(): React.JSX.Element {
-  const [plans, setPlans] = useState<OutfitPlanResponse[]>([]);
-  const [garments, setGarments] = useState<GarmentSummary[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
+  const queryClient = useQueryClient();
+  const { data: me } = useMe();
+  const [actionError, setActionError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   // Modal para agendar nuevo plan
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
+  const [isPackingOpen, setIsPackingOpen] = useState<boolean>(false);
   const [selectedDate, setSelectedDate] = useState<string>(getNext7Days()[0] ?? '');
   const [selectedOccasion, setSelectedOccasion] = useState<string>('Casual');
   const [selectedGarmentIds, setSelectedGarmentIds] = useState<string[]>([]);
@@ -63,31 +67,63 @@ export function PlannerView(): React.JSX.Element {
 
   const [isPending, startTransition] = useTransition();
 
-  const days = getNext7Days();
-  const todayStr = new Date().toISOString().split('T')[0] ?? '';
+  const days = useMemo(() => getNext7Days(), []);
+  const todayStr = days[0] ?? '';
 
-  useEffect(() => {
-    loadData();
-  }, []);
+  // Caché compartida con React Query para evitar recargar toda la agenda y el armario al volver a /planner.
+  const plansQuery = useQuery({
+    queryKey: ['planner', 'plans'],
+    queryFn: ({ signal }) => getOutfitPlans(undefined, signal),
+    staleTime: 60_000,
+    refetchOnWindowFocus: false,
+  });
 
-  async function loadData() {
-    setLoading(true);
-    setError(null);
-    try {
-      const [fetchedPlans, capsuleRes] = await Promise.all([
-        getOutfitPlans(),
-        listCapsuleGarments().catch(() => ({ garments: [] })),
-      ]);
-      setPlans(fetchedPlans);
-      setGarments(capsuleRes.garments || []);
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Error al cargar los planes.');
-    } finally {
-      setLoading(false);
+  const garmentsQuery = useQuery({
+    queryKey: ['garments-list'],
+    queryFn: ({ signal }) => listGarments(signal),
+    staleTime: 60_000,
+    refetchOnWindowFocus: false,
+  });
+
+  const ownedGarments = garmentsQuery.data?.garments;
+  const needsCapsuleFallback =
+    garmentsQuery.isError || (!garmentsQuery.isPending && (ownedGarments?.length ?? 0) === 0);
+
+  const capsuleQuery = useQuery({
+    queryKey: ['capsule'],
+    queryFn: ({ signal }) => listCapsuleGarments(signal),
+    enabled: needsCapsuleFallback,
+    staleTime: 5 * 60_000,
+    refetchOnWindowFocus: false,
+  });
+
+  const plans = plansQuery.data ?? [];
+  const garments = useMemo(
+    () =>
+      ownedGarments && ownedGarments.length > 0
+        ? ownedGarments
+        : (capsuleQuery.data?.garments ?? []),
+    [ownedGarments, capsuleQuery.data?.garments]
+  );
+
+  const loading = plansQuery.isPending;
+  const error =
+    actionError ??
+    (plansQuery.error instanceof Error
+      ? plansQuery.error.message
+      : plansQuery.isError
+        ? 'Error al cargar los planes.'
+        : null);
+
+  async function refreshPlannerData(includeGarments = false) {
+    await queryClient.invalidateQueries({ queryKey: ['planner', 'plans'] });
+    if (includeGarments) {
+      await queryClient.invalidateQueries({ queryKey: ['garments-list'] });
     }
   }
 
   function handleOpenScheduleModal(dateStr: string) {
+    setActionError(null);
     setSelectedDate(dateStr);
     setSelectedGarmentIds([]);
     setNotes('');
@@ -102,14 +138,15 @@ export function PlannerView(): React.JSX.Element {
 
   async function handleCreatePlan(e: React.FormEvent) {
     e.preventDefault();
+    setActionError(null);
     if (selectedGarmentIds.length === 0) {
-      setError('Debes seleccionar al menos una prenda para el conjunto.');
+      setActionError('Debes seleccionar al menos una prenda para el conjunto.');
       return;
     }
 
     try {
       await createOutfitPlan({
-        user_id: 'default-user',
+        user_id: me?.user_id ?? 'default-user',
         planned_date: selectedDate,
         garment_ids: selectedGarmentIds,
         occasion: selectedOccasion,
@@ -118,13 +155,14 @@ export function PlannerView(): React.JSX.Element {
       setIsModalOpen(false);
       setSuccessMessage('¡Conjunto agendado con éxito!');
       setTimeout(() => setSuccessMessage(null), 3000);
-      await loadData();
+      await refreshPlannerData();
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'No se pudo guardar el plan.');
+      setActionError(err instanceof Error ? err.message : 'No se pudo guardar el plan.');
     }
   }
 
   async function handleConfirmUsage(planId: string, sendToLaundry: boolean) {
+    setActionError(null);
     startTransition(async () => {
       try {
         await confirmOutfitPlan(planId, sendToLaundry);
@@ -134,22 +172,23 @@ export function PlannerView(): React.JSX.Element {
             : '¡Uso confirmado con éxito!'
         );
         setTimeout(() => setSuccessMessage(null), 3500);
-        await loadData();
+        await refreshPlannerData(sendToLaundry);
       } catch (err: unknown) {
-        setError(err instanceof Error ? err.message : 'Error al confirmar uso.');
+        setActionError(err instanceof Error ? err.message : 'Error al confirmar uso.');
       }
     });
   }
 
   async function handleDeletePlan(planId: string) {
     if (!window.confirm('¿Quieres cancelar este conjunto agendado?')) return;
+    setActionError(null);
     try {
       await deleteOutfitPlan(planId);
       setSuccessMessage('Plan cancelado.');
       setTimeout(() => setSuccessMessage(null), 2500);
-      await loadData();
+      await refreshPlannerData();
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Error al cancelar plan.');
+      setActionError(err instanceof Error ? err.message : 'Error al cancelar plan.');
     }
   }
 
@@ -191,18 +230,29 @@ export function PlannerView(): React.JSX.Element {
         </div>
       ) : (
         <div className="space-y-6">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-wrap items-center justify-between gap-3">
             <h2 className="text-lg font-semibold tracking-tight text-foreground flex items-center gap-2">
               <CalendarIcon className="h-5 w-5 text-accent" />
               Próximos 7 días
             </h2>
-            <button
-              onClick={() => handleOpenScheduleModal(todayStr)}
-              className="inline-flex items-center gap-2 rounded-full bg-accent px-4 py-2 text-xs font-semibold text-accent-foreground shadow-xs transition hover:bg-accent/90"
-            >
-              <Plus className="h-4 w-4" />
-              Agendar conjunto
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setIsPackingOpen(true)}
+                className="inline-flex items-center gap-2 rounded-full border border-accent/40 bg-accent/10 px-4 py-2 text-xs font-semibold text-accent shadow-xs transition hover:bg-accent/20"
+              >
+                <Briefcase className="h-4 w-4" />
+                Armar Maleta de Viaje
+              </button>
+              <button
+                type="button"
+                onClick={() => handleOpenScheduleModal(todayStr)}
+                className="inline-flex items-center gap-2 rounded-full bg-accent px-4 py-2 text-xs font-semibold text-accent-foreground shadow-xs transition hover:bg-accent/90"
+              >
+                <Plus className="h-4 w-4" />
+                Agendar conjunto
+              </button>
+            </div>
           </div>
 
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -467,6 +517,18 @@ export function PlannerView(): React.JSX.Element {
           </div>
         </div>
       )}
+
+      <PackingAssistantModal
+        isOpen={isPackingOpen}
+        onClose={() => setIsPackingOpen(false)}
+        onTripScheduled={async daysCount => {
+          setSuccessMessage(
+            `¡Viaje agendado! Se programaron ${daysCount} días de outfits en tu calendario.`
+          );
+          setTimeout(() => setSuccessMessage(null), 4000);
+          await refreshPlannerData();
+        }}
+      />
     </div>
   );
 }

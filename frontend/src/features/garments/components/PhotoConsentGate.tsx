@@ -4,6 +4,8 @@ import type { JSX, ReactNode } from 'react';
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ShieldCheck } from 'lucide-react';
+import { useAuth } from '@/features/auth/hooks/useAuth';
+import { persistPhotoConsentToSupabase } from '@/features/auth/api/auth';
 import { usePhotoConsentStore } from '@/stores/photoConsentStore';
 
 export interface PhotoConsentGateProps {
@@ -24,9 +26,27 @@ export function PhotoConsentGate({
   children,
   variant = 'garments',
 }: PhotoConsentGateProps): JSX.Element {
-  const { consentGiven, grant } = usePhotoConsentStore();
+  const { user } = useAuth();
+  const consentGiven = usePhotoConsentStore(s => s.consentGiven);
+  const consentByUser = usePhotoConsentStore(s => s.consentByUser);
+  const grant = usePhotoConsentStore(s => s.grant);
+  const grantForUser = usePhotoConsentStore(s => s.grantForUser);
 
-  if (consentGiven) {
+  const userId = user?.id ?? null;
+  const isConsented = userId
+    ? Boolean(user?.photoConsentGiven || consentByUser[userId])
+    : consentGiven;
+
+  const handleAccept = (): void => {
+    if (userId) {
+      grantForUser(userId);
+      void persistPhotoConsentToSupabase(true);
+    } else {
+      grant();
+    }
+  };
+
+  if (isConsented) {
     return <>{children}</>;
   }
 
@@ -72,7 +92,11 @@ export function PhotoConsentGate({
           <p className="text-[11px] text-muted-foreground">
             Al continuar, autorizas el procesamiento efímero de tu imagen.
           </p>
-          <Button type="button" onClick={grant} className="rounded-full shadow-xs px-6 font-medium">
+          <Button
+            type="button"
+            onClick={handleAccept}
+            className="rounded-full shadow-xs px-6 font-medium"
+          >
             Acepto y quiero continuar
           </Button>
         </CardFooter>
@@ -91,7 +115,7 @@ export function PhotoConsentGate({
         <p>Puedes eliminar una prenda (y su foto) en cualquier momento.</p>
       </CardContent>
       <CardFooter>
-        <Button type="button" onClick={grant}>
+        <Button type="button" onClick={handleAccept}>
           Acepto y quiero continuar
         </Button>
       </CardFooter>

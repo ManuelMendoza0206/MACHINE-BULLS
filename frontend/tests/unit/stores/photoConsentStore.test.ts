@@ -10,12 +10,13 @@ function persisted(): Record<string, unknown> {
 
 describe('photoConsentStore', () => {
   beforeEach(() => {
-    usePhotoConsentStore.setState({ consentGiven: false });
+    usePhotoConsentStore.setState({ consentGiven: false, consentByUser: {} });
     localStorage.clear();
   });
 
   it('starts without consent', () => {
     expect(usePhotoConsentStore.getState().consentGiven).toBe(false);
+    expect(usePhotoConsentStore.getState().hasConsent('user-a')).toBe(false);
   });
 
   it('grant() records consent', () => {
@@ -26,5 +27,17 @@ describe('photoConsentStore', () => {
   it('persists consent to localStorage (survives a browser restart, unlike sessionStorage)', () => {
     usePhotoConsentStore.getState().grant();
     expect(persisted()).toMatchObject({ consentGiven: true });
+  });
+
+  it('isolates consent per user and syncs from account metadata', () => {
+    usePhotoConsentStore.getState().grantForUser('user-a');
+    expect(usePhotoConsentStore.getState().hasConsent('user-a')).toBe(true);
+    expect(usePhotoConsentStore.getState().hasConsent('user-b')).toBe(false);
+
+    usePhotoConsentStore.getState().syncUserConsent('user-b', true);
+    expect(usePhotoConsentStore.getState().hasConsent('user-b')).toBe(true);
+    expect(persisted()).toMatchObject({
+      consentByUser: { 'user-a': true, 'user-b': true },
+    });
   });
 });

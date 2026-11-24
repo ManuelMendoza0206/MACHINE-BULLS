@@ -6,6 +6,7 @@ import { createBrowserSupabaseClient, isSupabaseConfigured } from '@/lib/supabas
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { toAuthUser, type AuthUser } from '@/features/auth/api/auth';
 import { useOnboardingStore } from '@/stores/onboardingStore';
+import { usePhotoConsentStore } from '@/stores/photoConsentStore';
 
 export interface AuthContextValue {
   user: AuthUser | null;
@@ -37,8 +38,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }): JSX.E
     // Initial session
     supabase.auth.getUser().then(({ data }) => {
       if (data.user) {
-        setUser(toAuthUser(data.user));
+        const authUser = toAuthUser(data.user);
+        setUser(authUser);
         setStatus('authenticated');
+        if (authUser.photoConsentGiven) {
+          usePhotoConsentStore.getState().syncUserConsent(authUser.id, true);
+        }
       } else {
         setUser(null);
         setStatus('unauthenticated');
@@ -48,8 +53,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }): JSX.E
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
       const sbUser = session?.user ?? null;
       if (sbUser) {
-        setUser(toAuthUser(sbUser));
+        const authUser = toAuthUser(sbUser);
+        setUser(authUser);
         setStatus('authenticated');
+        if (authUser.photoConsentGiven) {
+          usePhotoConsentStore.getState().syncUserConsent(authUser.id, true);
+        }
       } else {
         setUser(null);
         setStatus('unauthenticated');
@@ -67,6 +76,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }): JSX.E
     // navegador." Cleared unconditionally — this must happen regardless of whether a
     // Supabase session existed, since it's about *this browser*, not the remote session.
     useOnboardingStore.getState().reset();
+    usePhotoConsentStore.setState({ consentGiven: false });
 
     let supabase: SupabaseClient;
     try {
