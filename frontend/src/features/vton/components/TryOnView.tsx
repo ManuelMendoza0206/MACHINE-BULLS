@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState, type JSX } from 'react';
+import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { Badge } from '@/components/ui/badge';
@@ -10,10 +11,11 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { PhotoConsentGate } from '@/features/garments/components/PhotoConsentGate';
 import { GarmentDropzone } from '@/features/garments/components/GarmentDropzone';
 import { listCapsuleGarments } from '@/features/garments/api/listCapsuleGarments';
+import { listGarments } from '@/features/garments/api/listGarments';
 import { getOutfit } from '@/features/outfits/api/getOutfit';
 import { recommendOutfits } from '@/features/outfits/api/recommendOutfits';
 import { useMe } from '@/features/auth/hooks/useMe';
-import { createVtonJob } from '@/features/vton/api/createVtonJob';
+import { createVtonJob, createVtonMultilayerJob } from '@/features/vton/api/createVtonJob';
 import { getVtonJobStatus } from '@/features/vton/api/getVtonJobStatus';
 import {
   checkCachedVtonResult,
@@ -22,14 +24,61 @@ import {
 import { mapStatusToUserMessage } from '@/lib/api/mapStatusToUserMessage';
 import { ApiError } from '@/lib/errors';
 import type { OutfitPosition } from '@/schemas/api/outfits';
-import { CheckCircle2, Layers, RefreshCw, ShieldAlert } from 'lucide-react';
+import type { VtonGarmentLayer } from '@/schemas/api/vton';
+import { CheckCircle2, Layers, Lock, RefreshCw, ShieldAlert, Upload } from 'lucide-react';
 
 const POSITION_LABEL: Record<OutfitPosition, string> = {
   top: 'Parte superior',
   bottom: 'Parte inferior',
+  dress: 'Vestido',
   footwear: 'Calzado',
   outerwear: 'Abrigo',
+  bag: 'Bolso',
 };
+
+const STAGE_LABELS: Record<string, string> = {
+  queued: 'En cola de procesamiento',
+  validating: 'Validando postura A-Pose',
+  preprocessing: 'Preparando silueta y prendas',
+  pose_estimation: 'Estimando puntos clave corporales',
+  generating: 'Generando prueba virtual con IA',
+  layering: 'Combinando capas de prendas',
+  uploading: 'Guardando resultado final',
+  completed: 'Completado',
+  failed: 'Error en el procesamiento',
+};
+
+function getStageStepIndex(stage: string | null): 1 | 2 | 3 {
+  if (stage === 'layering' || stage === 'uploading' || stage === 'completed') return 3;
+  if (stage === 'pose_estimation' || stage === 'generating') return 2;
+  return 1;
+}
+
+function normalizePositionParam(raw: string | null): OutfitPosition {
+  if (
+    raw === 'top' ||
+    raw === 'bottom' ||
+    raw === 'dress' ||
+    raw === 'footwear' ||
+    raw === 'outerwear' ||
+    raw === 'bag'
+  ) {
+    return raw;
+  }
+  return 'top';
+}
+
+function sanitizeImageParam(raw: string | null): string | null {
+  if (!raw) return null;
+  if (raw.startsWith('http://') || raw.startsWith('https://') || raw.startsWith('/')) {
+    return raw;
+  }
+  return null;
+}
+
+type CreateJobVars =
+  | { mode: 'outfit'; image: File | null; outfitId: string }
+  | { mode: 'layers'; image: File | null; layers: VtonGarmentLayer[] };
 
 /** Techo de polling configurable por entorno (ms). El job NUNCA se cancela al alcanzarlo. */
 function getPollTimeoutMs(): number {
@@ -63,7 +112,11 @@ function describeCreateError(error: unknown): string {
 export function TryOnView(): JSX.Element {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const queryOutfitId = searchParams.get('outfit');
+  const queryOutfitId = searchParams.get('outfit') ?? searchParams.get('outfit_id');
+  const queryGarmentId = searchParams.get('garment');
+  const singleGarmentPosition = normalizePositionParam(searchParams.get('position'));
+  const safeQueryImage = sanitizeImageParam(searchParams.get('image'));
+  const isSingleGarmentMode = Boolean(queryGarmentId && !queryOutfitId);
 
   const { data: me } = useMe();
   const recommendedQuery = useQuery({
@@ -72,17 +125,26 @@ export function TryOnView(): JSX.Element {
       if (!me) throw new Error('sin identidad del backend');
       return recommendOutfits({ user_id: me.user_id }, signal);
     },
-    enabled: Boolean(me),
+    enabled: Boolean(me) && !isSingleGarmentMode,
     staleTime: 60_000,
   });
 
   const availableOutfits = recommendedQuery.data?.outfits ?? [];
   const effectiveOutfitId = queryOutfitId ?? availableOutfits[0]?.outfit_id ?? null;
+  const cacheKeyId = isSingleGarmentMode ? `garment:${queryGarmentId}` : effectiveOutfitId;
 
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [wantsCustomPhoto, setWantsCustomPhoto] = useState<boolean>(false);
   const [phase, setPhase] = useState<Phase>('idle');
+
+  const defaultPhotoUrl = me?.default_vton_photo_url ?? null;
+  const usingDefaultPhoto = Boolean(defaultPhotoUrl && !file && !wantsCustomPhoto);
+  const activePreviewUrl = previewUrl ?? (usingDefaultPhoto ? defaultPhotoUrl : null);
+  const activePhotoCacheKey: File | string | null =
+    file ?? (usingDefaultPhoto && defaultPhotoUrl ? `default:${defaultPhotoUrl}` : null);
   const [jobId, setJobId] = useState<string | null>(null);
+  const [jobStage, setJobStage] = useState<string | null>(null);
   const [resultUrl, setResultUrl] = useState<string | null>(null);
   const [failure, setFailure] = useState<string | null>(null);
   const [createError, setCreateError] = useState<string | null>(null);
@@ -100,7 +162,7 @@ export function TryOnView(): JSX.Element {
   const outfit = useQuery({
     queryKey: ['outfit', effectiveOutfitId],
     queryFn: ({ signal }) => getOutfit(effectiveOutfitId as string, signal),
-    enabled: Boolean(effectiveOutfitId),
+    enabled: Boolean(effectiveOutfitId) && !isSingleGarmentMode,
   });
 
   const capsule = useQuery({
@@ -108,8 +170,16 @@ export function TryOnView(): JSX.Element {
     queryFn: ({ signal }) => listCapsuleGarments(signal),
   });
 
+  const myGarments = useQuery({
+    queryKey: ['garments-list'],
+    queryFn: ({ signal }) => listGarments(signal),
+  });
+
   const createJob = useMutation({
-    mutationFn: (vars: { image: File; id: string }) => createVtonJob(vars.image, vars.id),
+    mutationFn: (vars: CreateJobVars) =>
+      vars.mode === 'layers'
+        ? createVtonMultilayerJob(vars.image, vars.layers)
+        : createVtonJob(vars.image, vars.outfitId),
   });
 
   // Detector de visibilidad de pestaña (visibilityState)
@@ -127,6 +197,7 @@ export function TryOnView(): JSX.Element {
         if (phase === 'processing' && jobId) {
           void getVtonJobStatus(jobId)
             .then(status => {
+              setJobStage(status.stage ?? null);
               if (status.status === 'completed') {
                 setResultUrl(status.result_url ?? null);
                 setPhase('completed');
@@ -178,12 +249,13 @@ export function TryOnView(): JSX.Element {
       }
       void getVtonJobStatus(jobId)
         .then(status => {
+          setJobStage(status.stage ?? null);
           if (status.status === 'completed') {
             const completedUrl = status.result_url ?? null;
             setResultUrl(completedUrl);
             setPhase('completed');
-            if (completedUrl && file && effectiveOutfitId) {
-              setCachedVtonResult(effectiveOutfitId, file, completedUrl, jobId);
+            if (completedUrl && activePhotoCacheKey && cacheKeyId) {
+              setCachedVtonResult(cacheKeyId, activePhotoCacheKey, completedUrl, jobId);
             }
           } else if (status.status === 'failed') {
             const msg =
@@ -202,21 +274,35 @@ export function TryOnView(): JSX.Element {
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current);
     };
-  }, [phase, jobId, attempt, isVisible, effectiveOutfitId, file]);
+  }, [phase, jobId, attempt, isVisible, cacheKeyId, activePhotoCacheKey]);
 
-  const resetPhoto = (): void => {
-    if (previewUrl) URL.revokeObjectURL(previewUrl);
-    setFile(null);
-    setPreviewUrl(null);
+  const resetJobState = (): void => {
     setResultUrl(null);
     setFailure(null);
     setCreateError(null);
     setJobId(null);
+    setJobStage(null);
     setAttempt(0);
     setElapsedSec(0);
     pausedAtRef.current = null;
     setManualCheckMsg(null);
     setPhase('idle');
+  };
+
+  const resetPhoto = (): void => {
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    setFile(null);
+    setPreviewUrl(null);
+    setWantsCustomPhoto(true);
+    resetJobState();
+  };
+
+  const resetToDefaultPhoto = (): void => {
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    setFile(null);
+    setPreviewUrl(null);
+    setWantsCustomPhoto(false);
+    resetJobState();
   };
 
   const loadSample = async (url: string, filename: string): Promise<void> => {
@@ -236,17 +322,19 @@ export function TryOnView(): JSX.Element {
     if (previewUrl) URL.revokeObjectURL(previewUrl);
     setFile(first);
     setPreviewUrl(URL.createObjectURL(first));
+    setWantsCustomPhoto(true);
     setCreateError(null);
   };
 
   const submit = (): void => {
     // Doble-submit: no re-entra mientras la creación del job esté en vuelo
     // ni mientras haya un job corriendo.
-    if (!file || !effectiveOutfitId || createJob.isPending || phase === 'processing') return;
+    if (!activePhotoCacheKey || !cacheKeyId || createJob.isPending || phase === 'processing')
+      return;
 
-    // Reuso de cache: si ya existe un resultado en la sesión para el par (outfit, foto),
+    // Reuso de cache: si ya existe un resultado en la sesión para el par (outfit|prenda, foto),
     // se muestra directo sin disparar un nuevo POST /vton/try-on ni gastar GPU.
-    const cached = checkCachedVtonResult(effectiveOutfitId, file);
+    const cached = checkCachedVtonResult(cacheKeyId, activePhotoCacheKey);
     if (cached) {
       setJobId(cached.jobId);
       setResultUrl(cached.resultUrl);
@@ -258,18 +346,30 @@ export function TryOnView(): JSX.Element {
 
     setCreateError(null);
     setElapsedSec(0);
-    createJob.mutate(
-      { image: file, id: effectiveOutfitId },
-      {
-        onSuccess: job => {
-          setJobId(job.job_id);
-          startedAtRef.current = Date.now();
-          setAttempt(0);
-          setPhase('processing');
-        },
-        onError: error => setCreateError(describeCreateError(error)),
-      }
-    );
+    const imageToSend = usingDefaultPhoto ? null : file;
+    const payload: CreateJobVars =
+      isSingleGarmentMode && queryGarmentId
+        ? {
+            mode: 'layers',
+            image: imageToSend,
+            layers: [{ garment_id: queryGarmentId, position: singleGarmentPosition }],
+          }
+        : {
+            mode: 'outfit',
+            image: imageToSend,
+            outfitId: effectiveOutfitId as string,
+          };
+
+    createJob.mutate(payload, {
+      onSuccess: job => {
+        setJobId(job.job_id);
+        setJobStage('queued');
+        startedAtRef.current = Date.now();
+        setAttempt(0);
+        setPhase('processing');
+      },
+      onError: error => setCreateError(describeCreateError(error)),
+    });
   };
 
   const resumePolling = (): void => {
@@ -287,6 +387,7 @@ export function TryOnView(): JSX.Element {
     setManualCheckMsg(null);
     try {
       const status = await getVtonJobStatus(jobId);
+      setJobStage(status.stage ?? null);
       if (status.status === 'completed') {
         setResultUrl(status.result_url ?? null);
         setPhase('completed');
@@ -309,7 +410,7 @@ export function TryOnView(): JSX.Element {
     }
   };
 
-  if (!effectiveOutfitId) {
+  if (!isSingleGarmentMode && !effectiveOutfitId) {
     return (
       <div className="rounded-lg border border-border p-6 text-center">
         <p className="font-semibold">Elige un outfit primero</p>
@@ -323,11 +424,11 @@ export function TryOnView(): JSX.Element {
     );
   }
 
-  if (outfit.isLoading) {
+  if (!isSingleGarmentMode && outfit.isLoading) {
     return <Skeleton className="h-48 w-full rounded-lg" />;
   }
 
-  if (outfit.isError || !outfit.data) {
+  if (!isSingleGarmentMode && (outfit.isError || !outfit.data)) {
     return (
       <div className="rounded-lg border border-border p-6 text-center">
         <p className="font-semibold">No encontramos ese outfit</p>
@@ -341,21 +442,40 @@ export function TryOnView(): JSX.Element {
     );
   }
 
-  const images = new Map(
-    (capsule.data?.garments ?? []).map(g => [g.id, g.processed_image_url] as const)
-  );
+  const images = new Map<string, string>();
+  for (const g of capsule.data?.garments ?? []) {
+    images.set(g.id, g.processed_image_url);
+  }
+  for (const g of myGarments.data?.garments ?? []) {
+    images.set(g.id, g.processed_image_url);
+  }
+
+  const singleGarmentSrc = queryGarmentId
+    ? (images.get(queryGarmentId) ?? safeQueryImage)
+    : safeQueryImage;
+  const activeStepIndex = getStageStepIndex(jobStage);
+  const stageDisplay = jobStage ? (STAGE_LABELS[jobStage] ?? jobStage) : null;
+  const failureMessage =
+    failure || 'No pudimos generar la prueba virtual. Intenta con otra foto o prenda.';
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
-      {/* Columna Izquierda: Outfit elegido y desglose de capas (Bento Modular) */}
+      {/* Columna Izquierda: Outfit elegido o prenda candidata individual */}
       <Card className="lg:col-span-5 flex flex-col justify-between rounded-3xl border border-border/80 bg-background/85 shadow-sm p-6 sm:p-7">
         <div className="space-y-6">
           <div className="flex items-center justify-between pb-3 border-b border-border/60">
             <div>
-              <h2 className="text-xl font-bold tracking-tight text-foreground">Outfit a probar</h2>
-              {availableOutfits.length > 1 && (
+              <h2 className="text-xl font-bold tracking-tight text-foreground">
+                {isSingleGarmentMode ? 'Prenda a probar' : 'Outfit a probar'}
+              </h2>
+              {!isSingleGarmentMode && availableOutfits.length > 1 && (
                 <p className="text-xs text-muted-foreground mt-0.5">
                   {availableOutfits.length} combinaciones disponibles
+                </p>
+              )}
+              {isSingleGarmentMode && (
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Prueba individual desde Asistente de compra
                 </p>
               )}
             </div>
@@ -364,50 +484,72 @@ export function TryOnView(): JSX.Element {
                 variant="outline"
                 className="border-accent/40 text-accent font-mono text-xs capitalize px-2.5 py-0.5"
               >
-                {outfit.data.aesthetic.replace(/_/g, ' ')}
+                {isSingleGarmentMode
+                  ? POSITION_LABEL[singleGarmentPosition]
+                  : outfit.data!.aesthetic.replace(/_/g, ' ')}
               </Badge>
               <Button
                 type="button"
                 variant="ghost"
                 size="sm"
                 className="h-7 px-2.5 text-xs text-muted-foreground hover:text-foreground rounded-full"
-                onClick={() => router.push('/outfits')}
+                onClick={() => router.push(isSingleGarmentMode ? '/shopping' : '/outfits')}
               >
-                Cambiar
+                {isSingleGarmentMode ? 'Volver a compras' : 'Cambiar'}
               </Button>
             </div>
           </div>
 
-          <div className="space-y-2">
-            <p className="text-xs font-semibold text-foreground">Prendas combinadas:</p>
-            <ul className="grid grid-cols-4 gap-2.5" aria-label="Prendas del outfit">
-              {outfit.data.garments.map(ref => {
-                const src = images.get(ref.garment_id);
-                return (
-                  <li
-                    key={ref.garment_id}
-                    className="group relative aspect-square overflow-hidden rounded-2xl bg-muted/50 border border-border/60 transition-all hover:border-accent/50 hover:shadow-xs"
-                  >
-                    {src ? (
-                      // eslint-disable-next-line @next/next/no-img-element -- URL arbitraria del backend
-                      <img
-                        src={src}
-                        alt={POSITION_LABEL[ref.position]}
-                        className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-                      />
-                    ) : (
-                      <span className="flex h-full items-center justify-center p-1 text-center text-[11px] text-muted-foreground">
-                        {POSITION_LABEL[ref.position]}
+          {isSingleGarmentMode ? (
+            <div className="space-y-2">
+              <p className="text-xs font-semibold text-foreground">Prenda seleccionada:</p>
+              <div className="mx-auto max-w-52 aspect-square overflow-hidden rounded-2xl bg-muted/50 border border-border/60">
+                {singleGarmentSrc ? (
+                  // eslint-disable-next-line @next/next/no-img-element -- URL arbitraria del backend
+                  <img
+                    src={singleGarmentSrc}
+                    alt={`Prenda candidata (${POSITION_LABEL[singleGarmentPosition]})`}
+                    className="h-full w-full object-contain p-2"
+                  />
+                ) : (
+                  <span className="flex h-full items-center justify-center p-4 text-center text-xs text-muted-foreground">
+                    {POSITION_LABEL[singleGarmentPosition]}
+                  </span>
+                )}
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <p className="text-xs font-semibold text-foreground">Prendas combinadas:</p>
+              <ul className="grid grid-cols-4 gap-2.5" aria-label="Prendas del outfit">
+                {outfit.data!.garments.map(ref => {
+                  const src = images.get(ref.garment_id);
+                  return (
+                    <li
+                      key={ref.garment_id}
+                      className="group relative aspect-square overflow-hidden rounded-2xl bg-muted/50 border border-border/60 transition-all hover:border-accent/50 hover:shadow-xs"
+                    >
+                      {src ? (
+                        // eslint-disable-next-line @next/next/no-img-element -- URL arbitraria del backend
+                        <img
+                          src={src}
+                          alt={POSITION_LABEL[ref.position]}
+                          className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                        />
+                      ) : (
+                        <span className="flex h-full items-center justify-center p-1 text-center text-[11px] text-muted-foreground">
+                          {POSITION_LABEL[ref.position]}
+                        </span>
+                      )}
+                      <span className="absolute bottom-1 left-1 right-1 rounded-md bg-background/85 px-1 py-0.5 text-[9px] font-mono font-medium text-foreground text-center truncate backdrop-blur-xs">
+                        {POSITION_LABEL[ref.position].split(' ')[1] ?? POSITION_LABEL[ref.position]}
                       </span>
-                    )}
-                    <span className="absolute bottom-1 left-1 right-1 rounded-md bg-background/85 px-1 py-0.5 text-[9px] font-mono font-medium text-foreground text-center truncate backdrop-blur-xs">
-                      {POSITION_LABEL[ref.position].split(' ')[1] ?? POSITION_LABEL[ref.position]}
-                    </span>
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          )}
 
           {/* Secuencia anatómica por capas */}
           <div className="space-y-2.5 rounded-2xl border border-border/60 bg-muted/30 p-4">
@@ -472,23 +614,107 @@ export function TryOnView(): JSX.Element {
           </div>
           <PhotoConsentGate variant="vton">
             <div className="space-y-4">
-              {previewUrl ? (
+              {activePreviewUrl ? (
                 <div className="space-y-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    {usingDefaultPhoto ? (
+                      <Badge
+                        variant="success"
+                        className="rounded-full text-[11px] font-medium gap-1.5"
+                      >
+                        <Lock className="h-3 w-3" aria-hidden="true" />
+                        Foto guardada de tu perfil (por defecto)
+                      </Badge>
+                    ) : (
+                      <Badge variant="outline" className="rounded-full text-[11px] font-medium">
+                        {defaultPhotoUrl
+                          ? 'Foto temporal · solo para esta prueba'
+                          : 'Foto seleccionada para esta prueba'}
+                      </Badge>
+                    )}
+                    {!usingDefaultPhoto && defaultPhotoUrl && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 px-2.5 text-xs"
+                        onClick={resetToDefaultPhoto}
+                      >
+                        Usar mi foto guardada
+                      </Button>
+                    )}
+                  </div>
                   <div className="relative aspect-[3/4] w-full overflow-hidden rounded-lg bg-muted">
-                    {/* eslint-disable-next-line @next/next/no-img-element -- object URL local */}
+                    {/* eslint-disable-next-line @next/next/no-img-element -- object URL local o foto privada del usuario */}
                     <img
-                      src={previewUrl}
+                      src={activePreviewUrl}
                       alt="Foto seleccionada para la prueba virtual"
                       className="h-full w-full object-contain"
                     />
                   </div>
-                  <Button type="button" variant="secondary" size="sm" onClick={resetPhoto}>
-                    Cambiar foto
-                  </Button>
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    {usingDefaultPhoto ? (
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => setWantsCustomPhoto(true)}
+                        className="gap-1.5"
+                      >
+                        <Upload className="h-3.5 w-3.5" aria-hidden="true" />
+                        Usar otra foto (solo esta vez)
+                      </Button>
+                    ) : (
+                      <Button type="button" variant="secondary" size="sm" onClick={resetPhoto}>
+                        Cambiar foto
+                      </Button>
+                    )}
+                    <Link
+                      href="/profile"
+                      className="text-xs text-muted-foreground underline underline-offset-4 hover:text-foreground"
+                    >
+                      Administrar foto base en Perfil
+                    </Link>
+                  </div>
                 </div>
               ) : (
                 <div className="space-y-3">
-                  <GarmentDropzone onFilesSelected={handleFiles} multiple={false} />
+                  {defaultPhotoUrl && (
+                    <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-border/80 bg-muted/40 px-3.5 py-2.5 text-xs">
+                      <span className="text-muted-foreground">
+                        Esta subida es de <strong>un solo uso</strong> y no reemplaza tu foto base.
+                      </span>
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        size="sm"
+                        className="h-7 text-xs"
+                        onClick={resetToDefaultPhoto}
+                      >
+                        Volver a mi foto por defecto
+                      </Button>
+                    </div>
+                  )}
+                  <GarmentDropzone
+                    onFilesSelected={handleFiles}
+                    multiple={false}
+                    title="Sube tu foto de cuerpo completo"
+                    subtitle="Foto frontal, buena luz y brazos ligeramente separados (postura A-Pose)"
+                    badgeText="JPG, PNG, WEBP · 1 foto tuya"
+                    inputAriaLabel="Seleccionar fotos tuyas para la prueba virtual"
+                  />
+                  {!defaultPhotoUrl && (
+                    <p className="text-[11px] text-muted-foreground text-center">
+                      ¿Pruebas outfits seguido?{' '}
+                      <Link
+                        href="/profile"
+                        className="font-medium text-foreground underline underline-offset-4 hover:text-accent"
+                      >
+                        Guarda tu foto base privada en Perfil
+                      </Link>{' '}
+                      para no tener que subirla cada vez.
+                    </p>
+                  )}
                   <div className="rounded-lg border border-border/80 bg-muted/30 p-3 space-y-2">
                     <p className="text-xs font-medium text-muted-foreground">
                       O usa un modelo rápido para la demo:
@@ -525,7 +751,7 @@ export function TryOnView(): JSX.Element {
                 type="button"
                 className="w-full"
                 onClick={submit}
-                disabled={!file || createJob.isPending || phase === 'processing'}
+                disabled={!activePhotoCacheKey || createJob.isPending || phase === 'processing'}
               >
                 {createJob.isPending
                   ? 'Generando…'
@@ -578,34 +804,88 @@ export function TryOnView(): JSX.Element {
                 <span>{elapsedSec}s transcurridos</span>
               </div>
 
-              {/* Pipeline Tracker */}
+              {stageDisplay && (
+                <div className="flex justify-center">
+                  <Badge variant="outline" className="border-accent/40 text-accent text-[11px]">
+                    Etapa actual: {stageDisplay}
+                  </Badge>
+                </div>
+              )}
+
+              {/* Pipeline Tracker dinámico según stage */}
               <div className="space-y-2 text-left text-xs">
                 <div className="flex items-center gap-2 rounded-xl border border-border/60 bg-background/90 p-2.5 shadow-2xs">
-                  <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
+                  {activeStepIndex > 1 ? (
+                    <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
+                  ) : (
+                    <RefreshCw className="h-4 w-4 shrink-0 animate-spin motion-reduce:animate-none text-accent" />
+                  )}
                   <div className="flex-1">
-                    <p className="font-medium text-foreground">1. Validación de postura</p>
-                    <p className="text-[11px] text-muted-foreground">Postura correcta verificada</p>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2 rounded-xl border border-border/60 bg-background/90 p-2.5 shadow-2xs">
-                  <RefreshCw className="h-4 w-4 shrink-0 animate-spin motion-reduce:animate-none text-accent" />
-                  <div className="flex-1">
-                    <p className="font-medium text-foreground">2. Ajuste a tu silueta</p>
+                    <p className="font-medium text-foreground">
+                      1. Validación de postura y prendas
+                    </p>
                     <p className="text-[11px] text-muted-foreground">
-                      Alineación de prendas y silueta
+                      {activeStepIndex > 1
+                        ? 'Postura verificada'
+                        : (stageDisplay ?? 'Preparando entrada')}
                     </p>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2 rounded-xl border border-border/40 bg-muted/40 p-2.5 opacity-70">
-                  <Layers className="h-4 w-4 shrink-0 text-muted-foreground" />
+                <div
+                  className={`flex items-center gap-2 rounded-xl border p-2.5 ${
+                    activeStepIndex >= 2
+                      ? 'border-border/60 bg-background/90 shadow-2xs'
+                      : 'border-border/40 bg-muted/40 opacity-70'
+                  }`}
+                >
+                  {activeStepIndex > 2 ? (
+                    <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
+                  ) : activeStepIndex === 2 ? (
+                    <RefreshCw className="h-4 w-4 shrink-0 animate-spin motion-reduce:animate-none text-accent" />
+                  ) : (
+                    <Layers className="h-4 w-4 shrink-0 text-muted-foreground" />
+                  )}
                   <div className="flex-1">
-                    <p className="font-medium text-muted-foreground">
+                    <p
+                      className={`font-medium ${
+                        activeStepIndex >= 2 ? 'text-foreground' : 'text-muted-foreground'
+                      }`}
+                    >
+                      2. Ajuste a tu silueta e inferencia IA
+                    </p>
+                    <p className="text-[11px] text-muted-foreground">
+                      {activeStepIndex === 2 && stageDisplay
+                        ? stageDisplay
+                        : 'Alineación de prendas y silueta'}
+                    </p>
+                  </div>
+                </div>
+
+                <div
+                  className={`flex items-center gap-2 rounded-xl border p-2.5 ${
+                    activeStepIndex === 3
+                      ? 'border-border/60 bg-background/90 shadow-2xs'
+                      : 'border-border/40 bg-muted/40 opacity-70'
+                  }`}
+                >
+                  {activeStepIndex === 3 ? (
+                    <RefreshCw className="h-4 w-4 shrink-0 animate-spin motion-reduce:animate-none text-accent" />
+                  ) : (
+                    <Layers className="h-4 w-4 shrink-0 text-muted-foreground" />
+                  )}
+                  <div className="flex-1">
+                    <p
+                      className={`font-medium ${
+                        activeStepIndex === 3 ? 'text-foreground' : 'text-muted-foreground'
+                      }`}
+                    >
                       3. Colocación de prendas por capas
                     </p>
                     <p className="text-[11px] text-muted-foreground">
-                      Renderizado y combinación final
+                      {activeStepIndex === 3 && stageDisplay
+                        ? stageDisplay
+                        : 'Renderizado y combinación final'}
                     </p>
                   </div>
                 </div>
@@ -682,12 +962,12 @@ export function TryOnView(): JSX.Element {
           {phase === 'completed' && resultUrl && (
             <div className="space-y-4">
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                {previewUrl && (
+                {activePreviewUrl && (
                   <div className="space-y-1.5">
                     <p className="text-xs font-medium text-muted-foreground">Foto original</p>
-                    {/* eslint-disable-next-line @next/next/no-img-element -- blob preview URL */}
+                    {/* eslint-disable-next-line @next/next/no-img-element -- blob preview URL o foto privada del usuario */}
                     <img
-                      src={previewUrl}
+                      src={activePreviewUrl}
                       alt="Foto original del usuario para prueba virtual"
                       className="aspect-3/4 w-full rounded-xl border border-border object-cover"
                     />
@@ -733,8 +1013,12 @@ export function TryOnView(): JSX.Element {
               <p className="text-xs font-semibold uppercase tracking-wider text-destructive">
                 No pudimos completar la prueba virtual
               </p>
-              <p role="alert" className="text-sm font-medium text-foreground">
-                {failure || 'No pudimos generar la prueba virtual. Intenta con otra foto o prenda.'}
+              <p
+                role="alert"
+                aria-label={failureMessage}
+                className="text-sm font-medium text-foreground"
+              >
+                {failureMessage}
               </p>
               <div className="flex flex-wrap gap-2 pt-1">
                 <Button type="button" size="sm" onClick={submit}>

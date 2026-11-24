@@ -5,5 +5,7 @@ import { z } from 'zod';
 export const MeResponseSchema = z.object({
   user_id: z.string().uuid(),
   email: z.string().email(),
+  has_default_vton_photo: z.boolean().optional().default(false),
+  default_vton_photo_url: z.string().nullable().optional().default(null),
 });
 export type MeResponse = z.infer<typeof MeResponseSchema>;

@@ -29,6 +29,7 @@ logger = logging.getLogger(__name__)
 FOLDER_MAP: dict[str, str] = {
     "garments": "prendas",
     "humans": "humanos",
+    "user_photos": "usuarios",
     "vton": "probador",
 }
 
@@ -132,6 +133,24 @@ def url_for(relative_path: str) -> str:
 def absolute_path(relative_path: str) -> Path:
     """Path absoluto en disco local del archivo."""
     return settings.media_dir / relative_path
+
+
+def delete_image(relative_path: str) -> None:
+    """Elimina un archivo en cache local y en Azure Blob Storage si existe."""
+    if not relative_path:
+        return
+    media_root = settings.media_dir.resolve()
+    local = (settings.media_dir / relative_path).resolve()
+    if local.is_relative_to(media_root) and local.is_file():
+        local.unlink(missing_ok=True)
+
+    if settings.azure_storage_connection_string:
+        try:
+            container = ensure_azure_container()
+            if container is not None:
+                container.delete_blob(relative_path)
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("Fallo al eliminar blob en Azure (%s): %s", relative_path, exc)
 
 
 def read_bytes(relative_path: str) -> bytes:

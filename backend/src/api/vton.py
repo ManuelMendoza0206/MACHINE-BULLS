@@ -15,7 +15,7 @@ import json
 import logging
 from typing import Annotated
 
-from fastapi import APIRouter, BackgroundTasks, Depends, Form, HTTPException, UploadFile
+from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPException, UploadFile
 from sqlalchemy.orm import Session
 
 from db.session import get_session
@@ -42,37 +42,54 @@ logger = logging.getLogger(__name__)
 @router.post("/try-on", response_model=VtonJobCreateResponse)
 async def create_try_on(
     background_tasks: BackgroundTasks,
-    user_image: UploadFile,
     session: SessionDep,
     user: UserDep,
+    user_image: Annotated[UploadFile | None, File()] = None,
     outfit_id: Annotated[str | None, Form()] = None,
     garment_layers: Annotated[str | None, Form()] = None,
 ) -> VtonJobCreateResponse:
     """Crea un job de try-on, lo encola en Redis (ARQ) y devuelve su id.
 
+    Acepta `user_image` (foto puntual de un solo uso) o, si se omite, reutiliza
+    la foto corporal por defecto guardada en `user.vton_photo_path`.
     Acepta `outfit_id` (outfit ya recomendado) o `garment_layers` (lista JSON
     de {garment_id, position} del flujo multicapa). Si ninguno viene, 400.
-    Redis caido: el job corre igual en BackgroundTasks (fallback de demo,
-    `services/queue.py` explica el orden).
     """
-    contenido = user_image.file.read()
-    if not contenido:
-        raise HTTPException(status_code=400, detail="user_image vacia")
+    if user_image is not None:
+        contenido = user_image.file.read()
+        if not contenido:
+            raise HTTPException(status_code=400, detail="user_image vacia")
 
-    try:
-        from PIL import Image, UnidentifiedImageError
+        try:
+            from PIL import Image, UnidentifiedImageError
 
-        Image.open(io.BytesIO(contenido)).load()
-    except UnidentifiedImageError as exc:
-        raise HTTPException(status_code=400, detail="user_image no es imagen") from exc
+            Image.open(io.BytesIO(contenido)).load()
+        except UnidentifiedImageError as exc:
+            raise HTTPException(status_code=400, detail="user_image no es imagen") from exc
 
-    # Protocolo de entrada (4.1.5): la foto debe estar en A-Pose ANTES de
-    # gastar GPU. Rechazo temprano con causa en detalle (frontend la muestra).
-    from services.pose_check import validate_apose
+        # Protocolo de entrada (4.1.5): la foto debe estar en A-Pose ANTES de
+        # gastar GPU. Rechazo temprano con causa en detalle (frontend la muestra).
+        from services.pose_check import validate_apose
 
-    pose = validate_apose(contenido)
-    if not pose.ok:
-        raise HTTPException(status_code=422, detail=f"A-Pose invalida: {pose.reason}")
+        pose = validate_apose(contenido)
+        if not pose.ok:
+            raise HTTPException(status_code=422, detail=f"A-Pose invalida: {pose.reason}")
+    else:
+        default_path = getattr(user, "vton_photo_path", None)
+        if not default_path:
+            raise HTTPException(
+                status_code=400,
+                detail="Debes subir una foto o guardar tu foto por defecto en tu perfil.",
+            )
+        try:
+            contenido = storage.read_bytes(default_path)
+        except FileNotFoundError as exc:
+            user.vton_photo_path = None
+            session.commit()
+            raise HTTPException(
+                status_code=400,
+                detail="Tu foto por defecto ya no esta disponible; subela nuevamente en tu perfil.",
+            ) from exc
 
     # Resolver el outfit: outfit_id directo, o garment_layers -> outfit sintetico.
     if outfit_id:
@@ -131,6 +148,7 @@ def job_status(job_id: str, session: SessionDep, user: UserDep) -> VtonJobStatus
     return VtonJobStatusResponse(
         job_id=job.id,
         status=VtonJobStatus(job.status),
+        stage=job.stage,
         result_url=result_url,
         error_message=job.error_message,
     )

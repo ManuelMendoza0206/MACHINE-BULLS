@@ -52,6 +52,12 @@ def init_db() -> None:
     insp = inspect(engine)
     tablas = set(insp.get_table_names())
 
+    if "users" in tablas:
+        columnas_users = {c["name"] for c in insp.get_columns("users")}
+        if "vton_photo_path" not in columnas_users:
+            with engine.begin() as conn:
+                conn.execute(text("ALTER TABLE users ADD COLUMN vton_photo_path VARCHAR(512)"))
+
     if "vton_jobs" in tablas:
         columnas_vton = {c["name"] for c in insp.get_columns("vton_jobs")}
         if "stage" not in columnas_vton:
@@ -66,6 +72,12 @@ def init_db() -> None:
         if "status" not in columnas_garments:
             with engine.begin() as conn:
                 conn.execute(text("ALTER TABLE garments ADD COLUMN status VARCHAR(20) DEFAULT 'AVAILABLE' NOT NULL"))
+        if "subcategory" not in columnas_garments:
+            with engine.begin() as conn:
+                conn.execute(text("ALTER TABLE garments ADD COLUMN subcategory VARCHAR(50)"))
+        if "pattern" not in columnas_garments:
+            with engine.begin() as conn:
+                conn.execute(text("ALTER TABLE garments ADD COLUMN pattern VARCHAR(50)"))
 
     if "outfits" in tablas:
         columnas_outfits = {c["name"] for c in insp.get_columns("outfits")}

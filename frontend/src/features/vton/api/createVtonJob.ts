@@ -6,12 +6,14 @@ import {
 } from '@/schemas/api/vton';
 
 export function createVtonJob(
-  userImage: File,
+  userImage: File | null,
   outfitId: string,
   signal?: AbortSignal
 ): Promise<VtonJobCreateResponse> {
   const formData = new FormData();
-  formData.append('user_image', userImage);
+  if (userImage) {
+    formData.append('user_image', userImage);
+  }
   formData.append('outfit_id', outfitId);
   return apiRequest(
     {
@@ -26,12 +28,14 @@ export function createVtonJob(
 }
 
 export function createVtonMultilayerJob(
-  userImage: File,
+  userImage: File | null,
   garmentLayers: VtonGarmentLayer[],
   signal?: AbortSignal
 ): Promise<VtonJobCreateResponse> {
   const formData = new FormData();
-  formData.append('user_image', userImage);
+  if (userImage) {
+    formData.append('user_image', userImage);
+  }
   formData.append('garment_layers', JSON.stringify(garmentLayers));
   return apiRequest(
     {

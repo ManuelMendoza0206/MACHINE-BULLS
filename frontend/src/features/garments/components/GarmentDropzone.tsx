@@ -10,6 +10,10 @@ export interface GarmentDropzoneProps {
   multiple?: boolean;
   disabled?: boolean;
   className?: string;
+  title?: string;
+  subtitle?: string;
+  badgeText?: string;
+  inputAriaLabel?: string;
 }
 
 function toImageFiles(list: FileList | null): File[] {
@@ -18,7 +22,7 @@ function toImageFiles(list: FileList | null): File[] {
 }
 
 /**
- * Drag&drop + click-to-select garment photo picker (wardrobe-flow/spec.md §2.4).
+ * Drag&drop + click-to-select photo picker (wardrobe-flow/spec.md §2.4).
  * The whole control is the touch target — well above the 44×44px minimum.
  */
 export function GarmentDropzone({
@@ -26,7 +30,13 @@ export function GarmentDropzone({
   multiple = true,
   disabled = false,
   className,
+  title = 'Arrastra tus prendas aquí',
+  subtitle = 'o haz clic para elegir archivos desde tu dispositivo',
+  badgeText,
+  inputAriaLabel = 'Seleccionar fotos de prendas',
 }: GarmentDropzoneProps): JSX.Element {
+  const resolvedBadgeText =
+    badgeText ?? (multiple ? 'JPG, PNG, WEBP (múltiples fotos)' : 'JPG, PNG, WEBP (1 imagen)');
   const inputRef = useRef<HTMLInputElement>(null);
   const [isDragOver, setIsDragOver] = useState(false);
 
@@ -67,14 +77,12 @@ export function GarmentDropzone({
       <div className="grid h-14 w-14 sm:h-16 sm:w-16 place-items-center rounded-2xl bg-accent/10 text-accent transition-transform group-hover:scale-105 mb-1 shadow-2xs">
         <UploadCloud className="h-7 w-7 sm:h-8 sm:w-8 stroke-[1.75]" />
       </div>
-      <p className="text-base sm:text-lg font-bold tracking-tight text-foreground">
-        Arrastra tus prendas aquí
-      </p>
+      <p className="text-base sm:text-lg font-bold tracking-tight text-foreground">{title}</p>
       <p className="text-xs sm:text-sm text-muted-foreground max-w-xs leading-relaxed">
-        o haz clic para elegir archivos desde tu dispositivo
+        {subtitle}
       </p>
       <span className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-muted/60 px-3 py-1 text-[11px] font-mono text-muted-foreground border border-border/50">
-        JPG, PNG, WEBP (múltiples fotos)
+        {resolvedBadgeText}
       </span>
       <input
         ref={inputRef}
@@ -83,7 +91,7 @@ export function GarmentDropzone({
         multiple={multiple}
         disabled={disabled}
         className="sr-only"
-        aria-label="Seleccionar fotos de prendas"
+        aria-label={inputAriaLabel}
         onChange={e => {
           const files = toImageFiles(e.target.files);
           if (files.length > 0) onFilesSelected(files);
