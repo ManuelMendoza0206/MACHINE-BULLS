@@ -7,6 +7,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 from fastapi.testclient import TestClient
 
 from db.session import SessionLocal
@@ -349,5 +351,58 @@ def test_garment_multi_user_isolation():
             json={"status": "LAUNDRY"},
         )
         assert resp_patch.status_code == 403
+    finally:
+        session.close()
+
+
+def test_create_packing_plan(client: Any) -> None:
+    """Verifica que el asistente de maleta genere una cápsula minimalista con planes diarios."""
+    session = SessionLocal()
+    try:
+        user = get_demo_user(session)
+
+        top = Garment(
+            id=new_uuid(),
+            owner_id=user.id,
+            category="t-shirt",
+            position="top",
+            image_path="test/top.jpg",
+            processed_image_path="test/top_proc.png",
+            dominant_colors=[],
+            top_aesthetics=[],
+            status="AVAILABLE",
+        )
+        bottom = Garment(
+            id=new_uuid(),
+            owner_id=user.id,
+            category="pants",
+            position="bottom",
+            image_path="test/bot.jpg",
+            processed_image_path="test/bot_proc.png",
+            dominant_colors=[],
+            top_aesthetics=[],
+            status="AVAILABLE",
+        )
+        session.add_all([top, bottom])
+        session.commit()
+
+        session.add_all([
+            GarmentOwnership(id=new_uuid(), user_id=user.id, garment_id=top.id, source="upload"),
+            GarmentOwnership(id=new_uuid(), user_id=user.id, garment_id=bottom.id, source="upload"),
+        ])
+        session.commit()
+
+        resp = client.post(
+            "/api/v1/planner/packing",
+            json={"days": 3, "weather": "cold"},
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["days"] == 3
+        assert data["weather"] == "cold"
+        assert len(data["packed_garments"]) >= 2
+        assert len(data["daily_plans"]) == 3
+        assert data["total_items_count"] >= 2
+        assert "tip" in data
     finally:
         session.close()

@@ -27,22 +27,28 @@ WEIGHTS = {"chromatic": 0.6, "embedding": 0.4}
 LAYER_ORDER = (
     GarmentPosition.BOTTOM,
     GarmentPosition.TOP,
+    GarmentPosition.DRESS,
     GarmentPosition.OUTERWEAR,
     GarmentPosition.FOOTWEAR,
+    GarmentPosition.BAG,
 )
 
-# Cuantas prendas por posicion se consideran en la generacion. Corta el costo
-# combinatorio sin perder variedad: con 8 tops x 8 bottoms x 6 shoes da 384
-# outfits posibles, de los cuales se rankean todos y se devuelven los `limit`.
+# Cuantas prendas por posicion se consideran en la generacion.
 MAX_PER_POSITION = 8
 
 
 def _por_posicion(garments: list[dict[str, Any]]) -> dict[GarmentPosition, list[dict[str, Any]]]:
-    """Agrupa prendas por posicion, descartando las que no tienen posicion."""
+    """Agrupa prendas por posicion, descartando las que no tienen posicion valida."""
     agrupadas: dict[GarmentPosition, list[dict[str, Any]]] = {p: [] for p in GarmentPosition}
     for g in garments:
-        posicion = g.get("position")
-        if posicion is None:
+        pos_raw = g.get("position")
+        if pos_raw is None:
+            continue
+        try:
+            posicion = (
+                pos_raw if isinstance(pos_raw, GarmentPosition) else GarmentPosition(str(pos_raw))
+            )
+        except ValueError:
             continue
         # Ya vienen ordenadas por created_at desc desde el repo; corto a MAX.
         if len(agrupadas[posicion]) < MAX_PER_POSITION:
@@ -50,33 +56,87 @@ def _por_posicion(garments: list[dict[str, Any]]) -> dict[GarmentPosition, list[
     return agrupadas
 
 
+def _mejores_accesorios(
+    nucleo: list[dict[str, Any]],
+    candidatos: list[dict[str, Any]],
+    max_items: int,
+) -> list[dict[str, Any] | None]:
+    """Selecciona los mejores complementos (calzado/bolso) por afinidad cromatica con el nucleo."""
+    if not candidatos:
+        return [None]
+    if len(candidatos) <= max_items:
+        return list(candidatos)
+    rankeados = sorted(
+        candidatos,
+        key=lambda item: score_outfit([*nucleo, item]),
+        reverse=True,
+    )
+    return list(rankeados[:max_items])
+
+
+def _acoplar_complementos(
+    nucleos: list[list[dict[str, Any]]],
+    shoes: list[dict[str, Any]],
+    bags: list[dict[str, Any]],
+    shoes_fijos: bool = False,
+    bags_fijos: bool = False,
+) -> list[list[dict[str, Any]]]:
+    """Acopla calzado y bolso sobre nucleos de cuerpo evitando explosion combinatoria."""
+    combos: list[list[dict[str, Any]]] = []
+    for nucleo in nucleos:
+        shoes_opt: list[dict[str, Any] | None] = (
+            list(shoes) if shoes_fijos and shoes else _mejores_accesorios(nucleo, shoes, max_items=2)
+        )
+        for shoe in shoes_opt:
+            base = [*nucleo, shoe] if shoe is not None else list(nucleo)
+            if bags_fijos and bags:
+                for bag in bags:
+                    combos.append([*base, bag])
+            elif bags:
+                mejores_bags = _mejores_accesorios(base, bags, max_items=1)
+                for bag in mejores_bags:
+                    if bag is not None:
+                        combos.append([*base, bag])
+                if len(combos) < 250:
+                    combos.append(base)
+            else:
+                combos.append(base)
+    return combos
+
+
 def _combinaciones(
     agrupadas: dict[GarmentPosition, list[dict[str, Any]]],
 ) -> list[list[dict[str, Any]]]:
-    """Combina prendas en outfits: ancla top+bottom, capas opcionales.
+    """Combina prendas con doble ancla: Top+Bottom o Dress (+Outerwear, Footwear y Bag).
 
-    El ancla es top+bottom (un outfit sin una de las dos mitades no viste
-    cuerpo completo). Calzado y outerwear son capas **opcionales**: no todo
-    usuario tiene zapatos en la capsule, y exigir footwear dejaba el
-    recomendador devolviendo 0 outfits con un guardarropa perfectamente
-    usable. Se generan las variantes con y sin cada capa opcional para que el
-    scoring decida cual prefiero.
-
-    Sin bottoms (p.ej. solo remeras) no hay outfit: no se fabrica una mitad.
+    - Ancla A: bottom + top (+ outerwear opcional).
+    - Ancla B: dress (+ outerwear opcional), sin mezclar top/bottom.
+    - Calzado y bolso se acoplan sobre los nucleos manteniendo costo acotado.
     """
     tops = agrupadas[GarmentPosition.TOP]
     bottoms = agrupadas[GarmentPosition.BOTTOM]
-    shoes = agrupadas[GarmentPosition.FOOTWEAR] or [None]
-    outers = agrupadas[GarmentPosition.OUTERWEAR] or [None]
+    dresses = agrupadas[GarmentPosition.DRESS]
+    outers: list[dict[str, Any] | None] = (
+        [*agrupadas[GarmentPosition.OUTERWEAR], None]
+        if agrupadas[GarmentPosition.OUTERWEAR]
+        else [None]
+    )
+    shoes = agrupadas[GarmentPosition.FOOTWEAR]
+    bags = agrupadas[GarmentPosition.BAG]
 
-    combos: list[list[dict[str, Any]]] = []
+    nucleos: list[list[dict[str, Any]]] = []
     for bottom in bottoms:
         for top in tops:
-            for shoe in shoes:
-                for outer in outers:
-                    capas = [c for c in (bottom, top, outer, shoe) if c is not None]
-                    combos.append(capas)
-    return combos
+            for outer in outers:
+                capas = [c for c in (bottom, top, outer) if c is not None]
+                nucleos.append(capas)
+
+    for dress in dresses:
+        for outer in outers:
+            capas = [c for c in (dress, outer) if c is not None]
+            nucleos.append(capas)
+
+    return _acoplar_complementos(nucleos, shoes=shoes, bags=bags)
 
 
 def _ordenar_capas(garment_dicts: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -89,6 +149,12 @@ def _ordenar_capas(garment_dicts: list[dict[str, Any]]) -> list[dict[str, Any]]:
             return len(LAYER_ORDER)
 
     return sorted(garment_dicts, key=clave)
+
+
+# Caché en memoria para evitar recalcular distancias cromáticas y de embeddings
+_COMBO_SCORES_CACHE: dict[tuple[str, ...], tuple[float, float]] = {}
+
+_BUSY_PATTERNS = frozenset({"striped", "plaid", "floral", "graphic"})
 
 
 def _rankear_y_explicar_combos(
@@ -109,8 +175,16 @@ def _rankear_y_explicar_combos(
         ):
             continue
 
-        chroma = score_outfit(capas)
-        emb = embedding_score([g["embedding"] for g in capas if g.get("embedding")])
+        cache_key = tuple(sorted(capa_ids))
+        if cache_key in _COMBO_SCORES_CACHE:
+            chroma, emb = _COMBO_SCORES_CACHE[cache_key]
+        else:
+            chroma = score_outfit(capas)
+            emb = embedding_score([g["embedding"] for g in capas if g.get("embedding")])
+            if len(_COMBO_SCORES_CACHE) > 5000:
+                _COMBO_SCORES_CACHE.clear()
+            _COMBO_SCORES_CACHE[cache_key] = (chroma, emb)
+
         score = WEIGHTS["chromatic"] * chroma + WEIGHTS["embedding"] * emb
         capas_ordenadas = _ordenar_capas(capas)
         estetica = _estetica_dominante(capas_ordenadas)
@@ -140,12 +214,30 @@ def _rankear_y_explicar_combos(
             elif occ_lower in ("university", "casual") and estetica in ("casual", "vintage", "soft boy"):
                 score = min(1.0, score + 0.10)
 
+        # 4. Modulación por estampados (pattern clash vs equilibrio con piezas lisas)
+        patrones = [
+            str(g.get("pattern")).strip().lower()
+            for g in capas
+            if g.get("pattern")
+        ]
+        busy_count = sum(1 for p in patrones if p in _BUSY_PATTERNS)
+        solid_count = sum(1 for p in patrones if p == "solid")
+        pattern_note: str | None = None
+        if busy_count >= 2:
+            score = max(0.0, score - 0.14)
+        elif busy_count == 1 and solid_count >= 1:
+            score = min(1.0, score + 0.04)
+            pattern_note = "equilibrio entre estampado y piezas lisas"
+
         # Generación de explicación explicable para el usuario
         explicacion_partes = []
         if chroma >= 0.75:
             explicacion_partes.append(f"Alta armonía de color ({round(chroma * 100)}%)")
         else:
             explicacion_partes.append(f"Contraste tonal equilibrado ({round(chroma * 100)}%)")
+
+        if pattern_note:
+            explicacion_partes.append(pattern_note)
 
         if weather == "cold" and has_outer:
             explicacion_partes.append("capa exterior térmica para bajas temperaturas")
@@ -259,37 +351,72 @@ def remix_outfit(
 
     agrupadas = _por_posicion(libres)
 
-    # Armado condicional de capas respetando las fijadas
-    if GarmentPosition.TOP.value in pinned_by_pos:
-        tops = [pinned_by_pos[GarmentPosition.TOP.value]]
-    else:
-        tops = agrupadas[GarmentPosition.TOP]
-
-    if GarmentPosition.BOTTOM.value in pinned_by_pos:
-        bottoms = [pinned_by_pos[GarmentPosition.BOTTOM.value]]
-    else:
-        bottoms = agrupadas[GarmentPosition.BOTTOM]
-
-    if GarmentPosition.FOOTWEAR.value in pinned_by_pos:
-        shoes = [pinned_by_pos[GarmentPosition.FOOTWEAR.value]]
-    else:
-        shoes = agrupadas[GarmentPosition.FOOTWEAR] or [None]
-
+    # Armado condicional de capas respetando las fijadas (doble ancla: top+bottom o dress)
+    outers: list[dict[str, Any] | None]
     if GarmentPosition.OUTERWEAR.value in pinned_by_pos:
         outers = [pinned_by_pos[GarmentPosition.OUTERWEAR.value]]
+    elif agrupadas[GarmentPosition.OUTERWEAR]:
+        outers = [*agrupadas[GarmentPosition.OUTERWEAR], None]
     else:
-        outers = agrupadas[GarmentPosition.OUTERWEAR] or [None]
+        outers = [None]
 
-    combos: list[list[dict[str, Any]]] = []
-    for bottom in bottoms:
-        for top in tops:
-            for shoe in shoes:
+    shoes_fijos = GarmentPosition.FOOTWEAR.value in pinned_by_pos
+    shoes = (
+        [pinned_by_pos[GarmentPosition.FOOTWEAR.value]]
+        if shoes_fijos
+        else agrupadas[GarmentPosition.FOOTWEAR]
+    )
+
+    bags_fijos = GarmentPosition.BAG.value in pinned_by_pos
+    bags = (
+        [pinned_by_pos[GarmentPosition.BAG.value]]
+        if bags_fijos
+        else agrupadas[GarmentPosition.BAG]
+    )
+
+    nucleos: list[list[dict[str, Any]]] = []
+    has_pinned_dress = GarmentPosition.DRESS.value in pinned_by_pos
+    has_pinned_split = (
+        GarmentPosition.TOP.value in pinned_by_pos
+        or GarmentPosition.BOTTOM.value in pinned_by_pos
+    )
+
+    if has_pinned_dress:
+        dress = pinned_by_pos[GarmentPosition.DRESS.value]
+        for outer in outers:
+            nucleos.append([c for c in (dress, outer) if c is not None])
+    else:
+        tops = (
+            [pinned_by_pos[GarmentPosition.TOP.value]]
+            if GarmentPosition.TOP.value in pinned_by_pos
+            else agrupadas[GarmentPosition.TOP]
+        )
+        bottoms = (
+            [pinned_by_pos[GarmentPosition.BOTTOM.value]]
+            if GarmentPosition.BOTTOM.value in pinned_by_pos
+            else agrupadas[GarmentPosition.BOTTOM]
+        )
+        for bottom in bottoms:
+            for top in tops:
                 for outer in outers:
-                    capas = [c for c in (bottom, top, outer, shoe) if c is not None]
-                    capas_ids = {g["id"] for g in capas if "id" in g}
-                    # Verificar que todas las prendas ancladas estén en el combo
-                    if pinned_set.issubset(capas_ids):
-                        combos.append(capas)
+                    nucleos.append([c for c in (bottom, top, outer) if c is not None])
+
+        if not has_pinned_split:
+            for dress in agrupadas[GarmentPosition.DRESS]:
+                for outer in outers:
+                    nucleos.append([c for c in (dress, outer) if c is not None])
+
+    combos = [
+        capas
+        for capas in _acoplar_complementos(
+            nucleos,
+            shoes=shoes,
+            bags=bags,
+            shoes_fijos=shoes_fijos,
+            bags_fijos=bags_fijos,
+        )
+        if pinned_set.issubset({g["id"] for g in capas if "id" in g})
+    ]
 
     return _rankear_y_explicar_combos(
         combos,
@@ -301,13 +428,35 @@ def remix_outfit(
     )
 
 
+def evaluate_manual_combo(
+    garments: list[dict[str, Any]],
+    occasion: str | None = None,
+    weather: str | None = None,
+) -> dict[str, Any]:
+    """Evalúa una combinación elegida manualmente por el usuario."""
+    resultados = _rankear_y_explicar_combos(
+        [garments],
+        occasion=occasion,
+        weather=weather,
+        limit=1,
+    )
+    return resultados[0]
+
+
 def _estetica_dominante(capas: list[dict[str, Any]]) -> str:
-    """Estetica mas repetida entre las prendas; empate -> la del top."""
+    """Estetica mas repetida entre las prendas; empate -> top o dress."""
     conteo: dict[str, int] = {}
     for g in capas:
         a = g.get("aesthetic") or "casual"
         conteo[a] = conteo.get(a, 0) + 1
-    top = next((g for g in capas if g["position"] == GarmentPosition.TOP.value), None)
-    if top and (top.get("aesthetic") or "casual") in conteo:
-        return top["aesthetic"] or "casual"
+    ancla = next(
+        (
+            g
+            for g in capas
+            if g["position"] in (GarmentPosition.TOP.value, GarmentPosition.DRESS.value)
+        ),
+        None,
+    )
+    if ancla and (ancla.get("aesthetic") or "casual") in conteo:
+        return ancla["aesthetic"] or "casual"
     return max(conteo.items(), key=lambda kv: kv[1])[0]

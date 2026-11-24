@@ -14,8 +14,10 @@ class GarmentPosition(str, enum.Enum):
 
     TOP = "top"
     BOTTOM = "bottom"
+    DRESS = "dress"
     FOOTWEAR = "footwear"
     OUTERWEAR = "outerwear"
+    BAG = "bag"
 
 
 class OwnershipSource(str, enum.Enum):
@@ -85,15 +87,15 @@ STAGE_TO_STATUS: dict[str, str] = {
 
 
 # Categoria CLIP -> posicion para armar capas. CLIP clasifica en las seis
-# clases del dataset (top, bottom, dress, outwear, shoes, bag); dress y bag no
-# tienen posicion en el enum y quedan en None.
+# clases del dataset (top, bottom, dress, outwear, shoes, bag), ahora todas
+# mapeadas a su posicion en el dominio para recomendacion y organizacion.
 CATEGORY_TO_POSITION: dict[str, GarmentPosition | None] = {
     "top": GarmentPosition.TOP,
     "bottom": GarmentPosition.BOTTOM,
     "shoes": GarmentPosition.FOOTWEAR,
     "outwear": GarmentPosition.OUTERWEAR,
-    "dress": None,
-    "bag": None,
+    "dress": GarmentPosition.DRESS,
+    "bag": GarmentPosition.BAG,
 }
 
 # Clases zero-shot del clasificador CLIP (ver ml.models.prompts + notebook 03).

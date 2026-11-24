@@ -54,10 +54,13 @@ def garment_to_dict(g: Garment) -> dict[str, Any]:
     aesthetic = g.top_aesthetics[0]["aesthetic"] if g.top_aesthetics else "casual"
     return {
         "id": g.id,
+        "category": g.category,
+        "subcategory": getattr(g, "subcategory", None),
         "position": posicion,
         "colors": g.dominant_colors,
         "embedding": g.embedding,
         "aesthetic": aesthetic,
+        "pattern": getattr(g, "pattern", None),
     }
 
 
@@ -92,7 +95,9 @@ def evaluate_prospective_garment(
         id=new_uuid(),
         owner_id=user_id,
         category=analisis["category"],
+        subcategory=analisis.get("subcategory"),
         position=analisis["position"],
+        pattern=analisis.get("pattern"),
         image_path=rel_orig,
         processed_image_path=rel_proc,
         dominant_colors=analisis["dominant_colors"],
@@ -242,10 +247,12 @@ def evaluate_prospective_garment(
     candidate_summary = GarmentUploadResponse(
         garment_id=candidate.id,
         category=candidate.category,
+        subcategory=getattr(candidate, "subcategory", None),
         position=candidate.position,
         top_aesthetics=formatted_aesthetics,
         dominant_colors=[DominantColor.model_validate(c) for c in candidate.dominant_colors],
         processed_image_url=storage.url_for(candidate.processed_image_path),
+        pattern=getattr(candidate, "pattern", None),
     )
 
     return SmartShoppingEvaluateResponse(

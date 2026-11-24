@@ -7,14 +7,16 @@ import { Button } from '@/components/ui/button';
 import { PhotoConsentGate } from '@/features/garments/components/PhotoConsentGate';
 import { GarmentBatchUploader } from '@/features/garments/components/GarmentBatchUploader';
 import { CapsuleCatalogGrid } from '@/features/garments/components/CapsuleCatalogGrid';
+import { MyWardrobeGrid } from '@/features/garments/components/MyWardrobeGrid';
 import { WardrobeEmptyState } from '@/features/garments/components/WardrobeEmptyState';
 import { useGarmentsList } from '@/features/garments/hooks/useGarmentsList';
 import { Camera, CheckCircle2, Sparkles, ArrowRight } from 'lucide-react';
 
-type Section = 'upload' | 'capsule';
+type Section = 'upload' | 'my-wardrobe' | 'capsule';
 
 const SECTIONS: { id: Section; label: string }[] = [
   { id: 'upload', label: 'Subir prendas' },
+  { id: 'my-wardrobe', label: 'Mi armario' },
   { id: 'capsule', label: 'Catálogo cápsula' },
 ];
 
@@ -55,7 +57,7 @@ export function WardrobeView(): JSX.Element {
 
         <div className="hidden sm:flex items-center gap-2 pr-3 text-xs text-muted-foreground">
           <span className="h-2 w-2 rounded-full bg-emerald-500" />
-          <span>{section === 'upload' ? 'Subir prendas' : 'Catálogo cápsula'}</span>
+          <span>{SECTIONS.find(s => s.id === section)?.label ?? 'Subir prendas'}</span>
         </div>
       </div>
 
@@ -125,6 +127,8 @@ export function WardrobeView(): JSX.Element {
             </BentoCard>
           </div>
         </div>
+      ) : section === 'my-wardrobe' ? (
+        <MyWardrobeGrid onGoUpload={() => setSection('upload')} />
       ) : (
         <CapsuleCatalogGrid />
       )}

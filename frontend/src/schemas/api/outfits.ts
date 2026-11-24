@@ -1,7 +1,14 @@
 import { z } from 'zod';
 
-// Closed enum — explicit in plan-base.md §10.1
-export const OutfitPositionSchema = z.enum(['top', 'bottom', 'footwear', 'outerwear']);
+// Closed enum — soporta las 6 categorias CLIP mapeadas a posicion de dominio
+export const OutfitPositionSchema = z.enum([
+  'top',
+  'bottom',
+  'dress',
+  'footwear',
+  'outerwear',
+  'bag',
+]);
 export type OutfitPosition = z.infer<typeof OutfitPositionSchema>;
 
 export const OutfitGarmentRefSchema = z.object({
@@ -79,3 +86,55 @@ export const OutfitPlanConfirmResponseSchema = z.object({
   garments_marked_laundry: z.array(z.string()),
 });
 export type OutfitPlanConfirmResponse = z.infer<typeof OutfitPlanConfirmResponseSchema>;
+
+export const PackingPlanRequestSchema = z.object({
+  days: z.number().min(1).max(14).default(3),
+  weather: z.enum(['cold', 'mild', 'warm']).default('mild'),
+  occasion: z.string().optional(),
+});
+export type PackingPlanRequest = z.infer<typeof PackingPlanRequestSchema>;
+
+export const PackedGarmentSummarySchema = z.object({
+  id: z.string(),
+  category: z.string(),
+  position: z.string().nullable().optional(),
+  processed_image_url: z.string(),
+});
+export type PackedGarmentSummary = z.infer<typeof PackedGarmentSummarySchema>;
+
+export const DailyOutfitPlanSchema = z.object({
+  day: z.number(),
+  garment_ids: z.array(z.string()),
+  reason: z.string(),
+});
+export type DailyOutfitPlan = z.infer<typeof DailyOutfitPlanSchema>;
+
+export const PackingPlanResponseSchema = z.object({
+  days: z.number(),
+  weather: z.string(),
+  packed_garments: z.array(PackedGarmentSummarySchema),
+  daily_plans: z.array(DailyOutfitPlanSchema),
+  total_items_count: z.number(),
+  combinations_unlocked_count: z.number(),
+  tip: z.string(),
+});
+export type PackingPlanResponse = z.infer<typeof PackingPlanResponseSchema>;
+
+export const StylistAdviceRequestSchema = z.object({
+  occasion: z.string().optional(),
+  weather: z.string().optional(),
+  user_note: z.string().max(300).optional(),
+});
+export type StylistAdviceRequest = z.infer<typeof StylistAdviceRequestSchema>;
+
+export const StylistAdviceResponseSchema = z.object({
+  outfit_id: z.string(),
+  why_it_works: z.string(),
+  accessories: z.array(z.string()).min(1),
+  grooming_and_footwear: z.string(),
+  event_adaptation: z.string(),
+  source: z.enum(['azure_openai', 'rules']),
+  model: z.string().nullable().optional(),
+  cached: z.boolean().optional(),
+});
+export type StylistAdviceResponse = z.infer<typeof StylistAdviceResponseSchema>;

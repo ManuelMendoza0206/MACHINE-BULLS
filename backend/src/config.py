@@ -69,6 +69,12 @@ class Settings:
     clip_confidence_threshold: float
     resnet_fallback_enabled: bool
     vton_failover_enabled: bool
+    # Azure OpenAI (Asesor de Moda Virtual)
+    azure_openai_endpoint: str | None = None
+    azure_openai_api_key: str | None = None
+    azure_openai_deployment_name: str | None = None
+    azure_openai_api_version: str = "2024-12-01-preview"
+    azure_openai_timeout_s: float = 20.0
 
     @property
     def media_url_base(self) -> str:
@@ -108,6 +114,11 @@ def load_settings() -> Settings:
         clip_confidence_threshold=float(os.environ.get("CLIP_CONFIDENCE_THRESHOLD", "0.40")),
         resnet_fallback_enabled=os.environ.get("RESNET_FALLBACK_ENABLED", "1").lower() in ("1", "true", "yes"),
         vton_failover_enabled=os.environ.get("VTON_FAILOVER_ENABLED", "1").lower() in ("1", "true", "yes"),
+        azure_openai_endpoint=os.environ.get("AZURE_OPENAI_ENDPOINT") or None,
+        azure_openai_api_key=os.environ.get("AZURE_OPENAI_API_KEY") or None,
+        azure_openai_deployment_name=os.environ.get("AZURE_OPENAI_DEPLOYMENT_NAME") or None,
+        azure_openai_api_version=os.environ.get("AZURE_OPENAI_API_VERSION") or "2024-12-01-preview",
+        azure_openai_timeout_s=float(os.environ.get("AZURE_OPENAI_TIMEOUT_S") or "20.0"),
     )
 
 

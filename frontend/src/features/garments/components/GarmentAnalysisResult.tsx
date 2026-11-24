@@ -8,16 +8,21 @@ import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
 import { GarmentCard } from '@/features/garments/components/GarmentCard';
 import { useUploadGarment } from '@/features/garments/hooks/useUploadGarment';
+import { updateGarment } from '@/features/garments/api/updateGarment';
 import { detectBlur } from '@/lib/vision/detectBlur';
 import { GarmentPositionSchema, type GarmentUploadResponse } from '@/schemas/api/garments';
 import { describeGarmentError } from '@/features/garments/lib/describeGarmentError';
+import { GarmentMaskEditorModal } from '@/features/garments/components/GarmentMaskEditorModal';
+import { Paintbrush } from 'lucide-react';
 import { cn } from '@/lib/utils/cn';
 
 const POSITION_LABELS: Record<string, string> = {
   top: 'Parte superior',
   bottom: 'Parte inferior',
+  dress: 'Vestido / Enterizo',
   footwear: 'Calzado',
   outerwear: 'Abrigo',
+  bag: 'Bolso / Mochila',
 };
 
 export interface GarmentAnalysisResultProps {
@@ -55,6 +60,10 @@ export function GarmentAnalysisResult({
   const [confirmed, setConfirmed] = useState(false);
   const [category, setCategory] = useState<string | null>(null);
   const [position, setPosition] = useState<string | null>(null);
+  const [isEditorOpen, setIsEditorOpen] = useState(false);
+  const [adjustedImageUrl, setAdjustedImageUrl] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   // Lazy initializer — must run exactly once per mounted file, not on every render.
   const [previewUrl] = useState(() => URL.createObjectURL(file));
 
@@ -102,15 +111,44 @@ export function GarmentAnalysisResult({
 
   const retry = (): void => upload(file);
 
-  const confirm = (): void => {
-    if (!data) return;
-    const editedPosition = position ?? data.position ?? '';
+  const confirm = async (): Promise<void> => {
+    if (!data || isSaving) return;
+    setSaveError(null);
+
+    const editedCategory = (category ?? data.category).trim() || data.category;
+    const rawPosition = position ?? data.position ?? '';
+    const parsedPosition = GarmentPositionSchema.safeParse(rawPosition);
+    const editedPosition = parsedPosition.success ? parsedPosition.data : undefined;
+
+    const categoryChanged = category !== null && editedCategory !== data.category;
+    const positionChanged =
+      position !== null && editedPosition !== undefined && editedPosition !== data.position;
+    const maskChanged = Boolean(adjustedImageUrl);
+
+    let nextProcessedUrl = data.processed_image_url;
+    if (categoryChanged || positionChanged || maskChanged) {
+      setIsSaving(true);
+      try {
+        const updated = await updateGarment(data.garment_id, {
+          category: categoryChanged ? editedCategory : undefined,
+          position: positionChanged ? editedPosition : undefined,
+          processed_image_base64: adjustedImageUrl ?? undefined,
+        });
+        nextProcessedUrl = updated.processed_image_url;
+      } catch {
+        setSaveError('No pudimos guardar tus cambios en el servidor. Intenta de nuevo.');
+        setIsSaving(false);
+        return;
+      } finally {
+        setIsSaving(false);
+      }
+    }
+
     const result: GarmentUploadResponse = {
       ...data,
-      category: category ?? data.category,
-      position: GarmentPositionSchema.safeParse(editedPosition).success
-        ? (editedPosition as GarmentUploadResponse['position'])
-        : undefined,
+      category: editedCategory,
+      position: editedPosition,
+      processed_image_url: nextProcessedUrl,
     };
     setConfirmed(true);
     onConfirmed(result);
@@ -155,7 +193,7 @@ export function GarmentAnalysisResult({
     const finalCategory = category ?? data.category;
     return (
       <GarmentCard
-        imageUrl={data.processed_image_url}
+        imageUrl={adjustedImageUrl ?? data.processed_image_url}
         category={finalCategory}
         dominantAesthetic={data.top_aesthetics?.[0]?.aesthetic ?? 'sin clasificar'}
         footer={<Badge variant="success">Confirmada</Badge>}
@@ -196,15 +234,25 @@ export function GarmentAnalysisResult({
   // review: status === 'success', not yet confirmed.
   const displayCategory = category ?? data.category;
   const displayPosition = position ?? data.position ?? '';
+  const currentImageUrl = adjustedImageUrl ?? data.processed_image_url;
   return (
     <Card>
       <div className="relative aspect-square w-full bg-muted">
         {/* eslint-disable-next-line @next/next/no-img-element -- processed_image_url can be any host until Cloudinary is the only source */}
         <img
-          src={data.processed_image_url}
+          src={currentImageUrl}
           alt={`${displayCategory}, resultado del análisis`}
           className="h-full w-full object-cover"
         />
+        <button
+          type="button"
+          onClick={() => setIsEditorOpen(true)}
+          className="absolute top-2 right-2 flex items-center gap-1 rounded-full bg-background/85 px-2.5 py-1 text-[10px] font-semibold text-foreground backdrop-blur-xs border border-border/60 hover:bg-background transition shadow-2xs"
+          title="Ajustar recorte con brocha o borrador"
+        >
+          <Paintbrush className="h-3 w-3 text-accent" />
+          <span>Ajustar bordes</span>
+        </button>
       </div>
       <CardContent className="space-y-3 p-4">
         <label className="block text-sm font-medium">
@@ -251,6 +299,20 @@ export function GarmentAnalysisResult({
             ))}
           </div>
         ) : null}
+        {(data.subcategory || data.pattern) && (
+          <div className="flex flex-wrap gap-1.5">
+            {data.subcategory && (
+              <Badge variant="outline" className="text-[11px] capitalize">
+                {data.subcategory}
+              </Badge>
+            )}
+            {data.pattern && (
+              <Badge variant="outline" className="text-[11px] capitalize">
+                Estampado: {data.pattern}
+              </Badge>
+            )}
+          </div>
+        )}
         <div className="flex gap-2">
           {data.dominant_colors.map(c => (
             <span
@@ -261,12 +323,23 @@ export function GarmentAnalysisResult({
             />
           ))}
         </div>
+        {saveError && (
+          <p role="alert" className="text-xs text-destructive">
+            {saveError}
+          </p>
+        )}
       </CardContent>
       <CardFooter>
-        <Button type="button" onClick={confirm}>
-          Confirmar
+        <Button type="button" disabled={isSaving} onClick={() => void confirm()}>
+          {isSaving ? 'Guardando...' : 'Confirmar'}
         </Button>
       </CardFooter>
+      <GarmentMaskEditorModal
+        isOpen={isEditorOpen}
+        imageUrl={currentImageUrl}
+        onClose={() => setIsEditorOpen(false)}
+        onSave={newUrl => setAdjustedImageUrl(newUrl)}
+      />
     </Card>
   );
 }

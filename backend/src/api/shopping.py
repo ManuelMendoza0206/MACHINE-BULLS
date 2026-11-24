@@ -53,10 +53,11 @@ def adopt_candidate(
 
 @router.get("/weather", response_model=WeatherResponse)
 def fetch_current_weather(
-    city: str = Query("La Paz", description="Ciudad para consultar el clima"),
+    city: str | None = Query(None, description="Ciudad para consultar el clima"),
     lat: float | None = Query(None, description="Latitud GPS opcional"),
     lon: float | None = Query(None, description="Longitud GPS opcional"),
 ) -> WeatherResponse:
     """Obtiene el clima actual para contextualizar las recomendaciones."""
-    data = get_weather(city=city, lat=lat, lon=lon)
+    effective_city = city if (city is not None or (lat is not None and lon is not None)) else "La Paz"
+    data = get_weather(city=effective_city, lat=lat, lon=lon)
     return WeatherResponse(**data)

@@ -56,6 +56,10 @@ os.environ["MEDIA_DIR"] = str(_TEST_MEDIA)
 # Sin nube: storage local dentro del tmp del proceso.
 os.environ["AZURE_STORAGE_CONNECTION_STRING"] = ""
 os.environ["AZURE_STORAGE_PUBLIC_URL_BASE"] = ""
+# Sin llamadas reales a Azure OpenAI en la suite automatizada.
+os.environ["AZURE_OPENAI_ENDPOINT"] = ""
+os.environ["AZURE_OPENAI_API_KEY"] = ""
+os.environ["AZURE_OPENAI_DEPLOYMENT_NAME"] = ""
 # Provider VTON fijo en mock: ningun test depende de Replicate/CatVTON reales.
 os.environ["VTON_PROVIDER"] = "mock"
 # Cola ARQ: puerto muerto para que los tests SIEMPRE ejerzan el fallback a

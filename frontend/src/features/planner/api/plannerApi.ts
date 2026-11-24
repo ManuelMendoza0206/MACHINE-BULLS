@@ -6,6 +6,9 @@ import {
   OutfitPlanCreate,
   OutfitPlanResponse,
   OutfitPlanResponseSchema,
+  PackingPlanRequest,
+  PackingPlanResponse,
+  PackingPlanResponseSchema,
 } from '@/schemas/api/outfits';
 
 export function getOutfitPlans(
@@ -69,5 +72,21 @@ export async function deleteOutfitPlan(planId: string, signal?: AbortSignal): Pr
       signal,
     },
     z.object({ deleted: z.boolean() }).passthrough()
+  );
+}
+
+export function createPackingPlan(
+  payload: PackingPlanRequest,
+  signal?: AbortSignal
+): Promise<PackingPlanResponse> {
+  return apiRequest(
+    {
+      path: '/api/v1/planner/packing',
+      method: 'POST',
+      body: payload as unknown as Record<string, unknown>,
+      timeoutMs: 8_000,
+      signal,
+    },
+    PackingPlanResponseSchema
   );
 }
