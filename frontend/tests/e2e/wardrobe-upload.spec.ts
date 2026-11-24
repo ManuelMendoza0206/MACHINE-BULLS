@@ -49,9 +49,26 @@ test('sube 1 prenda válida → aparece en el resultado de análisis, editable a
   page,
 }) => {
   let uploadCalls = 0;
+  let patchCalls = 0;
   await page.route('**/api/v1/garments/upload', route => {
     uploadCalls += 1;
     return route.fulfill({ json: garmentFixture });
+  });
+  await page.route(`**/api/v1/garments/${garmentFixture.garment_id}`, async route => {
+    if (route.request().method() !== 'PATCH') {
+      return route.fallback();
+    }
+    patchCalls += 1;
+    const body = (route.request().postDataJSON() ?? {}) as { category?: string };
+    return route.fulfill({
+      json: {
+        id: garmentFixture.garment_id,
+        processed_image_url: garmentFixture.processed_image_url,
+        category: body.category ?? garmentFixture.category,
+        dominant_aesthetic: garmentFixture.top_aesthetics[0]?.aesthetic ?? 'old_money',
+        status: 'AVAILABLE',
+      },
+    });
   });
 
   await page.getByLabel(/seleccionar fotos/i).setInputFiles(garmentFile('shirt.png'));
@@ -71,6 +88,7 @@ test('sube 1 prenda válida → aparece en el resultado de análisis, editable a
   // The edited value, not the original detected one, is what's confirmed.
   await expect(page.getByText('Confirmada')).toBeVisible();
   await expect(page.getByText('jacket', { exact: true })).toBeVisible();
+  expect(patchCalls).toBe(1);
 });
 
 test('lote que excede el techo de concurrencia encola el excedente sin bloquear el resto', async ({
