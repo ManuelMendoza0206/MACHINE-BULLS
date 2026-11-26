@@ -59,3 +59,11 @@ export const VtonJobListResponseSchema = z.object({
   total: z.number().int().nonnegative(),
 });
 export type VtonJobListResponse = z.infer<typeof VtonJobListResponseSchema>;
+
+export const ShareLookResponseSchema = z.object({
+  job_id: z.string().uuid(),
+  share_token: z.string(),
+  share_url: z.string(),
+  expires_in_hours: z.number().int().positive(),
+});
+export type ShareLookResponse = z.infer<typeof ShareLookResponseSchema>;

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { z } from 'zod';
-import { apiRequest } from '@/lib/api/client';
+import { apiRequest, apiRequestBlob } from '@/lib/api/client';
 import { ApiError, NetworkError, ValidationError } from '@/lib/errors';
 
 const TestSchema = z.object({ ok: z.boolean(), value: z.string() });
@@ -219,5 +219,39 @@ describe('apiRequest', () => {
     await expect(
       apiRequest({ path: '/api/v1/test', method: 'GET', timeoutMs: 1000 }, TestSchema)
     ).rejects.toBeInstanceOf(NetworkError);
+  });
+});
+
+describe('apiRequestBlob', () => {
+  it('resolves with the response blob on 200', async () => {
+    const blob = new Blob(['jpeg-bytes'], { type: 'image/jpeg' });
+    const fetchMock = mockFetchOnce({
+      ok: true,
+      status: 200,
+      blob: async () => blob,
+    });
+
+    const result = await apiRequestBlob({
+      path: '/api/v1/vton/job/download',
+      method: 'GET',
+      timeoutMs: 1000,
+    });
+
+    expect(result).toBe(blob);
+    expect(fetchMock.mock.calls[0]?.[0]).toBe(
+      'https://api.example.com/api/v1/vton/job/download'
+    );
+  });
+
+  it('throws ApiError with status on non-2xx', async () => {
+    mockFetchOnce({
+      ok: false,
+      status: 404,
+      text: async () => JSON.stringify({ detail: 'not found' }),
+    });
+
+    await expect(
+      apiRequestBlob({ path: '/api/v1/vton/job/download', method: 'GET', timeoutMs: 1000 })
+    ).rejects.toMatchObject({ code: 'API_ERROR', status: 404 });
   });
 });

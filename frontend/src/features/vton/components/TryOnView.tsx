@@ -17,6 +17,8 @@ import { createVtonJob } from '@/features/vton/api/createVtonJob';
 import { getVtonJobStatus } from '@/features/vton/api/getVtonJobStatus';
 import { useVtonJobStatus } from '@/features/vton/hooks/useVtonJobStatus';
 import { CompareView } from '@/features/vton/components/CompareView';
+import { downloadVtonJob, shareVtonJob } from '@/features/vton/api/shareVtonJob';
+import { getCanonicalPhoto } from '@/features/profile/api/canonicalPhoto';
 import {
   checkCachedVtonResult,
   setCachedVtonResult,
@@ -125,6 +127,7 @@ export function TryOnView(): JSX.Element {
 
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [canonicalSelected, setCanonicalSelected] = useState(false);
   const [phase, setPhase] = useState<Phase>('idle');
   const [jobId, setJobId] = useState<string | null>(null);
   const [resultUrl, setResultUrl] = useState<string | null>(null);
@@ -137,6 +140,10 @@ export function TryOnView(): JSX.Element {
   const [manualCheckMsg, setManualCheckMsg] = useState<string | null>(null);
   const [attempt, setAttempt] = useState(0);
   const [elapsedSec, setElapsedSec] = useState(0);
+  const [shareMessage, setShareMessage] = useState<string | null>(null);
+  const [isSharing, setIsSharing] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [downloadMessage, setDownloadMessage] = useState<string | null>(null);
   const [isVisible, setIsVisible] = useState(() =>
     typeof document !== 'undefined' ? document.visibilityState === 'visible' : true
   );
@@ -155,6 +162,14 @@ export function TryOnView(): JSX.Element {
     queryFn: ({ signal }) => listCapsuleGarments(signal),
   });
 
+  const canonicalPhoto = useQuery({
+    queryKey: ['canonical-photo'],
+    queryFn: ({ signal }) => getCanonicalPhoto(signal),
+  });
+  const hasCanonicalPhoto = Boolean(
+    canonicalPhoto.data?.has_canonical && canonicalPhoto.data.photo_url
+  );
+
   const comparisonOptionsQuery = useQuery({
     queryKey: ['outfits', 'comparison-options', me?.user_id],
     queryFn: ({ signal }) => {
@@ -165,11 +180,14 @@ export function TryOnView(): JSX.Element {
     staleTime: 60_000,
   });
 
+  type CreateVtonVars = { image: File | null; id: string; useCanonical: boolean };
   const createJob = useMutation({
-    mutationFn: (vars: { image: File; id: string }) => createVtonJob(vars.image, vars.id),
+    mutationFn: (vars: CreateVtonVars) =>
+      createVtonJob(vars.image, vars.id, { useCanonical: vars.useCanonical }),
   });
   const createComparisonJob = useMutation({
-    mutationFn: (vars: { image: File; id: string }) => createVtonJob(vars.image, vars.id),
+    mutationFn: (vars: CreateVtonVars) =>
+      createVtonJob(vars.image, vars.id, { useCanonical: vars.useCanonical }),
   });
 
   const comparisonOptions = queryOutfitId
@@ -272,6 +290,7 @@ export function TryOnView(): JSX.Element {
   const resetPhoto = (): void => {
     if (previewUrl) URL.revokeObjectURL(previewUrl);
     setFile(null);
+    setCanonicalSelected(false);
     setPreviewUrl(null);
     setResultUrl(null);
     setFailure(null);
@@ -281,6 +300,7 @@ export function TryOnView(): JSX.Element {
     setElapsedSec(0);
     pausedAtRef.current = null;
     setManualCheckMsg(null);
+    setDownloadMessage(null);
     setPhase('idle');
     setComparisonOpen(false);
     setComparisonOutfitId('');
@@ -303,32 +323,53 @@ export function TryOnView(): JSX.Element {
     const first = files[0];
     if (!first) return;
     if (previewUrl) URL.revokeObjectURL(previewUrl);
+    setCanonicalSelected(false);
     setFile(first);
     setPreviewUrl(URL.createObjectURL(first));
+    setCreateError(null);
+  };
+
+  const selectCanonicalPhoto = (): void => {
+    const photoUrl = canonicalPhoto.data?.photo_url;
+    if (!photoUrl) return;
+    if (previewUrl && previewUrl.startsWith('blob:')) URL.revokeObjectURL(previewUrl);
+    setFile(null);
+    setCanonicalSelected(true);
+    setPreviewUrl(photoUrl);
     setCreateError(null);
   };
 
   const submit = (): void => {
     // Doble-submit: no re-entra mientras la creación del job esté en vuelo
     // ni mientras haya un job corriendo.
-    if (!file || !effectiveOutfitId || createJob.isPending || phase === 'processing') return;
+    if (
+      (!file && !canonicalSelected) ||
+      !effectiveOutfitId ||
+      createJob.isPending ||
+      phase === 'processing'
+    ) {
+      return;
+    }
 
     // Reuso de cache: si ya existe un resultado en la sesión para el par (outfit, foto),
     // se muestra directo sin disparar un nuevo POST /vton/try-on ni gastar GPU.
-    const cached = checkCachedVtonResult(effectiveOutfitId, file);
-    if (cached) {
-      setJobId(cached.jobId);
-      setResultUrl(cached.resultUrl);
-      setFailure(null);
-      setCreateError(null);
-      setPhase('completed');
-      return;
+    // La foto canónica no se cachea porque su contenido puede cambiar en el perfil.
+    if (file) {
+      const cached = checkCachedVtonResult(effectiveOutfitId, file);
+      if (cached) {
+        setJobId(cached.jobId);
+        setResultUrl(cached.resultUrl);
+        setFailure(null);
+        setCreateError(null);
+        setPhase('completed');
+        return;
+      }
     }
 
     setCreateError(null);
     setElapsedSec(0);
     createJob.mutate(
-      { image: file, id: effectiveOutfitId },
+      { image: file, id: effectiveOutfitId, useCanonical: canonicalSelected },
       {
         onSuccess: job => {
           setJobId(job.job_id);
@@ -348,6 +389,47 @@ export function TryOnView(): JSX.Element {
     setElapsedSec(0);
     setManualCheckMsg(null);
     setPhase('processing');
+  };
+
+  const handleShare = async (): Promise<void> => {
+    if (!jobId) return;
+    setIsSharing(true);
+    setShareMessage(null);
+    try {
+      const res = await shareVtonJob(jobId);
+      if (typeof navigator !== 'undefined' && navigator.clipboard) {
+        await navigator.clipboard.writeText(res.share_url);
+        setShareMessage('¡Enlace copiado al portapapeles! Expira en 24 horas.');
+      } else {
+        setShareMessage(`Enlace para compartir: ${res.share_url}`);
+      }
+    } catch {
+      setShareMessage('No pudimos generar el enlace para compartir.');
+    } finally {
+      setIsSharing(false);
+    }
+  };
+
+  const handleDownload = async (): Promise<void> => {
+    if (!jobId) return;
+    setIsDownloading(true);
+    setDownloadMessage(null);
+    try {
+      const blob = await downloadVtonJob(jobId);
+      const objectUrl = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = objectUrl;
+      link.download = `styleme-look-${jobId.slice(0, 8)}.jpg`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      // Dar tiempo al navegador a iniciar la descarga antes de liberar el blob.
+      setTimeout(() => URL.revokeObjectURL(objectUrl), 1_000);
+    } catch {
+      setDownloadMessage('No pudimos descargar la imagen. Intenta de nuevo.');
+    } finally {
+      setIsDownloading(false);
+    }
   };
 
   const handleManualCheck = async (): Promise<void> => {
@@ -557,6 +639,33 @@ export function TryOnView(): JSX.Element {
                 </div>
               ) : (
                 <div className="space-y-3">
+                  {hasCanonicalPhoto && (
+                    <div className="flex items-center gap-3 rounded-xl border border-accent/30 bg-accent/5 p-2.5">
+                      {/* eslint-disable-next-line @next/next/no-img-element -- foto canónica del backend */}
+                      <img
+                        src={canonicalPhoto.data?.photo_url ?? ''}
+                        alt="Foto canónica guardada"
+                        className="h-16 w-12 rounded-lg object-cover"
+                      />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs font-semibold text-foreground">
+                          Usar mi foto canónica
+                        </p>
+                        <p className="text-[11px] text-muted-foreground">
+                          Guardada con consentimiento. No hace falta subirla de nuevo.
+                        </p>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        size="sm"
+                        className="h-8 text-xs shrink-0"
+                        onClick={selectCanonicalPhoto}
+                      >
+                        Usar
+                      </Button>
+                    </div>
+                  )}
                   <GarmentDropzone onFilesSelected={handleFiles} multiple={false} />
                   <div className="rounded-lg border border-border/80 bg-muted/30 p-3 space-y-2">
                     <p className="text-xs font-medium text-muted-foreground">
@@ -594,7 +703,9 @@ export function TryOnView(): JSX.Element {
                 type="button"
                 className="w-full"
                 onClick={submit}
-                disabled={!file || createJob.isPending || phase === 'processing'}
+                disabled={
+                  (!file && !canonicalSelected) || createJob.isPending || phase === 'processing'
+                }
               >
                 {createJob.isPending
                   ? 'Generando…'
@@ -754,7 +865,7 @@ export function TryOnView(): JSX.Element {
                 {previewUrl && (
                   <div className="space-y-1.5">
                     <p className="text-xs font-medium text-muted-foreground">Foto original</p>
-                    {/* eslint-disable-next-line @next/next/no-img-element -- blob preview URL */}
+                    {/* eslint-disable-next-line @next/next/no-img-element -- preview local o foto canónica */}
                     <img
                       src={previewUrl}
                       alt="Foto original del usuario para prueba virtual"
@@ -776,11 +887,23 @@ export function TryOnView(): JSX.Element {
                   />
                 </div>
               </div>
-              <div className="flex flex-wrap gap-2 pt-2">
-                <Button type="button" size="sm" asChild>
-                  <a href={resultUrl} download>
-                    Guardar imagen
-                  </a>
+              <div className="flex flex-wrap items-center gap-2 pt-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={() => void handleDownload()}
+                  disabled={isDownloading}
+                >
+                  {isDownloading ? 'Descargando…' : 'Guardar imagen'}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleShare}
+                  disabled={isSharing}
+                >
+                  {isSharing ? 'Generando...' : 'Compartir look'}
                 </Button>
                 <Button type="button" variant="secondary" size="sm" onClick={resetPhoto}>
                   Probar con otra foto
@@ -793,6 +916,16 @@ export function TryOnView(): JSX.Element {
                 >
                   Probar otro outfit
                 </Button>
+                {shareMessage && (
+                  <p role="status" className="w-full text-xs text-muted-foreground pt-1">
+                    {shareMessage}
+                  </p>
+                )}
+                {downloadMessage && (
+                  <p role="alert" className="w-full text-xs text-destructive pt-1">
+                    {downloadMessage}
+                  </p>
+                )}
               </div>
               <section
                 className="space-y-3 border-t border-border/50 pt-4"
@@ -857,13 +990,21 @@ export function TryOnView(): JSX.Element {
                       type="button"
                       size="sm"
                       onClick={() => {
-                        if (!file || !comparisonOutfitId) return;
+                        if ((!file && !canonicalSelected) || !comparisonOutfitId) return;
                         createComparisonJob.mutate(
-                          { image: file, id: comparisonOutfitId },
+                          {
+                            image: file,
+                            id: comparisonOutfitId,
+                            useCanonical: canonicalSelected,
+                          },
                           { onSuccess: job => setComparisonJobId(job.job_id) }
                         );
                       }}
-                      disabled={!file || !comparisonOutfitId || createComparisonJob.isPending}
+                      disabled={
+                        (!file && !canonicalSelected) ||
+                        !comparisonOutfitId ||
+                        createComparisonJob.isPending
+                      }
                     >
                       {createComparisonJob.isPending
                         ? 'Creando comparación…'
