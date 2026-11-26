@@ -20,6 +20,7 @@ import {
 } from '@/features/planner/api/plannerApi';
 import type { OutfitPlanResponse } from '@/schemas/api/outfits';
 import type { GarmentSummary } from '@/schemas/api/garments';
+import { listCapsuleGarments } from '@/features/garments/api/listCapsuleGarments';
 
 function formatDateHeading(dateStr: string): string {
   const parts = dateStr.split('-').map(Number);
@@ -75,10 +76,10 @@ export function PlannerView(): React.JSX.Element {
     try {
       const [fetchedPlans, capsuleRes] = await Promise.all([
         getOutfitPlans(),
-        fetch('/api/v1/garments/capsule').then(r => (r.ok ? r.json() : { garments: [] })),
+        listCapsuleGarments(),
       ]);
       setPlans(fetchedPlans);
-      setGarments(capsuleRes.garments || []);
+      setGarments(capsuleRes.garments);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Error al cargar los planes.');
     } finally {
@@ -108,7 +109,6 @@ export function PlannerView(): React.JSX.Element {
 
     try {
       await createOutfitPlan({
-        user_id: 'default-user',
         planned_date: selectedDate,
         garment_ids: selectedGarmentIds,
         occasion: selectedOccasion,

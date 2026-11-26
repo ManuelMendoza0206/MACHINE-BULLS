@@ -5,7 +5,7 @@ import { createBrowserSupabaseClient, isSupabaseConfigured } from '@/lib/supabas
 
 export interface RequestConfig {
   path: string;
-  method: 'GET' | 'POST';
+  method: 'GET' | 'POST' | 'PATCH' | 'DELETE';
   body?: FormData | Record<string, unknown>;
   timeoutMs: number;
   signal?: AbortSignal;
@@ -42,9 +42,17 @@ export async function apiRequest<T>(config: RequestConfig, schema: z.ZodType<T>)
   if (typeof window !== 'undefined' && isSupabaseConfigured()) {
     try {
       const supabase = createBrowserSupabaseClient();
-      const { data } = await supabase.auth.getSession();
+      const { data, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError) {
+        throw new NetworkError('No se pudo consultar la sesión de autenticación', sessionError);
+      }
       const session = data?.session;
-      if (session) {
+      if (!session) {
+        clearTimeout(timeoutId);
+        if (config.signal) config.signal.removeEventListener('abort', onExternalAbort);
+        throw new ApiError('Se requiere iniciar sesión', 401);
+      }
+      {
         let token = session.access_token;
         const nowSec = Math.floor(Date.now() / 1000);
         if (session.expires_at && session.expires_at <= nowSec + 30) {
@@ -61,8 +69,11 @@ export async function apiRequest<T>(config: RequestConfig, schema: z.ZodType<T>)
           authHeaders['Authorization'] = `Bearer ${token}`;
         }
       }
-    } catch {
-      // Ignora errores si Supabase no responde o esta offline (fallback a demo)
+    } catch (error) {
+      clearTimeout(timeoutId);
+      if (config.signal) config.signal.removeEventListener('abort', onExternalAbort);
+      if (error instanceof ApiError || error instanceof NetworkError) throw error;
+      throw new NetworkError('No se pudo validar la sesión de autenticación', error);
     }
   }
 
@@ -102,7 +113,7 @@ export async function apiRequest<T>(config: RequestConfig, schema: z.ZodType<T>)
       );
     }
 
-    const json = (await response.json()) as unknown;
+    const json = response.status === 204 ? undefined : ((await response.json()) as unknown);
     const result = schema.safeParse(json);
     if (!result.success) {
       throw new ValidationError('Response validation failed', result.error.issues);

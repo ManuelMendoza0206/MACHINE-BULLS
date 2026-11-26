@@ -2,7 +2,14 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 
 export const config = {
-  matcher: ['/wardrobe/:path*', '/outfits/:path*', '/try-on/:path*', '/profile/:path*'],
+  matcher: [
+    '/wardrobe/:path*',
+    '/outfits/:path*',
+    '/try-on/:path*',
+    '/profile/:path*',
+    '/planner/:path*',
+    '/shopping/:path*',
+  ],
 };
 
 export async function proxy(request: NextRequest): Promise<NextResponse> {
