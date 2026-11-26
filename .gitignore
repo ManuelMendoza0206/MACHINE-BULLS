@@ -126,6 +126,7 @@ backend/media/
 backend/*.db
 backend/.coverage
 backend/.pytest_cache/
+backend/.test-runtime/
 models/*.pt
 
 # Runtime junk del try-on y DB dev (se regeneran)

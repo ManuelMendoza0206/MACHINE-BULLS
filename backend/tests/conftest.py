@@ -31,8 +31,11 @@ if str(SRC) not in sys.path:
 # SQLite en ARCHIVO y no `:memory:`: FastAPI corre los endpoints en un threadpool
 # y cada thread abriria su propia BD en memoria (tablas recien creadas en el
 # thread principal no existirian ahi). Un archivo temporal lo comparten todos.
-_TEST_DB = "/tmp/opencode/styleme_test.db"
-_TEST_MEDIA = "/tmp/opencode/styleme_test_media"
+_TEST_ROOT = Path(
+    os.environ.get("STYLEME_TEST_DIR", str(Path(__file__).resolve().parents[1] / ".test-runtime"))
+)
+_TEST_DB = str(_TEST_ROOT / "styleme_test.db")
+_TEST_MEDIA = str(_TEST_ROOT / "media")
 Path(_TEST_DB).parent.mkdir(parents=True, exist_ok=True)
 Path(_TEST_DB).unlink(missing_ok=True)
 os.environ.setdefault("DATABASE_URL", f"sqlite:///{_TEST_DB}")
