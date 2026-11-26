@@ -75,6 +75,12 @@ class Settings:
     # BackgroundTasks y la demo sigue (ver services/queue.py).
     redis_url: str
     public_base_url: str
+    # URL publica del frontend: los enlaces de compartir apuntan a una pagina
+    # con Open Graph, no al binario JPEG del backend.
+    frontend_public_url: str
+    # Secreto dedicado para firmar tokens de compartir (HS256). Si falta, se
+    # usa SUPABASE_JWT_SECRET; en produccion no hay fallback hardcodeado.
+    vton_share_secret: str | None
     cors_origins: list[str]
     media_dir: Path
     # Almacenamiento en la nube (Azure Blob Storage)
@@ -133,6 +139,8 @@ def load_settings() -> Settings:
         vton_layer_mode=os.environ.get("VTON_LAYER_MODE", "sequential").strip().lower(),
         redis_url=os.environ.get("REDIS_URL", "redis://localhost:6379/0"),
         public_base_url=os.environ.get("PUBLIC_BASE_URL", "http://localhost:8000"),
+        frontend_public_url=os.environ.get("FRONTEND_PUBLIC_URL", "http://localhost:3000").rstrip("/"),
+        vton_share_secret=os.environ.get("VTON_SHARE_SECRET") or None,
         cors_origins=origins,
         media_dir=Path(os.environ.get("MEDIA_DIR", str(MEDIA_DIR))),
         azure_storage_connection_string=os.environ.get("AZURE_STORAGE_CONNECTION_STRING") or None,

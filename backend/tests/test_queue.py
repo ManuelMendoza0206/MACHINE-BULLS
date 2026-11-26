@@ -52,7 +52,28 @@ def test_enqueue_true_con_pool_falso(monkeypatch: pytest.MonkeyPatch) -> None:
 
     ok = asyncio.run(enqueue_vton_job("job-42", "humans/a.jpg"))
     assert ok is True
-    assert fake.jobs == [("run_vton_job", "job-42", "humans/a.jpg")]
+    assert fake.jobs == [("run_vton_job", "job-42", "humans/a.jpg", None, None, None, None)]
+
+    ok_params = asyncio.run(
+        enqueue_vton_job(
+            "job-43",
+            "humans/b.jpg",
+            steps=30,
+            guidance=2.5,
+            seed=42,
+            layer_mode="standard",
+        )
+    )
+    assert ok_params is True
+    assert fake.jobs[1] == (
+        "run_vton_job",
+        "job-43",
+        "humans/b.jpg",
+        30,
+        2.5,
+        42,
+        "standard",
+    )
 
 
 def test_stage_mapping_cubre_todos_los_stages() -> None:

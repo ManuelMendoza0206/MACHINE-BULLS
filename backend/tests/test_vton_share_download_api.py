@@ -43,7 +43,8 @@ def test_share_and_download_flow(client: Any, demo_user_id: str) -> None:
     data = share_res.json()
     token = data["share_token"]
     assert token
-    assert f"/api/v1/vton/shared/{token}" in data["share_url"]
+    assert f"/looks/{token}" in data["share_url"]
+    assert "/api/v1/vton/shared/" not in data["share_url"]
 
     # 2. Public shared access via token (unauthenticated client)
     shared_img_res = client.get(f"/api/v1/vton/shared/{token}")

@@ -53,6 +53,9 @@ os.environ.setdefault("REDIS_URL", "redis://localhost:6399/0")
 # protocolo A-Pose se apaga aca y se activa explicitamente en el test que la
 # cubre (test_vton_pose_invalida_da_422).
 os.environ.setdefault("POSE_VALIDATION", "off")
+os.environ.setdefault("RATE_LIMIT_GARMENTS", "1000/minute")
+os.environ.setdefault("RATE_LIMIT_SHOPPING", "1000/minute")
+os.environ.setdefault("RATE_LIMIT_VTON", "1000/minute")
 
 
 def _analisis_stub(imagen: Any) -> dict[str, Any]:

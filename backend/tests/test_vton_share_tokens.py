@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
-import time
+import dataclasses
 
 import pytest
 from fastapi import HTTPException
 
+from services.vton import share_tokens
 from services.vton.share_tokens import generate_share_token, verify_share_token
 
 
@@ -35,3 +36,16 @@ def test_verify_expired_share_token_fails() -> None:
     with pytest.raises(HTTPException) as exc_info:
         verify_share_token(token)
     assert exc_info.value.status_code == 410
+
+
+def test_production_requires_explicit_share_secret(monkeypatch: pytest.MonkeyPatch) -> None:
+    prod_settings = dataclasses.replace(
+        share_tokens.settings,
+        environment="production",
+        vton_share_secret=None,
+        supabase_jwt_secret=None,
+    )
+    monkeypatch.setattr(share_tokens, "settings", prod_settings)
+
+    with pytest.raises(RuntimeError, match="VTON_SHARE_SECRET"):
+        generate_share_token("job-123", "user-456")

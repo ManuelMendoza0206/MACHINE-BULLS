@@ -6,7 +6,7 @@ o el usuario demo si corre sin autenticacion.
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Form, HTTPException, UploadFile
@@ -72,7 +72,7 @@ def upload_canonical_photo(
 
     user.canonical_photo_path = rel_path
     user.canonical_consent = True
-    user.canonical_consent_at = datetime.utcnow()
+    user.canonical_consent_at = datetime.now(UTC)
     session.commit()
 
     return CanonicalPhotoResponse(

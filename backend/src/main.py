@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import os
 import sys
 from pathlib import Path
 
@@ -51,9 +52,9 @@ app.add_middleware(MetricsMiddleware)
 app.add_middleware(
     RateLimitMiddleware,
     limits={
-        "/garments/upload": "20/minute",
-        "/shopping/evaluate": "20/minute",
-        "/vton/try-on": "10/minute",
+        "/garments/upload": os.environ.get("RATE_LIMIT_GARMENTS", "20/minute"),
+        "/shopping/evaluate": os.environ.get("RATE_LIMIT_SHOPPING", "20/minute"),
+        "/vton/try-on": os.environ.get("RATE_LIMIT_VTON", "10/minute"),
     },
     redis_url=settings.redis_url,
     trusted_proxy_ips=settings.trusted_proxy_ips,

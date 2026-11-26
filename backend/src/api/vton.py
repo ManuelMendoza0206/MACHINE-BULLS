@@ -219,7 +219,8 @@ def share_look(job_id: str, session: SessionDep, user: UserDep) -> ShareLookResp
         raise HTTPException(status_code=400, detail="El trabajo VTON no ha finalizado exitosamente")
 
     token = generate_share_token(job.id, user.id, ttl_hours=24)
-    share_url = f"{settings.public_base_url.rstrip('/')}/api/v1/vton/shared/{token}"
+    # Pagina publica del frontend: incluye Open Graph y boton de descarga.
+    share_url = f"{settings.frontend_public_url.rstrip('/')}/looks/{token}"
     return ShareLookResponse(
         job_id=job.id,
         share_token=token,

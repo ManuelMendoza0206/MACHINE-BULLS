@@ -43,7 +43,7 @@ target-version = "py312"
 
 [tool.pytest.ini_options]
 testpaths = ["tests", "src/ml"]
-pythonpath = ["src"]
+pythonpath = ["src", "."]
 
 [dependency-groups]
 # Un solo grupo dev. Antes convivían `[project.optional-dependencies].dev`

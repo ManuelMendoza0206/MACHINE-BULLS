@@ -64,6 +64,10 @@ services:
       REDIS_URL: redis://redis:6379/0
       # URLs absolutas de /media para el navegador (localhost:8000 publicado).
       PUBLIC_BASE_URL: http://localhost:8000
+      # Los enlaces de compartir apuntan a la pagina publica del frontend.
+      FRONTEND_PUBLIC_URL: ${FRONTEND_PUBLIC_URL:-http://localhost:3000}
+      # Secreto dedicado para tokens de compartir; vacio = Supabase JWT secret.
+      VTON_SHARE_SECRET: ${VTON_SHARE_SECRET:-}
       # Fallback local por defecto; ver comentarios arriba para VM/Replicate.
       VTON_PROVIDER: ${VTON_PROVIDER:-mock}
       VTON_HTTP_URL: ${VTON_HTTP_URL:-}
