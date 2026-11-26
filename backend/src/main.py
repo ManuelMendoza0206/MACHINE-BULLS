@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import logging
 import sys
+import asyncio
 from pathlib import Path
 
 # Asegura que src/ esté en sys.path tanto si uvicorn se invoca como src.main:app,
@@ -35,6 +36,7 @@ from middleware.rate_limit import RateLimitMiddleware
 from services import storage
 
 logging.basicConfig(level=logging.INFO)
+_media_cleanup_task: asyncio.Task | None = None
 
 app = FastAPI(
     title="StyleMe MVP API",
@@ -93,10 +95,33 @@ app.mount("/media", StaticFiles(directory=settings.media_dir), name="media")
 
 @app.on_event("startup")
 def _startup() -> None:
-    """Crea tablas al arrancar (SQLite). En Postgres lo hace Alembic."""
+    """Inicializa SQLite, valida migraciones Postgres y programa la purga de fotos."""
+    global _media_cleanup_task
     init_db()
-    # Purga automatica de fotos humanas con mas de 24 horas (privacidad y compliance)
-    storage.purge_expired_human_photos(max_age_hours=24.0)
+    storage.purge_expired_human_photos(max_age_hours=settings.human_photo_retention_hours)
+    _media_cleanup_task = asyncio.get_running_loop().create_task(_periodic_media_cleanup())
+
+
+async def _periodic_media_cleanup() -> None:
+    """Repite la retención mientras el proceso siga vivo (no solo al reiniciar)."""
+    while True:
+        await asyncio.sleep(settings.human_photo_purge_interval_seconds)
+        await asyncio.to_thread(
+            storage.purge_expired_human_photos,
+            max_age_hours=settings.human_photo_retention_hours,
+        )
+
+
+@app.on_event("shutdown")
+async def _shutdown() -> None:
+    global _media_cleanup_task
+    if _media_cleanup_task is not None:
+        _media_cleanup_task.cancel()
+        try:
+            await _media_cleanup_task
+        except asyncio.CancelledError:
+            pass
+        _media_cleanup_task = None
 
 
 @app.get("/health")

@@ -47,6 +47,13 @@ def _positive_int(name: str, default: int) -> int:
     return value
 
 
+def _positive_float(name: str, default: float) -> float:
+    value = float(os.environ.get(name, str(default)))
+    if value <= 0:
+        raise ValueError(f"{name} debe ser mayor que cero")
+    return value
+
+
 @dataclass(frozen=True)
 class Settings:
     """Ajustes efectivos de la aplicacion, resueltos una vez al importar."""
@@ -76,6 +83,8 @@ class Settings:
     trusted_proxy_ips: tuple[str, ...]
     max_upload_bytes: int
     max_image_pixels: int
+    human_photo_retention_hours: float
+    human_photo_purge_interval_seconds: float
     # Modelo CLIP para clasificacion y embedding de prendas
     clip_model_name: str
     # Umbral de confianza minima de CLIP para disparar fallback ResNet-50 (86e3122f7)
@@ -125,6 +134,8 @@ def load_settings() -> Settings:
         trusted_proxy_ips=tuple(ip.strip() for ip in os.environ.get("TRUSTED_PROXY_IPS", "").split(",") if ip.strip()),
         max_upload_bytes=_positive_int("MAX_UPLOAD_BYTES", 10 * 1024 * 1024),
         max_image_pixels=_positive_int("MAX_IMAGE_PIXELS", 25_000_000),
+        human_photo_retention_hours=_positive_float("HUMAN_PHOTO_RETENTION_HOURS", 24.0),
+        human_photo_purge_interval_seconds=_positive_float("HUMAN_PHOTO_PURGE_INTERVAL_SECONDS", 900.0),
         clip_model_name=os.environ.get("CLIP_MODEL_NAME", "patrickjohncyh/fashion-clip"),
         clip_confidence_threshold=float(os.environ.get("CLIP_CONFIDENCE_THRESHOLD", "0.40")),
         resnet_fallback_enabled=os.environ.get("RESNET_FALLBACK_ENABLED", "1").lower() in ("1", "true", "yes"),
