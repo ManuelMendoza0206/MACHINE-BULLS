@@ -137,6 +137,28 @@ def absolute_path(relative_path: str) -> Path:
     return settings.media_dir / relative_path
 
 
+def delete_file(relative_path: str) -> bool:
+    """Elimina el archivo del almacenamiento local y Azure si existe."""
+    deleted = False
+    local = absolute_path(relative_path)
+    if local.is_file():
+        try:
+            local.unlink()
+            deleted = True
+        except OSError as exc:
+            logger.warning("Fallo al eliminar archivo local (%s): %s", local, exc)
+
+    if settings.azure_storage_connection_string:
+        try:
+            container = ensure_azure_container()
+            if container is not None:
+                container.delete_blob(relative_path)
+                deleted = True
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("Fallo al eliminar blob en Azure (%s): %s", relative_path, exc)
+    return deleted
+
+
 def read_bytes(relative_path: str) -> bytes:
     """Lee los bytes del archivo desde cache local o descargando de Azure."""
     local = absolute_path(relative_path)

@@ -150,6 +150,15 @@ class MeResponse(BaseModel):
     email: str
 
 
+class CanonicalPhotoResponse(BaseModel):
+    """Estado y URL de la foto canónica del usuario con consentimiento informado."""
+
+    has_canonical: bool
+    photo_url: str | None = None
+    consent_at: datetime | None = None
+    message: str | None = None
+
+
 class VtonJobCreateResponse(BaseModel):
     """POST /api/v1/vton/try-on: job aceptado, status siempre 'processing'."""
 
