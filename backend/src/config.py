@@ -40,6 +40,13 @@ def _load_dotenv(path: Path) -> None:
             os.environ[clave] = valor.strip()
 
 
+def _positive_int(name: str, default: int) -> int:
+    value = int(os.environ.get(name, str(default)))
+    if value <= 0:
+        raise ValueError(f"{name} debe ser mayor que cero")
+    return value
+
+
 @dataclass(frozen=True)
 class Settings:
     """Ajustes efectivos de la aplicacion, resueltos una vez al importar."""
@@ -63,6 +70,12 @@ class Settings:
     azure_storage_public_url_base: str | None
     supabase_jwt_secret: str | None
     supabase_url: str | None
+    environment: str
+    allow_demo_auth: bool
+    allow_unverified_jwt: bool
+    trusted_proxy_ips: tuple[str, ...]
+    max_upload_bytes: int
+    max_image_pixels: int
     # Modelo CLIP para clasificacion y embedding de prendas
     clip_model_name: str
     # Umbral de confianza minima de CLIP para disparar fallback ResNet-50 (86e3122f7)
@@ -87,6 +100,8 @@ def load_settings() -> Settings:
         for o in os.environ.get("CORS_ORIGINS", DEFAULT_CORS_ORIGINS).split(",")
         if o.strip()
     ]
+    environment = os.environ.get("ENV", "development").strip().lower()
+    production = environment in {"production", "prod"}
     return Settings(
         database_url=database_url,
         replicate_api_token=os.environ.get("REPLICATE_API_TOKEN") or None,
@@ -104,6 +119,12 @@ def load_settings() -> Settings:
         azure_storage_public_url_base=os.environ.get("AZURE_STORAGE_PUBLIC_URL_BASE") or None,
         supabase_jwt_secret=os.environ.get("SUPABASE_JWT_SECRET") or None,
         supabase_url=os.environ.get("SUPABASE_URL") or None,
+        environment=environment,
+        allow_demo_auth=os.environ.get("ALLOW_DEMO_AUTH", "false" if production else "true").lower() in ("1", "true", "yes"),
+        allow_unverified_jwt=os.environ.get("ALLOW_UNVERIFIED_JWT", "false").lower() in ("1", "true", "yes"),
+        trusted_proxy_ips=tuple(ip.strip() for ip in os.environ.get("TRUSTED_PROXY_IPS", "").split(",") if ip.strip()),
+        max_upload_bytes=_positive_int("MAX_UPLOAD_BYTES", 10 * 1024 * 1024),
+        max_image_pixels=_positive_int("MAX_IMAGE_PIXELS", 25_000_000),
         clip_model_name=os.environ.get("CLIP_MODEL_NAME", "patrickjohncyh/fashion-clip"),
         clip_confidence_threshold=float(os.environ.get("CLIP_CONFIDENCE_THRESHOLD", "0.40")),
         resnet_fallback_enabled=os.environ.get("RESNET_FALLBACK_ENABLED", "1").lower() in ("1", "true", "yes"),

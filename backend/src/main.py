@@ -53,6 +53,8 @@ app.add_middleware(
         "/shopping/evaluate": "20/minute",
         "/vton/try-on": "10/minute",
     },
+    redis_url=settings.redis_url,
+    trusted_proxy_ips=settings.trusted_proxy_ips,
 )
 
 # 3. CORS Middleware: orígenes permitidos (soporta cualquier puerto localhost/127.0.0.1)

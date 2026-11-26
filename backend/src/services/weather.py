@@ -42,6 +42,10 @@ def get_current_weather(
     api_key: str | None = None,
 ) -> dict[str, Any]:
     """Obtiene el clima actual y su clasificación para moda."""
+    if lat is not None and not -90 <= lat <= 90:
+        raise ValueError("latitud debe estar entre -90 y 90")
+    if lon is not None and not -180 <= lon <= 180:
+        raise ValueError("longitud debe estar entre -180 y 180")
     key = api_key or os.environ.get("WEATHER_API_KEY") or os.environ.get("WEATHERAPI_KEY")
     cache_key = f"{city}_{lat}_{lon}"
     now = time.time()
@@ -54,10 +58,10 @@ def get_current_weather(
     # 1. Intentar con WeatherAPI si hay API Key
     if key:
         query = city if city else f"{lat or DEFAULT_LAT},{lon or DEFAULT_LON}"
-        url = f"http://api.weatherapi.com/v1/current.json?key={key}&q={query}&aqi=no"
+        url = "https://api.weatherapi.com/v1/current.json"
         try:
             with httpx.Client(timeout=5.0) as client:
-                res = client.get(url)
+                res = client.get(url, params={"key": key, "q": query, "aqi": "no"})
                 if res.status_code == 200:
                     data = res.json()
                     temp_c = float(data["current"]["temp_c"])
