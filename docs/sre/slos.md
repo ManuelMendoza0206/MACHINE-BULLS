@@ -9,6 +9,18 @@
 
 ## 1. Resumen Ejecutivo y Presupuesto de Error
 
+> **Estado de validación:** los valores de esta tabla son objetivos declarados, no resultados
+> medidos ni evidencia de cumplimiento. En particular, el objetivo VTON p95 <15 s no está
+> respaldado por un benchmark reproducible en el repositorio. El código conserva una estimación
+> de 18 s por capa para el provider, mientras que comentarios de demo mencionan ~50 s por capa;
+> ninguna de esas cifras sustituye mediciones p50/p95 por provider, número de capas, hardware y
+> configuración. Hasta publicar esa medición, presentar los SLO como **objetivos pendientes de
+> validar**, no como SLOs alcanzados.
+
+Las métricas actuales se agregan en memoria por proceso y conservan una ventana limitada de
+muestras; no representan una serie histórica global cuando se ejecutan varios workers. El endpoint
+`/metrics` expone el snapshot disponible en el proceso que responde.
+
 StyleMe establece Service Level Objectives (SLOs) cuantitativos y medibles con el objetivo de garantizar una experiencia de usuario fluida, predecible y resiliente tanto en las recomendaciones de vestuario en tiempo real como en la generación asíncrona de pruebas virtuales (VTON).
 
 ### Tabla Maestra de SLOs
