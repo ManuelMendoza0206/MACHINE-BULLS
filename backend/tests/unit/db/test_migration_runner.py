@@ -12,11 +12,11 @@ def test_fresh_database_schedules_every_migration() -> None:
     assert actions == [("apply", "0001_initial.sql", "a"), ("apply", "0002_more.sql", "b")]
 
 
-def test_complete_legacy_schema_is_adopted_without_replaying_sql() -> None:
+def test_complete_legacy_schema_is_reconciled_by_idempotent_migrations() -> None:
     actions = migration_actions(
         {"0001_initial.sql": "a", "0002_more.sql": "b"}, {}, legacy_state="complete"
     )
-    assert actions == [("adopt", "0001_initial.sql", "a"), ("adopt", "0002_more.sql", "b")]
+    assert actions == [("apply", "0001_initial.sql", "a"), ("apply", "0002_more.sql", "b")]
 
 
 def test_partial_legacy_schema_fails_without_migration_actions() -> None:

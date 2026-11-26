@@ -40,8 +40,8 @@ def migration_actions(
         if current != checksum:
             raise RuntimeError(f"checksum distinto para migración aplicada {version}")
 
-    if legacy_state == "complete" and not applied:
-        return [("adopt", version, checksum) for version, checksum in migrations.items()]
+    # En un esquema legado completo se vuelven a ejecutar: los SQL versionados
+    # usan IF NOT EXISTS y así se reconcilian índices, RLS y triggers ausentes.
     return [
         ("apply", version, checksum)
         for version, checksum in migrations.items()
@@ -179,14 +179,6 @@ def apply_migrations(database_url: str | None = None, migrations_dir: Path | Non
         actions = migration_actions(checksums, recorded, legacy_state=legacy_state)
 
         for action, version, checksum in actions:
-            if action == "adopt":
-                cur.execute(
-                    "INSERT INTO public.schema_migrations (version, checksum) VALUES (%s, %s)",
-                    (version, checksum),
-                )
-                conn.commit()
-                print(f"[ADOPT] {version} (esquema legado validado)")
-                continue
             sql = contents[version]
             print(f"[RUN ] Aplicando {version}...")
             try:
