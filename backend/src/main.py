@@ -11,9 +11,9 @@ Arranque local:
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import sys
-import asyncio
 from pathlib import Path
 
 # Asegura que src/ esté en sys.path tanto si uvicorn se invoca como src.main:app,

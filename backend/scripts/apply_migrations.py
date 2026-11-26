@@ -6,8 +6,8 @@ Uso:
 
 from __future__ import annotations
 
-import os
 import hashlib
+import os
 import sys
 from pathlib import Path
 
@@ -144,9 +144,7 @@ def apply_migrations(database_url: str | None = None, migrations_dir: Path | Non
                 (table_name,),
             )
             legacy_columns_ok &= required.issubset({row[0] for row in cur.fetchall()})
-        if recorded:
-            legacy_state = "empty"
-        elif not existing_tables:
+        if recorded or not existing_tables:
             legacy_state = "empty"
         elif required_legacy_tables.issubset(existing_tables) and legacy_columns_ok:
             legacy_state = "complete"
