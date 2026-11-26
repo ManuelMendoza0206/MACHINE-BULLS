@@ -62,6 +62,7 @@ test('muestra scores y abre el probador sin volver a recomendar', async ({ page 
   const recommendationCalls = await mockOutfitPage(page);
 
   await page.goto('/outfits');
+  await expect(page.getByText(/Clima estimado/i)).toBeVisible();
   await expect(page.getByText('Armonía cromática')).toBeVisible();
   await expect(page.getByText('92%')).toBeVisible();
   await expect.poll(recommendationCalls).toBe(1);

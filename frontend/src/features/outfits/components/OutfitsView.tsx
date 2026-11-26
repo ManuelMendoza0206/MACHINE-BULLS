@@ -422,7 +422,8 @@ export function OutfitsView(): JSX.Element {
         signal
       );
     },
-    enabled: Boolean(me),
+    // Espera el clima (o su fallback tras timeout) para no recomendar dos veces.
+    enabled: Boolean(me) && !weatherQuery.isPending,
     staleTime: Infinity,
     refetchOnWindowFocus: false,
   });
@@ -626,7 +627,7 @@ export function OutfitsView(): JSX.Element {
                 : weatherQuery.data.weather_type === 'warm'
                   ? 'Cálido'
                   : 'Templado'}
-              )
+              ){weatherQuery.data.source === 'fallback' && ' · Clima estimado'}
             </span>
           </div>
         )}
