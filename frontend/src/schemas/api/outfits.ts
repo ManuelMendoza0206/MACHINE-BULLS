@@ -29,7 +29,7 @@ export const OutfitRecommendationResponseSchema = z.object({
 export type OutfitRecommendationResponse = z.infer<typeof OutfitRecommendationResponseSchema>;
 
 export const OutfitRecommendRequestSchema = z.object({
-  user_id: z.string().uuid(),
+  user_id: z.string().uuid().optional(),
   target_aesthetic: z.string().optional(),
   available_garment_ids: z.array(z.string().uuid()).optional(),
   occasion: z.string().optional(),
@@ -38,7 +38,7 @@ export const OutfitRecommendRequestSchema = z.object({
 export type OutfitRecommendRequest = z.infer<typeof OutfitRecommendRequestSchema>;
 
 export const OutfitRemixRequestSchema = z.object({
-  user_id: z.string(),
+  user_id: z.string().optional(),
   pinned_garment_ids: z.array(z.string()).min(1),
   occasion: z.string().optional(),
   weather: z.string().optional(),
@@ -50,7 +50,7 @@ export const OutfitPlanStatusSchema = z.enum(['PLANNED', 'COMPLETED', 'CANCELLED
 export type OutfitPlanStatus = z.infer<typeof OutfitPlanStatusSchema>;
 
 export const OutfitPlanCreateSchema = z.object({
-  user_id: z.string(),
+  user_id: z.string().optional(),
   planned_date: z.string(),
   garment_ids: z.array(z.string()).min(1),
   outfit_id: z.string().nullable().optional(),

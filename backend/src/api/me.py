@@ -29,8 +29,8 @@ def me(user: UserDep) -> MeResponse:
 @router.post("/me/purge-photos")
 @router.post("/auth/purge-photos")
 def purge_user_photos(user: UserDep) -> dict:
-    """Purga inmediata de fotos temporales de pose y silueta por privacidad."""
-    eliminados = storage.purge_all_human_photos()
+    """Purga las fotos temporales de pose y silueta del usuario actual."""
+    eliminados = storage.purge_user_human_photos(user.id)
     return {
         "status": "ok",
         "purged_count": len(eliminados),

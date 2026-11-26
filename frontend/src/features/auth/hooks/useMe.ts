@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { getMe } from '@/features/auth/api/getMe';
 
 /**
- * Identidad del usuario demo en el backend (MVP sin JWT).
+ * Identidad autenticada resuelta por el backend.
  *
  * La identidad es estable de por vida (`staleTime: Infinity`): pedirla más de una
  * vez por sesión es ruido. Todas las vistas que necesitan `user_id` (recomendador

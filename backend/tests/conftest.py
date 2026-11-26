@@ -39,6 +39,8 @@ os.environ.setdefault("DATABASE_URL", f"sqlite:///{_TEST_DB}")
 os.environ.setdefault("AZURE_STORAGE_CONNECTION_STRING", "")
 os.environ.setdefault("AZURE_STORAGE_PUBLIC_URL_BASE", "")
 os.environ.setdefault("VTON_PROVIDER", "mock")
+os.environ.setdefault("SUPABASE_JWT_SECRET", "unverified-secret")
+os.environ.setdefault("ALLOW_DEMO_AUTH", "true")
 os.environ.setdefault("MEDIA_DIR", _TEST_MEDIA)
 # Cola ARQ: puerto muerto para que los tests SIEMPRE ejerzan el fallback a
 # BackgroundTasks (determinista; el enqueue real lo cubre el smoke de compose

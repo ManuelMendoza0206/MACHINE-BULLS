@@ -1,7 +1,6 @@
 import { z } from 'zod';
 
-// Identidad del MVP: el backend no valida JWT, así que /me expone el user_id
-// bajo el que persiste prendas y outfits (coincide con domain/schemas.py::MeResponse).
+// Identidad derivada por backend desde JWT o demo explícitamente habilitado en desarrollo.
 export const MeResponseSchema = z.object({
   user_id: z.string().uuid(),
   email: z.string().email(),

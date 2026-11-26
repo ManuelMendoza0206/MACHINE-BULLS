@@ -10,7 +10,6 @@ Contrato del frontend (`schemas/api/vton.ts`):
 
 from __future__ import annotations
 
-import io
 import json
 import logging
 from typing import Annotated
@@ -28,12 +27,14 @@ from domain.schemas import (
     VtonJobStatusResponse,
 )
 from services import storage
-from services.auth import DEMO_USER_EMAIL
+from services.auth import get_current_user
+from services.image_upload import read_validated_image
 from services.vton import pipeline
 
 router = APIRouter(prefix="/api/v1/vton", tags=["vton"])
 
 SessionDep = Annotated[Session, Depends(get_session)]
+UserDep = Annotated[User, Depends(get_current_user)]
 
 logger = logging.getLogger(__name__)
 
@@ -43,6 +44,7 @@ async def create_try_on(
     background_tasks: BackgroundTasks,
     user_image: UploadFile,
     session: SessionDep,
+    user: UserDep,
     outfit_id: Annotated[str | None, Form()] = None,
     garment_layers: Annotated[str | None, Form()] = None,
 ) -> VtonJobCreateResponse:
@@ -53,16 +55,7 @@ async def create_try_on(
     Redis caido: el job corre igual en BackgroundTasks (fallback de demo,
     `services/queue.py` explica el orden).
     """
-    contenido = user_image.file.read()
-    if not contenido:
-        raise HTTPException(status_code=400, detail="user_image vacia")
-
-    try:
-        from PIL import Image, UnidentifiedImageError
-
-        Image.open(io.BytesIO(contenido)).load()
-    except UnidentifiedImageError as exc:
-        raise HTTPException(status_code=400, detail="user_image no es imagen") from exc
+    contenido, _image = read_validated_image(user_image, "user_image")
 
     # Protocolo de entrada (4.1.5): la foto debe estar en A-Pose ANTES de
     # gastar GPU. Rechazo temprano con causa en detalle (frontend la muestra).
@@ -72,12 +65,13 @@ async def create_try_on(
     if not pose.ok:
         raise HTTPException(status_code=422, detail=f"A-Pose invalida: {pose.reason}")
 
-    user = session.query(User).filter(User.email == DEMO_USER_EMAIL).first()
-    if user is None:
-        raise HTTPException(status_code=400, detail="no hay usuario demo; sube una prenda primero")
-
     # Resolver el outfit: outfit_id directo, o garment_layers -> outfit sintetico.
     if outfit_id:
+        outfit = session.get(Outfit, outfit_id)
+        if outfit is None:
+            raise HTTPException(status_code=404, detail="outfit no existe")
+        if outfit.user_id != user.id:
+            raise HTTPException(status_code=403, detail="no autorizado para probar este outfit")
         n_capas = pipeline.outfit_layer_count(session, outfit_id)
         if n_capas == 0:
             raise HTTPException(status_code=404, detail="outfit no existe o sin prendas")
@@ -87,7 +81,7 @@ async def create_try_on(
     else:
         raise HTTPException(status_code=400, detail="falta outfit_id o garment_layers")
 
-    rel_humano, _ = storage.save_image(contenido, "humans")
+    rel_humano, _ = storage.save_image(contenido, f"humans/{user.id}")
 
     # Job en cola: nace pending (contrato) con stage QUEUED (spec 4.1.8).
     job = VtonJob(
@@ -118,10 +112,12 @@ async def create_try_on(
 
 
 @router.get("/status/{job_id}", response_model=VtonJobStatusResponse)
-def job_status(job_id: str, session: SessionDep) -> VtonJobStatusResponse:
+def job_status(job_id: str, session: SessionDep, user: UserDep) -> VtonJobStatusResponse:
     """Estado del job. completed incluye result_url absoluto (lo exige Zod)."""
     job = session.get(VtonJob, job_id)
     if job is None:
+        raise HTTPException(status_code=404, detail="job no existe")
+    if job.user_id != user.id:
         raise HTTPException(status_code=404, detail="job no existe")
 
     result_url = None
@@ -137,15 +133,11 @@ def job_status(job_id: str, session: SessionDep) -> VtonJobStatusResponse:
 
 
 @router.get("/jobs", response_model=VtonJobListResponse)
-def list_vton_jobs(session: SessionDep, limit: int = 50) -> VtonJobListResponse:
+def list_vton_jobs(session: SessionDep, user: UserDep, limit: int = 50) -> VtonJobListResponse:
     """Historial de jobs VTON del usuario demo (G3).
 
     Ordenados por fecha de creación desc (más recientes primero).
     """
-    user = session.query(User).filter(User.email == DEMO_USER_EMAIL).first()
-    if user is None:
-        return VtonJobListResponse(jobs=[], total=0)
-
     query = (
         session.query(VtonJob)
         .filter(VtonJob.user_id == user.id)
@@ -192,6 +184,14 @@ def _outfit_desde_layers(session: Session, user_id: str, garment_layers_json: st
         prenda = session.get(Garment, gid)
         if prenda is None:
             raise HTTPException(status_code=404, detail=f"prenda {gid} no existe")
+        if prenda.owner_id != user_id:
+            from domain.models import GarmentOwnership
+
+            ownership = session.query(GarmentOwnership).filter_by(
+                user_id=user_id, garment_id=gid
+            ).first()
+            if ownership is None:
+                raise HTTPException(status_code=403, detail="no autorizado para usar esta prenda")
         session.add(
             OutfitGarment(
                 outfit_id=outfit.id,

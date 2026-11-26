@@ -136,7 +136,7 @@ def test_recommend_arma_outfit_y_persiste(client: Any, demo_user_id: str) -> Non
 
 def test_recommend_user_desconocido_da_404(client: Any) -> None:
     r = client.post("/api/v1/outfits/recommend", json={"user_id": "no-existe"})
-    assert r.status_code == 404
+    assert r.status_code == 403
 
 
 def test_recommend_sin_prendas_da_400(client: Any, demo_user_id: str) -> None:

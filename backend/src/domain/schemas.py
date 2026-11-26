@@ -99,7 +99,7 @@ class OutfitRecommendRequest(BaseModel):
 
     model_config = ConfigDict(extra="ignore")
 
-    user_id: str
+    user_id: str | None = None
     target_aesthetic: str | None = None
     available_garment_ids: list[str] | None = None
     occasion: str | None = None
@@ -111,7 +111,7 @@ class OutfitRemixRequest(BaseModel):
 
     model_config = ConfigDict(extra="ignore")
 
-    user_id: str
+    user_id: str | None = None
     pinned_garment_ids: list[str] = Field(min_length=1)
     occasion: str | None = None
     weather: str | None = None
@@ -144,12 +144,7 @@ class OutfitFeedbackOut(BaseModel):
 
 
 class MeResponse(BaseModel):
-    """GET /api/v1/me: identidad del usuario demo.
-
-    El MVP no valida JWT (el frontend no manda Authorization); este endpoint
-    expone el user_id con el que el backend persiste prendas y outfits, para
-    que el frontend no tenga que adivinarlo.
-    """
+    """GET /api/v1/me: identidad resuelta desde JWT o demo habilitado en desarrollo."""
 
     user_id: str
     email: str
@@ -252,7 +247,7 @@ class WeatherResponse(BaseModel):
 class OutfitPlanCreate(BaseModel):
     """Creación de un plan de vestimenta."""
 
-    user_id: str
+    user_id: str | None = None
     planned_date: str  # YYYY-MM-DD
     garment_ids: list[str] = Field(min_length=1)
     outfit_id: str | None = None

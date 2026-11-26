@@ -75,7 +75,10 @@ def save_image(content: bytes, subfolder: str, ext: str = "jpg") -> tuple[str, s
     Guarda copia en cache local de disco y, si Azure esta configurado, sube
     el blob al contenedor configurado con su Content-Type correcto.
     """
-    carpeta = FOLDER_MAP.get(subfolder, subfolder)
+    parts = subfolder.split("/", 1)
+    carpeta = FOLDER_MAP.get(parts[0], parts[0])
+    if len(parts) == 2:
+        carpeta = f"{carpeta}/{parts[1]}"
     nombre = f"{uuid.uuid4().hex}.{ext}"
     relativo = f"{carpeta}/{nombre}"
 
@@ -209,7 +212,7 @@ def purge_expired_human_photos(
 
     if humanos_dir.exists() and humanos_dir.is_dir():
         ahora = time.time()
-        for archivo in sorted(humanos_dir.iterdir()):
+        for archivo in sorted(humanos_dir.rglob("*")):
             if not archivo.is_file():
                 continue
             try:
@@ -242,7 +245,7 @@ def purge_all_human_photos(base_dir: Path | None = None) -> list[str]:
     eliminados: list[str] = []
 
     if humanos_dir.exists() and humanos_dir.is_dir():
-        for archivo in sorted(humanos_dir.iterdir()):
+        for archivo in sorted(humanos_dir.rglob("*")):
             if not archivo.is_file():
                 continue
             try:
@@ -258,5 +261,30 @@ def purge_all_human_photos(base_dir: Path | None = None) -> list[str]:
                 eliminados.append(nombre)
 
     return eliminados
+
+
+def purge_user_human_photos(user_id: str, base_dir: Path | None = None) -> list[str]:
+    """Delete only the temporary human photos stored under one user's prefix."""
+    if not user_id or "/" in user_id or "\\" in user_id or user_id in {".", ".."}:
+        raise ValueError("user_id inválido")
+    media_path = base_dir if base_dir is not None else settings.media_dir
+    relative_folder = Path(FOLDER_MAP["humans"]) / user_id
+    local_folder = media_path / relative_folder
+    deleted: list[str] = []
+    if local_folder.exists():
+        for path in local_folder.rglob("*"):
+            if path.is_file():
+                try:
+                    path.unlink()
+                    deleted.append(path.name)
+                except OSError as exc:
+                    logger.warning("No se pudo purgar foto temporal %s: %s", path, exc)
+        try:
+            local_folder.rmdir()
+        except OSError:
+            pass
+    if base_dir is None and settings.azure_storage_connection_string:
+        deleted.extend(_purge_azure_human_blobs(str(relative_folder), max_age_seconds=None))
+    return deleted
 
 

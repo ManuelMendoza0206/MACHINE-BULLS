@@ -263,6 +263,8 @@ def adopt_candidate_garment(session: Session, user_id: str, garment_id: str) -> 
     garment = session.get(Garment, garment_id)
     if garment is None:
         raise HTTPException(status_code=404, detail="prenda no existe")
+    if garment.owner_id != user_id or not garment.is_candidate:
+        raise HTTPException(status_code=404, detail="prenda candidata no existe")
 
     # Verificar si ya pertenece al usuario
     existing_ownership = (
