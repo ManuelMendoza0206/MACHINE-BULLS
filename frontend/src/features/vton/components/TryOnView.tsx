@@ -72,7 +72,8 @@ export function TryOnView(): JSX.Element {
       if (!me) throw new Error('sin identidad del backend');
       return recommendOutfits({ user_id: me.user_id }, signal);
     },
-    enabled: Boolean(me),
+    // Si la URL ya trae outfit, no necesitamos llamar al recomendador otra vez.
+    enabled: Boolean(me) && !queryOutfitId,
     staleTime: 60_000,
   });
 

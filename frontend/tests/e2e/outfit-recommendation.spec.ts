@@ -1,36 +1,85 @@
-import { test } from '@playwright/test';
+import { expect, test } from '@playwright/test';
+import outfitsFixture from '../fixtures/api/outfitRecommendationResponse.json';
+import capsuleFixture from '../fixtures/api/capsuleCatalogResponse.json';
 
-// outfits-flow/spec.md — "Estado vacío distingue causa raíz" +
-// "Navegación de detalle sin refetch innecesario".
-//
-// Scaffold dejado por Leonardo (Asiento D, Sprint 2, Q1 — team-rotation-plan.md §3/§7).
-// La UI real de este flujo (`/outfits`) es un stub de navegación (Sprint 1, commit
-// e2593c3) — la feature completa es el epic `frontend/outfits-flow`, Sprint 4 (ver
-// backlog-seed.md / team-rotation-plan.md §7.1: dueño Manuel).
-//
-// TODO(sprint-4, Manuel): quitar el `.skip` de cada test y completar los pasos cuando
-// la UI del grid/detalle de outfits exista. Referencia de forma de datos:
-// tests/fixtures/api/outfitRecommendationResponse.json.
+const outfitId = '8c7f8b1a-1234-4567-8901-abcdef123456';
 
-test.skip('grid de outfits muestra chromatic_score/embedding_score y navega al detalle', async ({
-  page: _page,
-}) => {
-  // 1. await page.goto('/outfits')
-  // 2. Mockear/esperar respuesta con la forma de
-  //    tests/fixtures/api/outfitRecommendationResponse.json (outfit_id, aesthetic,
-  //    chromatic_score, embedding_score, garments[])
-  // 3. Click en una card del grid → navegar a /outfits/[outfitId]
-  // 4. Verificar que NO se dispara una nueva llamada de red para ese outfit
-  //    (interceptar requests, contar) — Requirement "Navegación de detalle sin
-  //    refetch innecesario"
+async function mockOutfitPage(page: import('@playwright/test').Page, recommendStatus = 200) {
+  let recommendationCalls = 0;
+  await page.route('**/api/v1/me', route =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        user_id: 'aaaaaaaa-4567-4891-8901-abcdef123456',
+        email: 'demo@test.dev',
+      }),
+    })
+  );
+  await page.route('**/api/v1/shopping/weather**', route =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        city: 'La Paz',
+        temp_c: 15,
+        condition: 'Cool',
+        weather_type: 'mild',
+        is_raining: false,
+        source: 'fallback',
+      }),
+    })
+  );
+  await page.route('**/api/v1/garments/capsule', route =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify(capsuleFixture),
+    })
+  );
+  await page.route('**/api/v1/outfits/recommend', route => {
+    recommendationCalls += 1;
+    return route.fulfill({
+      status: recommendStatus,
+      contentType: 'application/json',
+      body:
+        recommendStatus === 200
+          ? JSON.stringify(outfitsFixture)
+          : JSON.stringify({ detail: 'Te falta una prenda inferior para armar combinaciones.' }),
+    });
+  });
+  await page.route(`**/api/v1/outfits/${outfitId}`, route =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify(outfitsFixture.outfits[0]),
+    })
+  );
+  return () => recommendationCalls;
+}
+
+test('muestra scores y abre el probador sin volver a recomendar', async ({ page }) => {
+  const recommendationCalls = await mockOutfitPage(page);
+
+  await page.goto('/outfits');
+  await expect(page.getByText('Armonía cromática')).toBeVisible();
+  await expect(page.getByText('92%')).toBeVisible();
+  await expect.poll(recommendationCalls).toBe(1);
+  const callsBeforeNavigation = recommendationCalls();
+  await page.getByRole('button', { name: 'Probar puesto' }).click();
+
+  await expect(page).toHaveURL(new RegExp(`/try-on\\?outfit=${outfitId}`));
+  await expect(page.getByRole('heading', { name: 'Outfit a probar' })).toBeVisible();
+  expect(recommendationCalls()).toBe(callsBeforeNavigation);
 });
 
-test.skip('armario sin una categoría muestra el hint de categoría faltante, no un vacío genérico', async ({
-  page: _page,
-}) => {
-  // 1. await page.goto('/outfits') con un armario mockeado que carece de una
-  //    categoría (ej. sin calzado)
-  // 2. Verificar que se muestra el hint con la posición exacta faltante, distinto
-  //    del mensaje de "no hay combinaciones disponibles" genérico — Requirement
-  //    "Estado vacío distingue causa raíz"
+test('explica la categoría faltante cuando el armario no permite recomendar', async ({ page }) => {
+  await mockOutfitPage(page, 400);
+
+  await page.goto('/outfits');
+
+  await expect(
+    page.getByText('Te falta una prenda inferior para armar combinaciones.')
+  ).toBeVisible();
+  await expect(page.getByRole('button', { name: /Completar el armario/i })).toBeVisible();
 });
