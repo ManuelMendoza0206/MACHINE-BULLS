@@ -8,6 +8,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/features/auth/hooks/useAuth';
 import { useMe } from '@/features/auth/hooks/useMe';
 import { listCapsuleGarments } from '@/features/garments/api/listCapsuleGarments';
+import { PhotoCard } from '@/features/profile/components/PhotoCard';
 import { getHealth } from '@/features/profile/api/getHealth';
 import { mapStatusToUserMessage } from '@/lib/api/mapStatusToUserMessage';
 import { ApiError } from '@/lib/errors';
@@ -175,6 +176,11 @@ export function ProfileView(): JSX.Element {
           Prendas listas para combinar en el probador
         </div>
       </Card>
+
+      {/* Foto canónica persistente con consentimiento informado */}
+      <div className="lg:col-span-12">
+        <PhotoCard />
+      </div>
 
       {/* Diagnóstico técnico accesible y discreto (conserva testids para verificación) */}
       <div className="lg:col-span-12">
