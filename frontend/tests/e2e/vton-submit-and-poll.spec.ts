@@ -77,3 +77,32 @@ test('polling muestra el resultado completado sin cancelar el job', async ({ pag
   expect(polls).toBeGreaterThanOrEqual(3);
   expect(cancelled).toEqual([]);
 });
+
+test('el outfit seleccionado conserva sus tres prendas al crear una prueba multicapa', async ({
+  page,
+}) => {
+  let requestBody = '';
+  await page.route('**/api/v1/vton/try-on', route => {
+    requestBody = route.request().postData() ?? '';
+    return route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify(createResponse),
+    });
+  });
+  await page.route(`**/api/v1/vton/status/${JOB_ID}`, route =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ job_id: JOB_ID, status: 'processing' }),
+    })
+  );
+  await openTryOn(page);
+
+  await expect(page.getByRole('list', { name: 'Prendas del outfit' }).getByRole('listitem')).toHaveCount(3);
+  await page.getByRole('button', { name: 'Generar prueba virtual' }).click();
+  await expect(page.getByRole('button', { name: 'Procesando en el probador…' })).toBeDisabled();
+
+  expect(requestBody).toContain(OUTFIT_ID);
+  expect(requestBody).not.toContain('garment_layers');
+});
