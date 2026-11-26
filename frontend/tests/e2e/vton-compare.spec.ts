@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { JOB_ID, OUTFIT_ID, RESULT_URL, openTryOn } from './helpers/vton';
+import { JOB_ID, RESULT_URL, openTryOn } from './helpers/vton';
 import recommendFixture from '../fixtures/api/outfitRecommendationResponse.json';
 
 const ALTERNATE_OUTFIT_ID = '7c8f8b1a-1234-4567-8901-abcdef123456';

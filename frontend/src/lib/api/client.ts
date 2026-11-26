@@ -77,6 +77,15 @@ export async function apiRequest<T>(config: RequestConfig, schema: z.ZodType<T>)
     }
   }
 
+  if (controller.signal.aborted) {
+    clearTimeout(timeoutId);
+    if (config.signal) config.signal.removeEventListener('abort', onExternalAbort);
+    throw new NetworkError(
+      'Request aborted',
+      new DOMException('The operation was aborted', 'AbortError')
+    );
+  }
+
   const headers: Record<string, string> = { ...authHeaders };
   let body: BodyInit | undefined;
 

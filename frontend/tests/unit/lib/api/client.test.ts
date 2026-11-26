@@ -93,9 +93,15 @@ describe('apiRequest', () => {
       'fetch',
       vi.fn().mockImplementation((_url: string, opts: RequestInit) => {
         return new Promise((_resolve, reject) => {
-          opts.signal?.addEventListener('abort', () => {
+          const signal = opts.signal;
+          const rejectAbort = (): void => {
             reject(new DOMException('The operation was aborted', 'AbortError'));
-          });
+          };
+          if (signal?.aborted) {
+            rejectAbort();
+            return;
+          }
+          signal?.addEventListener('abort', rejectAbort, { once: true });
         });
       })
     );
