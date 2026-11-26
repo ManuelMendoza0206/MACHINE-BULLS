@@ -42,9 +42,10 @@ logger = logging.getLogger(__name__)
 @router.post("/try-on", response_model=VtonJobCreateResponse)
 async def create_try_on(
     background_tasks: BackgroundTasks,
-    user_image: UploadFile,
     session: SessionDep,
     user: UserDep,
+    user_image: UploadFile | None = None,
+    use_canonical: Annotated[bool, Form()] = False,
     outfit_id: Annotated[str | None, Form()] = None,
     garment_layers: Annotated[str | None, Form()] = None,
     steps: Annotated[int | None, Form()] = None,
@@ -57,6 +58,7 @@ async def create_try_on(
     Acepta `outfit_id` (outfit ya recomendado) o `garment_layers` (lista JSON
     de {garment_id, position} del flujo multicapa). Si ninguno viene, 400.
     Permite opcionalmente hiperparámetros de inferencia (`steps`, `guidance`, `seed`, `layer_mode`).
+    Permite `use_canonical=true` para reusar la foto canónica registrada por el usuario.
     Redis caido: el job corre igual en BackgroundTasks (fallback de demo,
     `services/queue.py` explica el orden).
     """
@@ -67,15 +69,26 @@ async def create_try_on(
     if layer_mode is not None and layer_mode not in ("sequential", "from_original"):
         raise HTTPException(status_code=422, detail="layer_mode debe ser 'sequential' o 'from_original'")
 
-    contenido, _image = read_validated_image(user_image, "user_image")
+    if use_canonical:
+        if not user.canonical_consent or not user.canonical_photo_path:
+            raise HTTPException(
+                status_code=400,
+                detail="El usuario no tiene una foto canónica configurada con consentimiento.",
+            )
+        rel_humano = user.canonical_photo_path
+    elif user_image is not None:
+        contenido, _image = read_validated_image(user_image, "user_image")
+        from services.pose_check import validate_apose
 
-    # Protocolo de entrada (4.1.5): la foto debe estar en A-Pose ANTES de
-    # gastar GPU. Rechazo temprano con causa en detalle (frontend la muestra).
-    from services.pose_check import validate_apose
-
-    pose = validate_apose(contenido)
-    if not pose.ok:
-        raise HTTPException(status_code=422, detail=f"A-Pose invalida: {pose.reason}")
+        pose = validate_apose(contenido)
+        if not pose.ok:
+            raise HTTPException(status_code=422, detail=f"A-Pose invalida: {pose.reason}")
+        rel_humano, _ = storage.save_image(contenido, f"humans/{user.id}")
+    else:
+        raise HTTPException(
+            status_code=400,
+            detail="Debe proporcionar user_image o especificar use_canonical=true",
+        )
 
     # Resolver el outfit: outfit_id directo, o garment_layers -> outfit sintetico.
     if outfit_id:
@@ -92,8 +105,6 @@ async def create_try_on(
         n_capas = pipeline.outfit_layer_count(session, outfit_id)
     else:
         raise HTTPException(status_code=400, detail="falta outfit_id o garment_layers")
-
-    rel_humano, _ = storage.save_image(contenido, f"humans/{user.id}")
 
     # Job en cola: nace pending (contrato) con stage QUEUED (spec 4.1.8).
     job = VtonJob(
