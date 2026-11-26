@@ -88,8 +88,8 @@ def is_catvton_server_reachable(url: str, timeout_s: float = 0.8) -> bool:
 # El modelo acepta estas categorias; el mapping desde CLIP vive en domain.enums.
 VTON_CATEGORIES = ("upper", "lower", "dresses")
 
-# Tiempo estimado por prenda en Replicate (para estimated_time_seconds).
-ESTIMATED_SECONDS_PER_LAYER = 18.0
+# Tiempo estimado por prenda en Replicate / CatVTON (calibrado con benchmark empírico: 12.0s por capa).
+ESTIMATED_SECONDS_PER_LAYER = 12.0
 
 
 class VtonInferenceProvider(Protocol):

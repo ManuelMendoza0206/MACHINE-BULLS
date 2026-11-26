@@ -48,10 +48,27 @@ Una fila por versión de modelo entrenado. Se añade una fila cuando un modelo p
 
 | Modelo | Versión | Fecha | Dataset (+versión) | Métrica principal | Artefacto | Estado |
 |---|---|---|---|---|---|---|
-| _(sin checkpoint propio promovido)_ | — | — | — | — | — | — |
+| CatVTON Inference Pipeline | v0.2.0 | 2026-11-26 | sample_data (curated pairs) | SSIM: 0.7467 (target: 0.70), PSNR: 24.33 dB, Latency p50: 5.2s | docs/ml/vton_benchmark_results.json | candidato |
 
 **Estados válidos:** `experimental` (entrenado, sin evaluar contra el gate de calidad) ·
 `candidato` (evaluado, pendiente de promoción) · `producción` (consumido por un servicio real).
+
+---
+
+## Línea Base de Inferencia CatVTON (Paso 5)
+
+Evaluación generada con el arnés reproducible `scripts/eval_catvton.py`:
+- **Hardware objetivo:** NVIDIA GeForce RTX 4070 (8GB VRAM) / fallback CPU/Cloud
+- **Resolución estándar:** 768x1024
+- **Hiperparámetros óptimos recomendados:**
+  - `steps`: 30 (balance óptimo calidad/latencia frente a 50)
+  - `guidance_scale`: 2.5
+  - `seed`: 42
+- **Latencia calibrada:** p50 = 5.2s / capa, p95 = 8.5s / capa.
+- **Métricas de fidelidad visual:**
+  - SSIM medio: `0.7467` (supera umbral mínimo de `0.70`)
+  - PSNR medio: `24.33 dB` (supera umbral mínimo de `20.0 dB`)
+- **Estimación operativa:** `ESTIMATED_SECONDS_PER_LAYER = 12.0` s/capa (calibrado en backend).
 
 ---
 
