@@ -2,6 +2,7 @@
 
 const isDev = process.env.NODE_ENV !== 'production';
 const apiOrigin = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000';
+const isLocalhost = apiOrigin.includes('localhost') || apiOrigin.includes('127.0.0.1');
 
 // Baseline CSP. `script-src` keeps `'unsafe-inline'` because Next injects inline bootstrap
 // scripts and the app has statically-rendered routes (a nonce + `strict-dynamic` policy would
@@ -21,7 +22,7 @@ const csp = [
   "base-uri 'self'",
   "form-action 'self'",
   "object-src 'none'",
-  ...(isDev ? [] : ['upgrade-insecure-requests']),
+  ...(isDev || isLocalhost ? [] : ['upgrade-insecure-requests']),
 ].join('; ');
 
 const securityHeaders = [
