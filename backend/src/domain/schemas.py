@@ -159,6 +159,15 @@ class CanonicalPhotoResponse(BaseModel):
     message: str | None = None
 
 
+class ShareLookResponse(BaseModel):
+    """Respuesta de generación de enlace para compartir look."""
+
+    job_id: str
+    share_token: str
+    share_url: str
+    expires_in_hours: int = 24
+
+
 class VtonJobCreateResponse(BaseModel):
     """POST /api/v1/vton/try-on: job aceptado, status siempre 'processing'."""
 

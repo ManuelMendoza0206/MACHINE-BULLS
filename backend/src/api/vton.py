@@ -14,13 +14,15 @@ import json
 import logging
 from typing import Annotated
 
-from fastapi import APIRouter, BackgroundTasks, Depends, Form, HTTPException, UploadFile
+from fastapi import APIRouter, BackgroundTasks, Depends, Form, HTTPException, Response, UploadFile
 from sqlalchemy.orm import Session
 
+from config import settings
 from db.session import get_session
 from domain.enums import VtonJobStatus, VtonStage
 from domain.models import Garment, Outfit, OutfitGarment, User, VtonJob, new_uuid
 from domain.schemas import (
+    ShareLookResponse,
     VtonJobCreateResponse,
     VtonJobListItem,
     VtonJobListResponse,
@@ -30,6 +32,7 @@ from services import storage
 from services.auth import get_current_user
 from services.image_upload import read_validated_image
 from services.vton import pipeline
+from services.vton.share_tokens import generate_share_token, verify_share_token
 
 router = APIRouter(prefix="/api/v1/vton", tags=["vton"])
 
@@ -202,6 +205,69 @@ def list_vton_jobs(session: SessionDep, user: UserDep, limit: int = 50) -> VtonJ
         )
 
     return VtonJobListResponse(jobs=items, total=total)
+
+
+@router.post("/{job_id}/share", response_model=ShareLookResponse)
+def share_look(job_id: str, session: SessionDep, user: UserDep) -> ShareLookResponse:
+    """Genera un enlace público firmado y temporal para compartir el look."""
+    job = session.get(VtonJob, job_id)
+    if job is None:
+        raise HTTPException(status_code=404, detail="Job VTON no encontrado")
+    if job.user_id != user.id:
+        raise HTTPException(status_code=403, detail="No autorizado para compartir este look")
+    if job.status != VtonJobStatus.COMPLETED.value or not job.result_path:
+        raise HTTPException(status_code=400, detail="El trabajo VTON no ha finalizado exitosamente")
+
+    token = generate_share_token(job.id, user.id, ttl_hours=24)
+    share_url = f"{settings.public_base_url.rstrip('/')}/api/v1/vton/shared/{token}"
+    return ShareLookResponse(
+        job_id=job.id,
+        share_token=token,
+        share_url=share_url,
+        expires_in_hours=24,
+    )
+
+
+@router.get("/shared/{token}")
+def get_shared_look(token: str, session: SessionDep) -> Response:
+    """Endpoint público para acceder a la imagen de un look compartido mediante token firmado."""
+    payload = verify_share_token(token)
+    job = session.get(VtonJob, payload["job_id"])
+    if job is None or job.user_id != payload.get("user_id") or not job.result_path:
+        raise HTTPException(status_code=404, detail="Look no disponible")
+
+    image_bytes = storage.read_bytes(job.result_path)
+    return Response(
+        content=image_bytes,
+        media_type="image/jpeg",
+        headers={
+            "Cache-Control": "private, max-age=3600",
+            "X-Content-Type-Options": "nosniff",
+        },
+    )
+
+
+@router.get("/{job_id}/download")
+def download_look(job_id: str, session: SessionDep, user: UserDep) -> Response:
+    """Descarga directa del resultado del look con cabeceras attachment protegidas."""
+    job = session.get(VtonJob, job_id)
+    if job is None:
+        raise HTTPException(status_code=404, detail="Job VTON no encontrado")
+    if job.user_id != user.id:
+        raise HTTPException(status_code=403, detail="No autorizado para descargar este look")
+    if job.status != VtonJobStatus.COMPLETED.value or not job.result_path:
+        raise HTTPException(status_code=400, detail="El trabajo VTON no ha finalizado exitosamente")
+
+    image_bytes = storage.read_bytes(job.result_path)
+    filename = f"styleme-look-{job.id[:8]}.jpg"
+    return Response(
+        content=image_bytes,
+        media_type="image/jpeg",
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}"',
+            "X-Content-Type-Options": "nosniff",
+        },
+    )
 
 
 def _outfit_desde_layers(session: Session, user_id: str, garment_layers_json: str) -> str:
