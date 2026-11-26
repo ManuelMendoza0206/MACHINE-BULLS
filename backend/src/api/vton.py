@@ -47,14 +47,26 @@ async def create_try_on(
     user: UserDep,
     outfit_id: Annotated[str | None, Form()] = None,
     garment_layers: Annotated[str | None, Form()] = None,
+    steps: Annotated[int | None, Form()] = None,
+    guidance: Annotated[float | None, Form()] = None,
+    seed: Annotated[int | None, Form()] = None,
+    layer_mode: Annotated[str | None, Form()] = None,
 ) -> VtonJobCreateResponse:
     """Crea un job de try-on, lo encola en Redis (ARQ) y devuelve su id.
 
     Acepta `outfit_id` (outfit ya recomendado) o `garment_layers` (lista JSON
     de {garment_id, position} del flujo multicapa). Si ninguno viene, 400.
+    Permite opcionalmente hiperparámetros de inferencia (`steps`, `guidance`, `seed`, `layer_mode`).
     Redis caido: el job corre igual en BackgroundTasks (fallback de demo,
     `services/queue.py` explica el orden).
     """
+    if steps is not None and (steps < 10 or steps > 100):
+        raise HTTPException(status_code=422, detail="steps debe estar entre 10 y 100")
+    if guidance is not None and (guidance < 1.0 or guidance > 10.0):
+        raise HTTPException(status_code=422, detail="guidance debe estar entre 1.0 y 10.0")
+    if layer_mode is not None and layer_mode not in ("sequential", "from_original"):
+        raise HTTPException(status_code=422, detail="layer_mode debe ser 'sequential' o 'from_original'")
+
     contenido, _image = read_validated_image(user_image, "user_image")
 
     # Protocolo de entrada (4.1.5): la foto debe estar en A-Pose ANTES de
@@ -96,11 +108,26 @@ async def create_try_on(
 
     from services.queue import enqueue_vton_job
 
-    enqueued = await enqueue_vton_job(job.id, rel_humano)
+    enqueued = await enqueue_vton_job(
+        job.id,
+        rel_humano,
+        steps=steps,
+        guidance=guidance,
+        seed=seed,
+        layer_mode=layer_mode,
+    )
     if not enqueued:
         # Fallback de demo (Redis caido): el mismo pipeline corre en el server
         # de FastAPI como siempre. Contrato publico identico.
-        background_tasks.add_task(pipeline.run_job, job.id, rel_humano)
+        background_tasks.add_task(
+            pipeline.run_job,
+            job.id,
+            rel_humano,
+            num_inference_steps=steps,
+            guidance_scale=guidance,
+            seed=seed,
+            layer_mode=layer_mode,
+        )
     else:
         logger.info("job %s encolado en Redis", job.id)
 

@@ -47,6 +47,10 @@ def run_job(
     job_id: str,
     human_image_path: str,
     provider: VtonInferenceProvider | None = None,
+    num_inference_steps: int | None = None,
+    guidance_scale: float | None = None,
+    seed: int | None = None,
+    layer_mode: str | None = None,
 ) -> None:
     """Ejecuta el try-on encadenado de todas las capas del job con failover automatico. Corre en background."""
     primary = provider or build_provider()
@@ -67,7 +71,16 @@ def run_job(
                         f"Circuit breaker abierto para {prov.name}: proveedor temporalmente no disponible"
                     )
                 _set_stage(session, job, VtonStage.VALIDATING)
-                resultado_path = _procesar(session, job, human_image_path, prov)
+                resultado_path = _procesar(
+                    session,
+                    job,
+                    human_image_path,
+                    prov,
+                    num_inference_steps=num_inference_steps,
+                    guidance_scale=guidance_scale,
+                    seed=seed,
+                    layer_mode=layer_mode,
+                )
                 job.result_path = resultado_path
                 job.error_message = None
                 _set_stage(session, job, VtonStage.COMPLETED)
@@ -97,7 +110,16 @@ def run_job(
         session.close()
 
 
-def _procesar(session, job: VtonJob, human_image_path: str, provider: VtonInferenceProvider) -> str:
+def _procesar(
+    session,
+    job: VtonJob,
+    human_image_path: str,
+    provider: VtonInferenceProvider,
+    num_inference_steps: int | None = None,
+    guidance_scale: float | None = None,
+    seed: int | None = None,
+    layer_mode: str | None = None,
+) -> str:
     """Corre las capas encadenadas y devuelve el path relativo del resultado."""
     capas = _capas_del_job(session, job)
     if not capas:
@@ -121,14 +143,18 @@ def _procesar(session, job: VtonJob, human_image_path: str, provider: VtonInfere
         )
         cb = get_circuit_breaker(provider.name)
         cb.check_call()
+        base_human = humano if layer_mode == "from_original" and i > 0 else resultado
         try:
             resultado = retry_with_backoff(
-                lambda r=resultado, p=prenda_bytes, d=descripcion, c=categoria, m=mask_type: provider.try_on(
+                lambda r=base_human, p=prenda_bytes, d=descripcion, c=categoria, m=mask_type: provider.try_on(
                     human_image=r,
                     garment_image=p,
                     garment_description=d,
                     category=c,
                     mask_type=m,
+                    num_inference_steps=num_inference_steps,
+                    guidance_scale=guidance_scale,
+                    seed=seed,
                 ),
                 max_retries=3,
                 base_delay=0.1,
