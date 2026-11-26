@@ -79,6 +79,61 @@ def apply_migrations(database_url: str | None = None, migrations_dir: Path | Non
     applied_now: list[str] = []
     with psycopg.connect(conn_url) as conn, conn.cursor() as cur:
         cur.execute("SELECT pg_advisory_lock(hashtext('styleme:migrations'));")
+        cur.execute("SELECT to_regclass('public.schema_migrations') IS NOT NULL;")
+        has_history = cur.fetchone()[0]
+        recorded: dict[str, str | None] = {}
+        legacy_state = "empty"
+        if has_history:
+            cur.execute(
+                """SELECT EXISTS (
+                    SELECT 1 FROM information_schema.columns
+                    WHERE table_schema = 'public' AND table_name = 'schema_migrations'
+                      AND column_name = 'checksum'
+                )"""
+            )
+            has_checksums = cur.fetchone()[0]
+            cur.execute(
+                "SELECT version, checksum FROM public.schema_migrations;"
+                if has_checksums
+                else "SELECT version, NULL::varchar FROM public.schema_migrations;"
+            )
+            recorded = {row[0]: row[1] for row in cur.fetchall()}
+            migration_actions(
+                checksums,
+                {name: checksum for name, checksum in recorded.items() if checksum is not None},
+                legacy_state="empty",
+            )
+        else:
+            cur.execute(
+                """SELECT table_name FROM information_schema.tables
+                   WHERE table_schema = 'public' AND table_type = 'BASE TABLE'"""
+            )
+            existing_tables = {row[0] for row in cur.fetchall()}
+            required_legacy_tables = {
+                "users", "garments", "outfits", "vton_jobs", "garment_ownerships",
+                "outfit_garments", "outfit_feedbacks", "outfit_usage_logs", "outfit_plans",
+            }
+            required_legacy_columns = {
+                "garments": {"is_candidate", "status"},
+                "outfits": {"occasion", "weather", "reason"},
+            }
+            legacy_columns_ok = True
+            for table_name, required in required_legacy_columns.items():
+                cur.execute(
+                    """SELECT column_name FROM information_schema.columns
+                       WHERE table_schema = 'public' AND table_name = %s""",
+                    (table_name,),
+                )
+                legacy_columns_ok &= required.issubset({row[0] for row in cur.fetchall()})
+            if existing_tables:
+                legacy_state = (
+                    "complete"
+                    if required_legacy_tables.issubset(existing_tables) and legacy_columns_ok
+                    else "partial"
+                )
+            # Detecta instalaciones parciales antes de crear roles, schema o tablas.
+            migration_actions(checksums, {}, legacy_state=legacy_state)
+
         if os.environ.get("DB_MODE", "supabase").strip().lower() == "local":
             cur.execute(
                 """
@@ -110,8 +165,6 @@ def apply_migrations(database_url: str | None = None, migrations_dir: Path | Non
         cur.execute("ALTER TABLE public.schema_migrations ADD COLUMN IF NOT EXISTS checksum VARCHAR(64);")
         conn.commit()
 
-        cur.execute("SELECT version, checksum FROM public.schema_migrations;")
-        recorded = {row[0]: row[1] for row in cur.fetchall()}
         # Compatibilidad segura con la tabla creada por el runner anterior.
         # Checksums ausentes se fijan al SQL actual una sola vez.
         for version, checksum in list(recorded.items()):
@@ -123,33 +176,6 @@ def apply_migrations(database_url: str | None = None, migrations_dir: Path | Non
                 recorded[version] = checksums[version]
         conn.commit()
 
-        cur.execute(
-            """SELECT table_name FROM information_schema.tables
-               WHERE table_schema = 'public' AND table_type = 'BASE TABLE'"""
-        )
-        existing_tables = {row[0] for row in cur.fetchall()}
-        required_legacy_tables = {
-            "users", "garments", "outfits", "vton_jobs", "garment_ownerships",
-            "outfit_garments", "outfit_feedbacks", "outfit_usage_logs", "outfit_plans",
-        }
-        required_legacy_columns = {
-            "garments": {"is_candidate", "status"},
-            "outfits": {"occasion", "weather", "reason"},
-        }
-        legacy_columns_ok = True
-        for table_name, required in required_legacy_columns.items():
-            cur.execute(
-                """SELECT column_name FROM information_schema.columns
-                   WHERE table_schema = 'public' AND table_name = %s""",
-                (table_name,),
-            )
-            legacy_columns_ok &= required.issubset({row[0] for row in cur.fetchall()})
-        if recorded or not existing_tables:
-            legacy_state = "empty"
-        elif required_legacy_tables.issubset(existing_tables) and legacy_columns_ok:
-            legacy_state = "complete"
-        else:
-            legacy_state = "partial"
         actions = migration_actions(checksums, recorded, legacy_state=legacy_state)
 
         for action, version, checksum in actions:
