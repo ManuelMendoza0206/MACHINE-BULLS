@@ -104,6 +104,9 @@ class VtonInferenceProvider(Protocol):
         garment_description: str,
         category: str,
         mask_type: str | None = None,
+        num_inference_steps: int | None = None,
+        guidance_scale: float | None = None,
+        seed: int | None = None,
     ) -> bytes:
         """Devuelve los bytes de la imagen resultante.
 
@@ -133,6 +136,9 @@ class ReplicateVtonProvider:
         garment_description: str,
         category: str,
         mask_type: str | None = None,
+        num_inference_steps: int | None = None,
+        guidance_scale: float | None = None,
+        seed: int | None = None,
     ) -> bytes:
         """Try-on real contra Replicate. `mask_type` no aplica: el modelo cloud
         decide con `category`; se acepta y se ignora para compatibilidad."""
@@ -235,6 +241,9 @@ class HttpVtonProvider:
         garment_description: str,
         category: str,
         mask_type: str | None = None,
+        num_inference_steps: int | None = None,
+        guidance_scale: float | None = None,
+        seed: int | None = None,
     ) -> bytes:
         if category not in VTON_CATEGORIES:
             raise ValueError(
@@ -251,6 +260,17 @@ class HttpVtonProvider:
             # Extension multicapa del Layer Manager (CatVTON la entiende como
             # upper|lower|overall|inner|outer). Un server viejo la ignora.
             payload["mask_type"] = mask_type
+
+        steps = num_inference_steps if num_inference_steps is not None else getattr(settings, "vton_steps", None)
+        guidance = guidance_scale if guidance_scale is not None else getattr(settings, "vton_guidance", None)
+        active_seed = seed if seed is not None else getattr(settings, "vton_seed", None)
+
+        if steps is not None:
+            payload["num_inference_steps"] = steps
+        if guidance is not None:
+            payload["guidance_scale"] = guidance
+        if active_seed is not None:
+            payload["seed"] = active_seed
         headers = {"Content-Type": "application/json"}
         if self._token:
             headers["Authorization"] = f"Bearer {self._token}"
@@ -300,6 +320,9 @@ class MockVtonProvider:
         garment_description: str,
         category: str,
         mask_type: str | None = None,
+        num_inference_steps: int | None = None,
+        guidance_scale: float | None = None,
+        seed: int | None = None,
     ) -> bytes:
         """Compone con PIL; mask_type no aplica al mock."""
         persona = Image.open(io.BytesIO(human_image)).convert("RGB")
