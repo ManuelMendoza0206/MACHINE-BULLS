@@ -15,6 +15,8 @@ import { recommendOutfits } from '@/features/outfits/api/recommendOutfits';
 import { useMe } from '@/features/auth/hooks/useMe';
 import { createVtonJob } from '@/features/vton/api/createVtonJob';
 import { getVtonJobStatus } from '@/features/vton/api/getVtonJobStatus';
+import { useVtonJobStatus } from '@/features/vton/hooks/useVtonJobStatus';
+import { CompareView } from '@/features/vton/components/CompareView';
 import {
   checkCachedVtonResult,
   setCachedVtonResult,
@@ -34,6 +36,47 @@ const POSITION_LABEL: Record<OutfitPosition, string> = {
 /** Techo de polling configurable por entorno (ms). El job NUNCA se cancela al alcanzarlo. */
 function getPollTimeoutMs(): number {
   return Number(process.env['NEXT_PUBLIC_VTON_POLL_TIMEOUT_MS'] ?? 90_000);
+}
+
+function ComparisonResult({
+  jobId,
+  originalUrl,
+  originalLabel,
+  comparisonLabel,
+}: {
+  jobId: string;
+  originalUrl: string;
+  originalLabel: string;
+  comparisonLabel: string;
+}): JSX.Element {
+  const result = useVtonJobStatus({ jobId, timeoutMs: getPollTimeoutMs() });
+
+  if (result.status === 'completed' && result.data?.result_url) {
+    return (
+      <CompareView
+        originalUrl={originalUrl}
+        comparisonUrl={result.data.result_url}
+        originalLabel={originalLabel}
+        comparisonLabel={comparisonLabel}
+      />
+    );
+  }
+
+  if (result.status === 'failed') {
+    return (
+      <p role="alert">
+        {result.data?.error_message || 'No se pudo generar el resultado alternativo.'}
+      </p>
+    );
+  }
+
+  if (result.status === 'timeout') {
+    return (
+      <p role="status">La comparación sigue procesándose. Podrás consultarla en el historial.</p>
+    );
+  }
+
+  return <p role="status">Generando resultado alternativo…</p>;
 }
 /** Backoff: 1s, 1.5s, 2.25s… techo 5s. */
 const POLL_BASE_MS = 1_000;
@@ -86,6 +129,9 @@ export function TryOnView(): JSX.Element {
   const [jobId, setJobId] = useState<string | null>(null);
   const [resultUrl, setResultUrl] = useState<string | null>(null);
   const [failure, setFailure] = useState<string | null>(null);
+  const [comparisonOpen, setComparisonOpen] = useState(false);
+  const [comparisonOutfitId, setComparisonOutfitId] = useState('');
+  const [comparisonJobId, setComparisonJobId] = useState<string | null>(null);
   const [createError, setCreateError] = useState<string | null>(null);
   const [isCheckingManual, setIsCheckingManual] = useState(false);
   const [manualCheckMsg, setManualCheckMsg] = useState<string | null>(null);
@@ -109,9 +155,27 @@ export function TryOnView(): JSX.Element {
     queryFn: ({ signal }) => listCapsuleGarments(signal),
   });
 
+  const comparisonOptionsQuery = useQuery({
+    queryKey: ['outfits', 'comparison-options', me?.user_id],
+    queryFn: ({ signal }) => {
+      if (!me) throw new Error('sin identidad del backend');
+      return recommendOutfits({ user_id: me.user_id }, signal);
+    },
+    enabled: comparisonOpen && Boolean(me) && Boolean(queryOutfitId),
+    staleTime: 60_000,
+  });
+
   const createJob = useMutation({
     mutationFn: (vars: { image: File; id: string }) => createVtonJob(vars.image, vars.id),
   });
+  const createComparisonJob = useMutation({
+    mutationFn: (vars: { image: File; id: string }) => createVtonJob(vars.image, vars.id),
+  });
+
+  const comparisonOptions = queryOutfitId
+    ? (comparisonOptionsQuery.data?.outfits ?? [])
+    : availableOutfits;
+  const comparisonOutfit = comparisonOptions.find(item => item.outfit_id === comparisonOutfitId);
 
   // Detector de visibilidad de pestaña (visibilityState)
   useEffect(() => {
@@ -218,6 +282,10 @@ export function TryOnView(): JSX.Element {
     pausedAtRef.current = null;
     setManualCheckMsg(null);
     setPhase('idle');
+    setComparisonOpen(false);
+    setComparisonOutfitId('');
+    setComparisonJobId(null);
+    createComparisonJob.reset();
   };
 
   const loadSample = async (url: string, filename: string): Promise<void> => {
@@ -726,6 +794,100 @@ export function TryOnView(): JSX.Element {
                   Probar otro outfit
                 </Button>
               </div>
+              <section
+                className="space-y-3 border-t border-border/50 pt-4"
+                aria-label="Comparar outfits"
+              >
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setComparisonOpen(open => !open)}
+                >
+                  {comparisonOpen ? 'Cerrar comparación' : 'Comparar con otro outfit'}
+                </Button>
+
+                {comparisonOpen && (
+                  <div className="space-y-3 rounded-xl border border-border/70 bg-muted/20 p-4">
+                    <div>
+                      <h3 className="font-semibold">Prueba otra combinación con la misma foto</h3>
+                      <p className="text-xs text-muted-foreground">
+                        La foto permanece en esta sesión y se vuelve a enviar para generar el otro
+                        resultado.
+                      </p>
+                    </div>
+
+                    {comparisonOptionsQuery.isError && queryOutfitId ? (
+                      <p role="alert" className="text-sm text-destructive">
+                        No pudimos cargar otras combinaciones. Intenta de nuevo más tarde.
+                      </p>
+                    ) : (
+                      <select
+                        aria-label="Outfit alternativo"
+                        value={comparisonOutfitId}
+                        onChange={event => setComparisonOutfitId(event.currentTarget.value)}
+                        disabled={comparisonOptionsQuery.isPending && Boolean(queryOutfitId)}
+                        className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm"
+                      >
+                        <option value="">
+                          {comparisonOptionsQuery.isPending && queryOutfitId
+                            ? 'Buscando combinaciones…'
+                            : 'Elige otro outfit'}
+                        </option>
+                        {comparisonOptions
+                          .filter(candidate => candidate.outfit_id !== effectiveOutfitId)
+                          .map(candidate => (
+                            <option key={candidate.outfit_id} value={candidate.outfit_id}>
+                              {candidate.aesthetic.replace(/_/g, ' ')}
+                            </option>
+                          ))}
+                      </select>
+                    )}
+
+                    {comparisonOptions.length > 0 &&
+                      comparisonOptions.every(
+                        candidate => candidate.outfit_id === effectiveOutfitId
+                      ) && (
+                        <p role="status" className="text-sm text-muted-foreground">
+                          No encontramos otro outfit para comparar todavía.
+                        </p>
+                      )}
+
+                    <Button
+                      type="button"
+                      size="sm"
+                      onClick={() => {
+                        if (!file || !comparisonOutfitId) return;
+                        createComparisonJob.mutate(
+                          { image: file, id: comparisonOutfitId },
+                          { onSuccess: job => setComparisonJobId(job.job_id) }
+                        );
+                      }}
+                      disabled={!file || !comparisonOutfitId || createComparisonJob.isPending}
+                    >
+                      {createComparisonJob.isPending
+                        ? 'Creando comparación…'
+                        : 'Generar comparación'}
+                    </Button>
+
+                    {createComparisonJob.isError && (
+                      <p role="alert" className="text-sm text-destructive">
+                        {describeCreateError(createComparisonJob.error)}
+                      </p>
+                    )}
+
+                    {comparisonJobId && resultUrl && comparisonOutfit && (
+                      <ComparisonResult
+                        key={comparisonJobId}
+                        jobId={comparisonJobId}
+                        originalUrl={resultUrl}
+                        originalLabel={`Outfit ${outfit.data.aesthetic.replace(/_/g, ' ')}`}
+                        comparisonLabel={`Outfit ${comparisonOutfit.aesthetic.replace(/_/g, ' ')}`}
+                      />
+                    )}
+                  </div>
+                )}
+              </section>
             </div>
           )}
 
