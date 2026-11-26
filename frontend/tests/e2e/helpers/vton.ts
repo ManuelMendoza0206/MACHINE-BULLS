@@ -28,9 +28,14 @@ export async function openTryOn(page: Page): Promise<void> {
       }),
     })
   );
-  await page.route('**/api/v1/outfits/*', route =>
-    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(outfit) })
-  );
+  await page.route('**/api/v1/outfits/*', route => {
+    if (route.request().method() !== 'GET') return route.fallback();
+    return route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify(outfit),
+    });
+  });
   await page.route('**/api/v1/garments/capsule', route =>
     route.fulfill({
       status: 200,

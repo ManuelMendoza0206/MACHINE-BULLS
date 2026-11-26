@@ -18,7 +18,7 @@ export function CompareView({
   const [reveal, setReveal] = useState(50);
 
   return (
-    <section aria-label="Comparación visual de resultados" className="space-y-3">
+    <section aria-label="Comparacion visual de resultados" className="space-y-3">
       <div className="relative aspect-[3/4] overflow-hidden rounded-2xl border border-border bg-muted">
         {/* eslint-disable-next-line @next/next/no-img-element -- generated media can use dynamic storage hosts */}
         <img
