@@ -65,6 +65,12 @@ class Settings:
     # Si esta seteado, `VTON_PROVIDER=auto` lo prioriza sobre Replicate.
     vton_http_url: str | None
     vton_http_timeout_s: float
+    vton_steps: int
+    vton_guidance: float
+    vton_seed: int
+    vton_width: int
+    vton_height: int
+    vton_layer_mode: str
     # Cola asincrona (ARQ). Si Redis no responde al encolar, el backend cae a
     # BackgroundTasks y la demo sigue (ver services/queue.py).
     redis_url: str
@@ -119,6 +125,12 @@ def load_settings() -> Settings:
         # En CPU/VM puede tardar bastante; default generoso y configurable
         # (`or "300"` tolera un env vacío que rompería float("")).
         vton_http_timeout_s=float(os.environ.get("VTON_HTTP_TIMEOUT_S", "300")),
+        vton_steps=_positive_int("VTON_STEPS", 50),
+        vton_guidance=_positive_float("VTON_GUIDANCE", 2.5),
+        vton_seed=int(os.environ.get("VTON_SEED", "42")),
+        vton_width=_positive_int("VTON_WIDTH", 768),
+        vton_height=_positive_int("VTON_HEIGHT", 1024),
+        vton_layer_mode=os.environ.get("VTON_LAYER_MODE", "sequential").strip().lower(),
         redis_url=os.environ.get("REDIS_URL", "redis://localhost:6379/0"),
         public_base_url=os.environ.get("PUBLIC_BASE_URL", "http://localhost:8000"),
         cors_origins=origins,
