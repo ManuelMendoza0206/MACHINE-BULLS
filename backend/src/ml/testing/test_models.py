@@ -12,6 +12,10 @@ from ml.training.train import main as train_main
 from ml.validation.eval import accuracy
 from ml.validation.eval import main as eval_main
 
+# Entrena de verdad: los dos tests de train/correr tardan ~120s en total.
+# Excluible con `pytest -m "not slow"` para un gate rapido.
+pytestmark = pytest.mark.slow
+
 
 def test_config_default_carga_y_valida(tmp_path=None) -> None:
     from ml.training.train import DEFAULT_CONFIG
@@ -31,7 +35,7 @@ def test_config_invalida_reporta_errores(tmp_path) -> None:
 
 
 def test_train_implementado_y_retorna_metricas() -> None:
-    res = train({"epochs": 1, "batch_size": 4})
+    res = train({"epochs": 1, "batch_size": 4}, fast_dev_run=True, use_mlflow=False)
     assert "final_val_acc" in res or "final_train_loss" in res
 
 
@@ -48,7 +52,7 @@ def test_train_main_dry_run_ok(capsys) -> None:
 def test_train_main_run_ejecuta_ok() -> None:
     from ml.training.train import DEFAULT_CONFIG
 
-    assert train_main(["--config", str(DEFAULT_CONFIG), "--run"]) == 0
+    assert train_main(["--config", str(DEFAULT_CONFIG), "--run", "--no-mlflow"]) == 0
 
 
 def test_eval_accuracy_y_cli(tmp_path) -> None:

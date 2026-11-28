@@ -44,6 +44,19 @@ def test_purge_expired_human_photos_directory_not_exists(tmp_path: Path) -> None
     assert eliminados == []
 
 
+def test_purge_user_human_photos_is_scoped(tmp_path: Path) -> None:
+    from services.storage import purge_user_human_photos
+
+    (tmp_path / "humanos" / "user-a").mkdir(parents=True)
+    (tmp_path / "humanos" / "user-b").mkdir(parents=True)
+    (tmp_path / "humanos" / "user-a" / "a.jpg").write_bytes(b"a")
+    (tmp_path / "humanos" / "user-b" / "b.jpg").write_bytes(b"b")
+    deleted = purge_user_human_photos("user-a", base_dir=tmp_path)
+    assert deleted == ["a.jpg"]
+    assert not (tmp_path / "humanos" / "user-a" / "a.jpg").exists()
+    assert (tmp_path / "humanos" / "user-b" / "b.jpg").exists()
+
+
 def test_purge_azure_human_blobs_respects_ttl_and_demand(tmp_path: Path, monkeypatch) -> None:
     """Verifica purga selectiva (>24h) y purga total bajo demanda en Azure Blob Storage."""
     import dataclasses

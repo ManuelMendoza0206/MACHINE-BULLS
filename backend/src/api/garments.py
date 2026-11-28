@@ -9,10 +9,13 @@ Endpoints que el frontend ya llama:
 
 from __future__ import annotations
 
+import base64
+import binascii
 import io
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile
+from PIL import Image, UnidentifiedImageError
 from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
@@ -29,8 +32,10 @@ from domain.models import (
 from domain.schemas import (
     CapsuleCatalogResponse,
     DominantColor,
+    GarmentsListResponse,
     GarmentStatusUpdate,
     GarmentSummary,
+    GarmentUpdateRequest,
     GarmentUploadResponse,
     WardrobeAnalyticsResponse,
 )
@@ -38,6 +43,8 @@ from services import storage
 from services.auth import DEMO_USER_EMAIL, get_current_user, get_demo_user
 from services.garment_analysis.analyzer import analyze_garment
 from services.garment_analysis.background_remover import remove_background
+from services.garment_analysis.color_extraction import dominant_colors
+from services.image_upload import read_validated_image
 
 __all__ = ["DEMO_USER_EMAIL", "get_current_user", "get_demo_user", "router"]
 
@@ -54,17 +61,7 @@ def upload_garment(
     user: UserDep,
 ) -> GarmentUploadResponse:
     """Analiza una prenda subida: CLIP (categoria + estetica) + colores."""
-    contenido = file.file.read()
-    if not contenido:
-        raise HTTPException(status_code=400, detail="archivo vacio")
-
-    try:
-        from PIL import Image, UnidentifiedImageError
-
-        imagen = Image.open(io.BytesIO(contenido))
-        imagen.load()
-    except UnidentifiedImageError as exc:
-        raise HTTPException(status_code=400, detail="archivo no es una imagen") from exc
+    contenido, imagen = read_validated_image(file, "archivo")
 
     # Remocion de fondo textil (u2net_cloth_seg)
     imagen_procesada = remove_background(imagen)
@@ -81,7 +78,9 @@ def upload_garment(
         id=new_uuid(),
         owner_id=user.id,
         category=analisis["category"],
+        subcategory=analisis.get("subcategory"),
         position=analisis["position"],
+        pattern=analisis.get("pattern"),
         image_path=rel_orig,
         processed_image_path=rel_proc,
         dominant_colors=analisis["dominant_colors"],
@@ -104,10 +103,26 @@ def upload_garment(
     return GarmentUploadResponse(
         garment_id=garment.id,
         category=garment.category,
+        subcategory=garment.subcategory,
         position=garment.position,
         top_aesthetics=garment.top_aesthetics,
         dominant_colors=[DominantColor.model_validate(c) for c in garment.dominant_colors],
         processed_image_url=storage.url_for(garment.processed_image_path),
+        pattern=garment.pattern,
+    )
+
+
+def _garment_a_summary(g: Garment) -> GarmentSummary:
+    """Serializa un Garment a GarmentSummary reutilizado en listings y updates."""
+    return GarmentSummary(
+        id=g.id,
+        processed_image_url=storage.url_for(g.processed_image_path),
+        category=g.category,
+        subcategory=getattr(g, "subcategory", None),
+        dominant_aesthetic=_dominant_aesthetic(g),
+        position=g.position,
+        status=getattr(g, "status", "AVAILABLE"),
+        pattern=getattr(g, "pattern", None),
     )
 
 
@@ -127,22 +142,7 @@ def list_capsule(
         .all()
     )
 
-    resumen: list[GarmentSummary] = []
-    # El listing muestra todo el catalogo (el adopt marca pertenencia). En el
-    # MVP la capsule es el catalogo completo: las propias ya estan adoptadas de
-    # fabrica (upload crea ownership). El frontend distingue el estado con el
-    # 409 del adopt, no con el listing.
-    for g in catalogo:
-        resumen.append(
-            GarmentSummary(
-                id=g.id,
-                processed_image_url=storage.url_for(g.processed_image_path),
-                category=g.category,
-                dominant_aesthetic=_dominant_aesthetic(g),
-                position=g.position,
-                status=getattr(g, "status", "AVAILABLE"),
-            )
-        )
+    resumen = [_garment_a_summary(g) for g in catalogo]
     return CapsuleCatalogResponse(garments=resumen)
 
 
@@ -157,7 +157,7 @@ def update_garment_status(
     garment = session.get(Garment, garment_id)
     if garment is None:
         raise HTTPException(status_code=404, detail="prenda no existe")
-    if garment.owner_id is not None and garment.owner_id != user.id:
+    if garment.owner_id != user.id:
         raise HTTPException(status_code=403, detail="no tienes permiso para modificar esta prenda")
 
     allowed = {"AVAILABLE", "LAUNDRY", "REPAIR", "INACTIVE"}
@@ -172,20 +172,137 @@ def update_garment_status(
     session.commit()
     session.refresh(garment)
 
-    return GarmentSummary(
-        id=garment.id,
-        processed_image_url=storage.url_for(garment.processed_image_path),
-        category=garment.category,
-        dominant_aesthetic=_dominant_aesthetic(garment),
-        position=garment.position,
-        status=garment.status,
-    )
+    return _garment_a_summary(garment)
+
+
+def _decode_base64_png(raw_payload: str) -> tuple[bytes, Image.Image]:
+    """Decodifica un PNG en base64 (o data URL) y valida que sea una imagen PIL legible."""
+    b64_part = raw_payload.strip()
+    if b64_part.startswith("data:") and "," in b64_part:
+        b64_part = b64_part.split(",", 1)[1]
+    try:
+        raw_bytes = base64.b64decode(b64_part, validate=True)
+    except (binascii.Error, ValueError) as exc:
+        raise HTTPException(status_code=400, detail="imagen base64 invalida") from exc
+    if not raw_bytes:
+        raise HTTPException(status_code=400, detail="imagen base64 vacia")
+    try:
+        img = Image.open(io.BytesIO(raw_bytes))
+        img.load()
+    except UnidentifiedImageError as exc:
+        raise HTTPException(status_code=400, detail="archivo editado no es una imagen valida") from exc
+    buf = io.BytesIO()
+    img.convert("RGBA").save(buf, format="PNG")
+    return buf.getvalue(), img
+
+
+@router.patch("/{garment_id}", response_model=GarmentSummary)
+def update_garment(
+    garment_id: str,
+    payload: GarmentUpdateRequest,
+    session: SessionDep,
+    user: UserDep,
+) -> GarmentSummary:
+    """Persiste ediciones de categoria, posicion, subcategoria, patron o recorte PNG."""
+    garment = session.get(Garment, garment_id)
+    if garment is None:
+        raise HTTPException(status_code=404, detail="prenda no existe")
+    if garment.owner_id != user.id:
+        raise HTTPException(status_code=403, detail="no tienes permiso para editar esta prenda")
+
+    if payload.category is not None:
+        cat_clean = payload.category.strip()
+        if not cat_clean:
+            raise HTTPException(status_code=400, detail="la categoria no puede quedar vacia")
+        garment.category = cat_clean
+
+    if payload.position is not None:
+        garment.position = payload.position.value
+
+    if payload.subcategory is not None:
+        garment.subcategory = payload.subcategory.strip() or None
+
+    if payload.pattern is not None:
+        garment.pattern = payload.pattern.strip() or None
+
+    if payload.processed_image_base64:
+        png_bytes, pil_img = _decode_base64_png(payload.processed_image_base64)
+        rel_proc, _ = storage.save_image(png_bytes, "garments")
+        garment.processed_image_path = rel_proc
+        garment.dominant_colors = dominant_colors(pil_img)
+
+    session.commit()
+    session.refresh(garment)
+    return _garment_a_summary(garment)
+
+
+@router.delete("/{garment_id}")
+def delete_garment(
+    garment_id: str,
+    session: SessionDep,
+    user: UserDep,
+) -> dict[str, Any]:
+    """Elimina una prenda propia o desvincula una prenda capsula adoptada del armario."""
+    garment = session.get(Garment, garment_id)
+    if garment is None:
+        raise HTTPException(status_code=404, detail="prenda no existe")
+
+    if garment.owner_id is None:
+        removed = (
+            session.query(GarmentOwnership)
+            .filter(
+                GarmentOwnership.user_id == user.id,
+                GarmentOwnership.garment_id == garment_id,
+            )
+            .delete()
+        )
+        if removed == 0:
+            raise HTTPException(status_code=403, detail="esta prenda capsula no pertenece a tu armario")
+        session.commit()
+        return {"deleted": True, "id": garment_id}
+
+    if garment.owner_id != user.id:
+        raise HTTPException(status_code=403, detail="no tienes permiso para eliminar esta prenda")
+
+    session.query(OutfitGarment).filter(OutfitGarment.garment_id == garment_id).delete()
+    session.query(GarmentOwnership).filter(GarmentOwnership.garment_id == garment_id).delete()
+    session.delete(garment)
+    session.commit()
+    return {"deleted": True, "id": garment_id}
 
 
 def _dominant_aesthetic(g: Garment) -> str:
     if g.top_aesthetics:
         return g.top_aesthetics[0]["aesthetic"]
     return "casual"
+
+
+@router.get("", response_model=GarmentsListResponse)
+def list_garments(
+    session: SessionDep,
+    user: UserDep,
+    category: str | None = None,
+    status: str | None = None,
+) -> GarmentsListResponse:
+    """Listado de prendas pertenecientes al usuario (armario activo)."""
+    owned_ids = [
+        row.garment_id
+        for row in session.query(GarmentOwnership).filter(GarmentOwnership.user_id == user.id).all()
+    ]
+    if not owned_ids:
+        return GarmentsListResponse(garments=[])
+
+    query = session.query(Garment).filter(
+        Garment.id.in_(owned_ids),
+        Garment.is_candidate.is_(False),
+    )
+    if category:
+        query = query.filter(Garment.category == category)
+    if status:
+        query = query.filter(Garment.status == status)
+
+    garments = query.order_by(Garment.created_at.desc()).all()
+    return GarmentsListResponse(garments=[_garment_a_summary(g) for g in garments])
 
 
 @router.get("/analytics", response_model=WardrobeAnalyticsResponse)
@@ -270,10 +387,12 @@ def get_wardrobe_analytics(
         gaps.append("Falta una prenda de abrigo (chaqueta o campera) para clima frío.")
     if "footwear" not in positions_present:
         gaps.append("Falta calzado registrado para completar outfits de forma integral.")
-    if "bottom" not in positions_present:
-        gaps.append("Faltan prendas inferiores (pantalones o faldas) para combinaciones completas.")
-    elif sum(1 for g in garments if g.position == "bottom") < 2:
+    if "bottom" not in positions_present and "dress" not in positions_present:
+        gaps.append("Faltan prendas inferiores (pantalones, faldas o vestidos) para combinaciones completas.")
+    elif "bottom" in positions_present and sum(1 for g in garments if g.position == "bottom") < 2 and "dress" not in positions_present:
         gaps.append("Tu guardarropa ganaría versatilidad con mayor variedad de prendas inferiores.")
+    if "bag" not in positions_present:
+        gaps.append("Falta un bolso o mochila versátil para complementar tus outfits.")
 
     if not any("shirt" in c or "camisa" in c or "blouse" in c for c in categories_present):
         gaps.append("Falta una camisa o prenda formal superior para eventos elegantes o de trabajo.")

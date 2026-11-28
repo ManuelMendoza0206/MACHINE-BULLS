@@ -133,25 +133,25 @@ def train(
             token = os.environ.get("DAGSHUB_USER_TOKEN") or os.environ.get("DAGSHUB_TOKEN")
             if token:
                 os.environ["DAGSHUB_TOKEN"] = token
+                import dagshub
+                import mlflow
 
-            import dagshub
-            import mlflow
-
-            # Inicializar DagsHub si hay credenciales
-            dagshub.init(repo_owner="jesusrodrigov", repo_name="machine-bulls", mlflow=True)
-            mlflow.start_run(run_name=run_name)
-            mlflow.log_params({
-                "model_type": "fashion-clip-adapter",
-                "backbone": "patrickjohncyh/fashion-clip (frozen)",
-                "head_dims": "512->256->128",
-                "epochs": epochs,
-                "batch_size": batch_size,
-                "lr": lr,
-                "seed": seed,
-                "device": str(device),
-                "num_train_samples": len(train_dataset),
-            })
-            mlflow_active = True
+                dagshub.init(repo_owner="jesusrodrigov", repo_name="machine-bulls", mlflow=True)
+                mlflow.start_run(run_name=run_name)
+                mlflow.log_params({
+                    "model_type": "fashion-clip-adapter",
+                    "backbone": "patrickjohncyh/fashion-clip (frozen)",
+                    "head_dims": "512->256->128",
+                    "epochs": epochs,
+                    "batch_size": batch_size,
+                    "lr": lr,
+                    "seed": seed,
+                    "device": str(device),
+                    "num_train_samples": len(train_dataset),
+                })
+                mlflow_active = True
+            else:
+                print("[INFO] Sin DAGSHUB_TOKEN en entorno; ejecutando entrenamiento sin tracking remoto.")
         except Exception as ex:  # noqa: BLE001
             print(f"[WARN] No se pudo inicializar MLflow/DagsHub: {ex}. Continuando localmente.")
 

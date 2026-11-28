@@ -9,7 +9,7 @@ en estado de error tipado. Si cambia un schema Zod, cambia este.
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
@@ -45,10 +45,12 @@ class GarmentUploadResponse(BaseModel):
 
     garment_id: str
     category: str
+    subcategory: str | None = None
     position: GarmentPosition | None = None
     top_aesthetics: list[AestheticScore] | None = None
     dominant_colors: list[DominantColor] = Field(min_length=1)
     processed_image_url: str
+    pattern: str | None = None
 
 
 class GarmentSummary(BaseModel):
@@ -57,9 +59,11 @@ class GarmentSummary(BaseModel):
     id: str
     processed_image_url: str
     category: str
+    subcategory: str | None = None
     dominant_aesthetic: str
     position: GarmentPosition | None = None
     status: str = "AVAILABLE"
+    pattern: str | None = None
 
 
 class GarmentStatusUpdate(BaseModel):
@@ -68,8 +72,26 @@ class GarmentStatusUpdate(BaseModel):
     status: str
 
 
+class GarmentUpdateRequest(BaseModel):
+    """Payload PATCH /api/v1/garments/{garment_id} para corregir metadatos o recorte."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    category: str | None = None
+    position: GarmentPosition | None = None
+    subcategory: str | None = None
+    pattern: str | None = None
+    processed_image_base64: str | None = None
+
+
 class CapsuleCatalogResponse(BaseModel):
     """GET /api/v1/garments/capsule."""
+
+    garments: list[GarmentSummary]
+
+
+class GarmentsListResponse(BaseModel):
+    """GET /api/v1/garments."""
 
     garments: list[GarmentSummary]
 
@@ -99,7 +121,7 @@ class OutfitRecommendRequest(BaseModel):
 
     model_config = ConfigDict(extra="ignore")
 
-    user_id: str
+    user_id: str | None = None
     target_aesthetic: str | None = None
     available_garment_ids: list[str] | None = None
     occasion: str | None = None
@@ -111,11 +133,21 @@ class OutfitRemixRequest(BaseModel):
 
     model_config = ConfigDict(extra="ignore")
 
-    user_id: str
+    user_id: str | None = None
     pinned_garment_ids: list[str] = Field(min_length=1)
     occasion: str | None = None
     weather: str | None = None
     target_aesthetic: str | None = None
+
+
+class ManualOutfitEvaluateRequest(BaseModel):
+    """POST /api/v1/outfits/evaluate-manual."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    garment_ids: list[str] = Field(min_length=1, max_length=6)
+    occasion: str | None = None
+    weather: str | None = None
 
 
 class OutfitRecommendResponse(BaseModel):
@@ -144,15 +176,30 @@ class OutfitFeedbackOut(BaseModel):
 
 
 class MeResponse(BaseModel):
-    """GET /api/v1/me: identidad del usuario demo.
-
-    El MVP no valida JWT (el frontend no manda Authorization); este endpoint
-    expone el user_id con el que el backend persiste prendas y outfits, para
-    que el frontend no tenga que adivinarlo.
-    """
+    """GET /api/v1/me: identidad resuelta (JWT o demo) y foto canónica por defecto."""
 
     user_id: str
     email: str
+    has_default_vton_photo: bool = False
+    default_vton_photo_url: str | None = None
+
+
+class CanonicalPhotoResponse(BaseModel):
+    """Estado y URL de la foto canónica del usuario con consentimiento informado."""
+
+    has_canonical: bool
+    photo_url: str | None = None
+    consent_at: datetime | None = None
+    message: str | None = None
+
+
+class ShareLookResponse(BaseModel):
+    """Respuesta de generación de enlace para compartir look."""
+
+    job_id: str
+    share_token: str
+    share_url: str
+    expires_in_hours: int = 24
 
 
 class VtonJobCreateResponse(BaseModel):
@@ -168,6 +215,7 @@ class VtonJobStatusResponse(BaseModel):
 
     job_id: str
     status: VtonJobStatus
+    stage: str | None = None
     result_url: str | None = None
     error_message: str | None = None
 
@@ -252,7 +300,7 @@ class WeatherResponse(BaseModel):
 class OutfitPlanCreate(BaseModel):
     """Creación de un plan de vestimenta."""
 
-    user_id: str
+    user_id: str | None = None
     planned_date: str  # YYYY-MM-DD
     garment_ids: list[str] = Field(min_length=1)
     outfit_id: str | None = None
@@ -281,4 +329,64 @@ class OutfitPlanConfirmResponse(BaseModel):
     plan: OutfitPlanResponse
     usage_logged: bool
     garments_marked_laundry: list[str] = []
+
+
+class PackingPlanRequest(BaseModel):
+    """Payload para generar un plan de maleta de viaje."""
+
+    days: int = Field(ge=1, le=14, default=3)
+    weather: str = Field(default="mild")  # cold | mild | warm
+    occasion: str | None = None  # casual | formal | work | sport
+
+
+class PackedGarmentSummary(BaseModel):
+    """Prenda incluida en la maleta."""
+
+    id: str
+    category: str
+    position: str | None = None
+    processed_image_url: str
+
+
+class DailyOutfitPlan(BaseModel):
+    """Propuesta de outfit para un día específico del viaje."""
+
+    day: int
+    garment_ids: list[str]
+    reason: str
+
+
+class PackingPlanResponse(BaseModel):
+    """Respuesta con cápsula de viaje optimizada y planes diarios."""
+
+    days: int
+    weather: str
+    packed_garments: list[PackedGarmentSummary]
+    daily_plans: list[DailyOutfitPlan]
+    total_items_count: int
+    combinations_unlocked_count: int
+    tip: str
+
+
+class StylistAdviceRequest(BaseModel):
+    """POST /api/v1/outfits/{outfit_id}/stylist-advice."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    occasion: str | None = None
+    weather: str | None = None
+    user_note: str | None = Field(default=None, max_length=300)
+
+
+class StylistAdviceResponse(BaseModel):
+    """Asesoramiento estilístico estructurado (Azure OpenAI o fallback experto local)."""
+
+    outfit_id: str
+    why_it_works: str
+    accessories: list[str] = Field(min_length=1)
+    grooming_and_footwear: str
+    event_adaptation: str
+    source: Literal["azure_openai", "rules"]
+    model: str | None = None
+    cached: bool = False
 

@@ -88,8 +88,8 @@ def is_catvton_server_reachable(url: str, timeout_s: float = 0.8) -> bool:
 # El modelo acepta estas categorias; el mapping desde CLIP vive en domain.enums.
 VTON_CATEGORIES = ("upper", "lower", "dresses")
 
-# Tiempo estimado por prenda en Replicate (para estimated_time_seconds).
-ESTIMATED_SECONDS_PER_LAYER = 18.0
+# Tiempo estimado por prenda en Replicate / CatVTON (calibrado con benchmark empírico: 12.0s por capa).
+ESTIMATED_SECONDS_PER_LAYER = 12.0
 
 
 class VtonInferenceProvider(Protocol):
@@ -104,6 +104,9 @@ class VtonInferenceProvider(Protocol):
         garment_description: str,
         category: str,
         mask_type: str | None = None,
+        num_inference_steps: int | None = None,
+        guidance_scale: float | None = None,
+        seed: int | None = None,
     ) -> bytes:
         """Devuelve los bytes de la imagen resultante.
 
@@ -133,6 +136,9 @@ class ReplicateVtonProvider:
         garment_description: str,
         category: str,
         mask_type: str | None = None,
+        num_inference_steps: int | None = None,
+        guidance_scale: float | None = None,
+        seed: int | None = None,
     ) -> bytes:
         """Try-on real contra Replicate. `mask_type` no aplica: el modelo cloud
         decide con `category`; se acepta y se ignora para compatibilidad."""
@@ -235,6 +241,9 @@ class HttpVtonProvider:
         garment_description: str,
         category: str,
         mask_type: str | None = None,
+        num_inference_steps: int | None = None,
+        guidance_scale: float | None = None,
+        seed: int | None = None,
     ) -> bytes:
         if category not in VTON_CATEGORIES:
             raise ValueError(
@@ -251,6 +260,17 @@ class HttpVtonProvider:
             # Extension multicapa del Layer Manager (CatVTON la entiende como
             # upper|lower|overall|inner|outer). Un server viejo la ignora.
             payload["mask_type"] = mask_type
+
+        steps = num_inference_steps if num_inference_steps is not None else getattr(settings, "vton_steps", None)
+        guidance = guidance_scale if guidance_scale is not None else getattr(settings, "vton_guidance", None)
+        active_seed = seed if seed is not None else getattr(settings, "vton_seed", None)
+
+        if steps is not None:
+            payload["num_inference_steps"] = steps
+        if guidance is not None:
+            payload["guidance_scale"] = guidance
+        if active_seed is not None:
+            payload["seed"] = active_seed
         headers = {"Content-Type": "application/json"}
         if self._token:
             headers["Authorization"] = f"Bearer {self._token}"
@@ -300,6 +320,9 @@ class MockVtonProvider:
         garment_description: str,
         category: str,
         mask_type: str | None = None,
+        num_inference_steps: int | None = None,
+        guidance_scale: float | None = None,
+        seed: int | None = None,
     ) -> bytes:
         """Compone con PIL; mask_type no aplica al mock."""
         persona = Image.open(io.BytesIO(human_image)).convert("RGB")
@@ -376,15 +399,17 @@ def build_provider() -> VtonInferenceProvider:
             api_token=settings.replicate_api_token,
             timeout_s=settings.vton_http_timeout_s,
         )
+    replicate_token = settings.replicate_api_token
     if modo == "replicate":
-        if not settings.replicate_api_token:
+        if not replicate_token:
             raise RuntimeError("VTON_PROVIDER=replicate pero falta REPLICATE_API_TOKEN")
-        return ReplicateVtonProvider(settings.replicate_api_token)
-    # auto
+        return ReplicateVtonProvider(replicate_token)
+    # auto: 1° GPU CatVTON (explicit VTON_HTTP_URL or local 7861), 2° Replicate GPU,
+    # 3° CatVTON por defecto (sin caer a MockVtonProvider en runtime).
     if settings.vton_http_url:
         return HttpVtonProvider(
-            settings.vton_http_url,
-            api_token=settings.replicate_api_token,
+            resolve_catvton_url(settings.vton_http_url),
+            api_token=replicate_token or None,
             timeout_s=settings.vton_http_timeout_s,
         )
     # Autodeteccion del server CatVTON nativo en el puerto 7861
@@ -400,21 +425,29 @@ def build_provider() -> VtonInferenceProvider:
             timeout_s=settings.vton_http_timeout_s,
         )
 
-    if settings.replicate_api_token:
-        return ReplicateVtonProvider(settings.replicate_api_token)
-    logger.warning("VTON en modo auto sin VTON_HTTP_URL ni token: usando MockVtonProvider")
-    return MockVtonProvider()
+    if replicate_token:
+        return ReplicateVtonProvider(replicate_token)
+    logger.info(
+        "Usando CatVTON GPU por defecto en %s (sin fallback a mock en runtime)",
+        candidate_catvton,
+    )
+    return HttpVtonProvider(
+        candidate_catvton,
+        api_token=None,
+        timeout_s=settings.vton_http_timeout_s,
+    )
 
 
 def get_provider_fallback_chain(
     primary: VtonInferenceProvider | None = None,
 ) -> list[VtonInferenceProvider]:
-    """Genera la cadena de proveedores ordenada para failover en tiempo de ejecucion.
+    """Genera la cadena de proveedores GPU ordenada para failover en runtime.
 
     Si `vton_failover_enabled` esta activo:
     - Primario: CatVTON / HttpVtonProvider
-    - Fallback 1: ReplicateVtonProvider (si hay token configurado)
-    - Fallback 2: MockVtonProvider (composicion determinista PIL)
+    - Fallback: ReplicateVtonProvider (si hay token configurado)
+    En runtime real nunca cae silenciosamente a MockVtonProvider (solo existe para tests
+    cuando se fuerza `VTON_PROVIDER=mock`).
     """
     prov = primary if primary is not None else build_provider()
     if not getattr(settings, "vton_failover_enabled", True):
@@ -428,9 +461,6 @@ def get_provider_fallback_chain(
         replicate_token = os.environ.get("REPLICATE_API_TOKEN") or settings.replicate_api_token
         if replicate_token:
             chain.append(ReplicateVtonProvider(replicate_token))
-        chain.append(MockVtonProvider())
-    elif isinstance(prov, ReplicateVtonProvider):
-        chain.append(MockVtonProvider())
 
     return chain
 

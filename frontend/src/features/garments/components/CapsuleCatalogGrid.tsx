@@ -135,6 +135,9 @@ export function CapsuleCatalogGrid(): JSX.Element {
           if (filterCategory === 'top') return cat === 'top';
           if (filterCategory === 'bottom') return cat === 'bottom';
           if (filterCategory === 'outwear') return cat === 'outwear' || cat === 'outerwear';
+          if (filterCategory === 'dress') return cat === 'dress' || cat === 'dresses';
+          if (filterCategory === 'shoes') return cat === 'shoes' || cat === 'footwear';
+          if (filterCategory === 'bag') return cat === 'bag' || cat === 'bags';
           return cat === filterCategory;
         });
 
@@ -148,7 +151,10 @@ export function CapsuleCatalogGrid(): JSX.Element {
             { id: 'all', label: `Todas (${garments.length})` },
             { id: 'top', label: 'Superiores' },
             { id: 'bottom', label: 'Inferiores' },
+            { id: 'dress', label: 'Vestidos' },
             { id: 'outwear', label: 'Abrigos' },
+            { id: 'shoes', label: 'Calzado' },
+            { id: 'bag', label: 'Bolsos' },
           ].map(f => (
             <button
               key={f.id}

@@ -14,8 +14,11 @@ Dos decisiones que hacen rapidos y estables los tests:
 
 from __future__ import annotations
 
+import atexit
 import os
+import shutil
 import sys
+import tempfile
 from pathlib import Path
 from typing import Any
 
@@ -28,26 +31,45 @@ if str(SRC) not in sys.path:
 # Hay que fijar el entorno ANTES de importar config: `settings` se resuelve al
 # importar y no se recalcula.
 #
+# DB y media viven en un directorio UNICO POR PROCESO: dos corridas de pytest
+# en paralelo (o workers de pytest-xdist) no se pisan entre si ni dejan estado
+# en una ruta fija. Se limpia al salir del proceso (E0-T1).
+_TMP_BASE = Path("/tmp/opencode")
+if not _TMP_BASE.is_dir():
+    _TMP_BASE = Path(tempfile.gettempdir())
+_TEST_ROOT = Path(tempfile.mkdtemp(prefix="styleme_test_", dir=_TMP_BASE))
+atexit.register(shutil.rmtree, _TEST_ROOT, ignore_errors=True)
+
 # SQLite en ARCHIVO y no `:memory:`: FastAPI corre los endpoints en un threadpool
 # y cada thread abriria su propia BD en memoria (tablas recien creadas en el
 # thread principal no existirian ahi). Un archivo temporal lo comparten todos.
-_TEST_DB = "/tmp/opencode/styleme_test.db"
-_TEST_MEDIA = "/tmp/opencode/styleme_test_media"
-Path(_TEST_DB).parent.mkdir(parents=True, exist_ok=True)
-Path(_TEST_DB).unlink(missing_ok=True)
-os.environ.setdefault("DATABASE_URL", f"sqlite:///{_TEST_DB}")
-os.environ.setdefault("AZURE_STORAGE_CONNECTION_STRING", "")
-os.environ.setdefault("AZURE_STORAGE_PUBLIC_URL_BASE", "")
-os.environ.setdefault("VTON_PROVIDER", "mock")
-os.environ.setdefault("MEDIA_DIR", _TEST_MEDIA)
+_TEST_DB = _TEST_ROOT / "styleme_test.db"
+_TEST_MEDIA = _TEST_ROOT / "media"
+
+# Se FUERZA el entorno (no `setdefault`) para aislar completamente la suite
+# del .env local o Supabase/Azure reales.
+os.environ["DATABASE_URL"] = f"sqlite:///{_TEST_DB}"
+os.environ["MEDIA_DIR"] = str(_TEST_MEDIA)
+os.environ["AZURE_STORAGE_CONNECTION_STRING"] = ""
+os.environ["AZURE_STORAGE_PUBLIC_URL_BASE"] = ""
+os.environ["AZURE_OPENAI_ENDPOINT"] = ""
+os.environ["AZURE_OPENAI_API_KEY"] = ""
+os.environ["AZURE_OPENAI_DEPLOYMENT_NAME"] = ""
+os.environ["VTON_PROVIDER"] = "mock"
+os.environ.setdefault("SUPABASE_JWT_SECRET", "unverified-secret")
+os.environ.setdefault("ALLOW_DEMO_AUTH", "true")
 # Cola ARQ: puerto muerto para que los tests SIEMPRE ejerzan el fallback a
 # BackgroundTasks (determinista; el enqueue real lo cubre el smoke de compose
 # y test_vton_fallback_sin_redis_completa_igual).
-os.environ.setdefault("REDIS_URL", "redis://localhost:6399/0")
+os.environ["REDIS_URL"] = "redis://localhost:6399/0"
 # Las imagenes de los tests son JPG sinteticos sin cuerpo: la validacion del
 # protocolo A-Pose se apaga aca y se activa explicitamente en el test que la
-# cubre (test_vton_pose_invalida_da_422).
-os.environ.setdefault("POSE_VALIDATION", "off")
+# cubre (test_vton_pose_invalida_da_422). `pose_check` lee este env EN RUNTIME,
+# por eso `monkeypatch.setenv` ahi es efectivo de verdad.
+os.environ["POSE_VALIDATION"] = "off"
+os.environ.setdefault("RATE_LIMIT_GARMENTS", "1000/minute")
+os.environ.setdefault("RATE_LIMIT_SHOPPING", "1000/minute")
+os.environ.setdefault("RATE_LIMIT_VTON", "1000/minute")
 
 
 def _analisis_stub(imagen: Any) -> dict[str, Any]:

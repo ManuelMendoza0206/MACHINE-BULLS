@@ -27,6 +27,7 @@ import { AuthForm } from '@/features/auth/components/AuthForm';
 import { LandingCta } from '@/features/auth/components/LandingCta';
 import { AuthProvider } from '@/features/auth/components/AuthProvider';
 import { useAuth } from '@/features/auth/hooks/useAuth';
+import { sanitizeRedirectPath } from '@/features/auth/api/auth';
 
 describe('AuthForm', () => {
   beforeEach(() => {
@@ -181,5 +182,17 @@ describe('useAuth transitions', () => {
     );
 
     await waitFor(() => expect(screen.getByText(/authenticated:a@b.com/)).toBeInTheDocument());
+  });
+});
+
+describe('sanitizeRedirectPath', () => {
+  it('allows relative app routes and rejects external/auth loop paths', () => {
+    expect(sanitizeRedirectPath('/planner')).toBe('/planner');
+    expect(sanitizeRedirectPath('/wardrobe?tab=capsule')).toBe('/wardrobe?tab=capsule');
+    expect(sanitizeRedirectPath(null)).toBe('/wardrobe');
+    expect(sanitizeRedirectPath('//evil.com')).toBe('/wardrobe');
+    expect(sanitizeRedirectPath('https://evil.com')).toBe('/wardrobe');
+    expect(sanitizeRedirectPath('/login')).toBe('/wardrobe');
+    expect(sanitizeRedirectPath('/signup')).toBe('/wardrobe');
   });
 });

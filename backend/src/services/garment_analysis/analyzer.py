@@ -18,7 +18,7 @@ from __future__ import annotations
 import threading
 from typing import Any
 
-from PIL import Image
+from PIL import Image, ImageOps
 
 from domain.enums import CATEGORY_TO_POSITION, CLIP_CATEGORIES
 from ml.models.clip_classifier import ClipClassifier
@@ -49,13 +49,45 @@ _AESTHETIC_TEMPLATES = (
 # una preocupacion distinta del eval de la libreria (ADR-401: el servicio
 # importa la libreria, no la reimplementa — configurar prompts es importar,
 # no reimplementar).
-_CATEGORY_PROMPTS: dict[str, str] = {
-    "top": "a photo of a t-shirt",
-    "bottom": "a photo of a pair of pants",
-    "dress": "a photo of a dress",
-    "outwear": "a photo of a jacket",
-    "shoes": "a photo of a pair of shoes",
-    "bag": "a photo of a handbag",
+_CATEGORY_SYNSETS: dict[str, tuple[tuple[str, str], ...]] = {
+    "top": (
+        ("t-shirt", "a studio product photo of a t-shirt"),
+        ("shirt", "a studio product photo of a button-up shirt or blouse"),
+        ("sweater", "a studio product photo of a knit sweater or pullover"),
+        ("hoodie", "a studio product photo of a hoodie or sweatshirt"),
+        ("polo", "a studio product photo of a tank top or polo shirt"),
+    ),
+    "bottom": (
+        ("pants", "a studio product photo of a pair of pants or trousers"),
+        ("jeans", "a studio product photo of a pair of jeans"),
+        ("skirt", "a studio product photo of a skirt"),
+        ("shorts", "a studio product photo of a pair of shorts"),
+        ("joggers", "a studio product photo of joggers or leggings"),
+    ),
+    "dress": (
+        ("dress", "a studio product photo of a full-length or midi dress"),
+        ("midi dress", "a studio product photo of a short casual or cocktail dress"),
+        ("sundress", "a studio product photo of a sundress"),
+        ("jumpsuit", "a studio product photo of a jumpsuit or romper"),
+    ),
+    "outwear": (
+        ("jacket", "a studio product photo of a jacket"),
+        ("coat", "a studio product photo of a long coat or trench coat"),
+        ("blazer", "a studio product photo of a blazer or suit jacket"),
+        ("cardigan", "a studio product photo of a cardigan or puffer jacket"),
+    ),
+    "shoes": (
+        ("sneakers", "a studio product photo of a pair of sneakers"),
+        ("boots", "a studio product photo of a pair of boots or ankle boots"),
+        ("loafers", "a studio product photo of loafers or dress shoes"),
+        ("heels", "a studio product photo of heels or sandals"),
+    ),
+    "bag": (
+        ("handbag", "a studio product photo of a handbag or purse"),
+        ("backpack", "a studio product photo of a backpack"),
+        ("tote bag", "a studio product photo of a tote bag"),
+        ("crossbody bag", "a studio product photo of a crossbody or shoulder bag"),
+    ),
 }
 
 _lock = threading.Lock()
@@ -108,31 +140,68 @@ def get_classifier() -> ClipClassifier:
 
 
 def _prepare_for_clip(image: Image.Image) -> Image.Image:
-    """Prepara la imagen para CLIP: si es RGBA, la compone sobre fondo blanco de estudio."""
+    """Prepara la imagen para CLIP: fondo blanco de estudio y padding cuadrado.
+
+    El padding cuadrado evita que el recorte central de CLIP corte la parte inferior
+    de vestidos o pantalones largos.
+    """
     if image.mode == "RGBA":
-        bg = Image.new("RGB", image.size, (255, 255, 255))
-        bg.paste(image, mask=image.split()[3])
-        return bg
-    return image.convert("RGB")
+        rgb = Image.new("RGB", image.size, (255, 255, 255))
+        rgb.paste(image, mask=image.split()[3])
+    else:
+        rgb = image.convert("RGB")
+    side = max(rgb.size)
+    if side > 0 and rgb.size != (side, side):
+        return ImageOps.pad(rgb, (side, side), color=(255, 255, 255))
+    return rgb
 
 
-def classify_category(image: Image.Image) -> tuple[str, float, dict[str, float]]:
-    """Categoria CLIP + confianza + todas las probabilidades de clase.
+def classify_category_detailed(
+    image: Image.Image,
+) -> tuple[str, str, float, dict[str, float]]:
+    """Categoria CLIP (6 clases) + subcategoria fina + confianza + probs por clase.
 
-    Usa los prompts runtime del servicio (`_CATEGORY_PROMPTS`), no los TEMPLATES
-    de eval de la libreria: ver el comentario de esa constante.
+    Evalua un ensemble multi-prompt de synsets naturales por clase en una sola
+    pasada CLIP, sumando probabilidades por bloque de categoria y extrayendo el
+    synset mas probable dentro de la categoria ganadora.
     """
     clf = get_classifier()
     clip_img = _prepare_for_clip(image)
     clases = list(CLIP_CATEGORIES)
-    textos = [_CATEGORY_PROMPTS[c] for c in clases]
+
+    flat_prompts: list[str] = []
+    class_slices: dict[str, tuple[int, int, tuple[tuple[str, str], ...]]] = {}
+    cursor = 0
+    for c in clases:
+        synsets = _CATEGORY_SYNSETS[c]
+        flat_prompts.extend(prompt for _sub, prompt in synsets)
+        class_slices[c] = (cursor, cursor + len(synsets), synsets)
+        cursor += len(synsets)
+
     probs = ClipClassifier.probs_imagen(
-        clf.model, clf.processor, clip_img, textos, clf.device
+        clf.model, clf.processor, clip_img, flat_prompts, clf.device
     )
-    total = sum(probs) or 1.0
-    por_clase = [p / total for p in probs]
-    mejor = max(range(len(clases)), key=lambda i: por_clase[i])
-    return clases[mejor], por_clase[mejor], dict(zip(clases, por_clase))
+
+    raw_por_clase: dict[str, float] = {}
+    for c, (ini, fin, _synsets) in class_slices.items():
+        raw_por_clase[c] = sum(probs[ini:fin])
+
+    total = sum(raw_por_clase.values()) or 1.0
+    por_clase = {c: raw_por_clase[c] / total for c in clases}
+    mejor_clase = max(clases, key=lambda c: por_clase[c])
+
+    ini, fin, synsets = class_slices[mejor_clase]
+    class_probs = probs[ini:fin]
+    mejor_sub_idx = max(range(len(synsets)), key=lambda i: class_probs[i])
+    subcategory = synsets[mejor_sub_idx][0]
+
+    return mejor_clase, subcategory, por_clase[mejor_clase], por_clase
+
+
+def classify_category(image: Image.Image) -> tuple[str, float, dict[str, float]]:
+    """Categoria CLIP + confianza + todas las probabilidades de clase."""
+    category, _subcategory, conf, por_clase = classify_category_detailed(image)
+    return category, conf, por_clase
 
 
 def classify_aesthetics(
@@ -174,25 +243,49 @@ def classify_aesthetics(
     return resultado
 
 
+PATTERNS = ("solid", "striped", "plaid", "floral", "graphic")
+_PATTERN_TEMPLATES = (
+    "a photo of a {p} clothing item",
+    "a clothing fabric with a {p} pattern",
+)
+
+
+def classify_pattern(image: Image.Image) -> str:
+    """Clasifica el patron visual de la prenda (zero-shot CLIP)."""
+    clf = get_classifier()
+    clip_img = _prepare_for_clip(image)
+    textos = [t.format(p=p) for p in PATTERNS for t in _PATTERN_TEMPLATES]
+    probs = ClipClassifier.probs_imagen(clf.model, clf.processor, clip_img, textos, clf.device)
+    por_patron: dict[str, float] = {}
+    ancho = len(_PATTERN_TEMPLATES)
+    for i, pat in enumerate(PATTERNS):
+        por_patron[pat] = sum(probs[i * ancho : (i + 1) * ancho])
+    mejor = max(por_patron.items(), key=lambda kv: kv[1])
+    return mejor[0]
+
+
 def analyze_garment(image: Image.Image) -> dict[str, Any]:
     """Analisis completo de una prenda para el MVP.
 
     Devuelve un dict listo para persistir y para la respuesta de upload:
-    category, position, top_aesthetics, dominant_colors, embedding (CLIP image
-    features, para el embedding_score del recomendador).
+    category, subcategory, position, top_aesthetics, dominant_colors,
+    embedding (CLIP image features), y pattern.
     """
     clf = get_classifier()
-    category, _conf, _probs = classify_category(image)
+    category, subcategory, _conf, _probs = classify_category_detailed(image)
     position = CATEGORY_TO_POSITION.get(category)
     aesthetics = classify_aesthetics(image)
     colors = dominant_colors(image)
     embedding = _image_embedding(clf, image)
+    pattern = classify_pattern(image)
     return {
         "category": category,
+        "subcategory": subcategory,
         "position": position.value if position else None,
         "top_aesthetics": aesthetics,
         "dominant_colors": colors,
         "embedding": embedding,
+        "pattern": pattern,
     }
 
 

@@ -16,16 +16,51 @@ import { createJSONStorage, persist } from 'zustand/middleware';
  * backend record to defer to yet. Revisit once Q5 adds a server-side consent record.
  */
 export interface PhotoConsentState {
+  /** Flag anónimo / fallback local (mantiene compatibilidad con sesiones sin usuario Auth). */
   consentGiven: boolean;
-  /** Records that the user accepted the current consent copy. */
+  /** Registro persistido por ID de usuario en el navegador (`{ [userId]: true }`). */
+  consentByUser: Record<string, boolean>;
+  /** Consulta si el usuario (o sesión anónima si es null/undefined) ya aceptó. */
+  hasConsent: (userId?: string | null) => boolean;
+  /** Registra el consentimiento en modo anónimo / legado. */
   grant: () => void;
+  /** Registra el consentimiento asociado a un usuario específico (o anónimo si no hay userId). */
+  grantForUser: (userId?: string | null) => void;
+  /** Sincroniza el consentimiento proveniente de la cuenta autenticada (Supabase metadata). */
+  syncUserConsent: (userId: string, granted: boolean) => void;
 }
 
 export const usePhotoConsentStore = create<PhotoConsentState>()(
   persist(
-    set => ({
+    (set, get) => ({
       consentGiven: false,
+      consentByUser: {},
+      hasConsent: (userId?: string | null) => {
+        const state = get();
+        if (userId) {
+          return Boolean(state.consentByUser[userId]);
+        }
+        return state.consentGiven;
+      },
       grant: () => set({ consentGiven: true }),
+      grantForUser: (userId?: string | null) => {
+        if (!userId) {
+          set({ consentGiven: true });
+          return;
+        }
+        set(state => ({
+          consentByUser: { ...state.consentByUser, [userId]: true },
+        }));
+      },
+      syncUserConsent: (userId: string, granted: boolean) => {
+        if (!userId || !granted) return;
+        set(state => {
+          if (state.consentByUser[userId]) return state;
+          return {
+            consentByUser: { ...state.consentByUser, [userId]: true },
+          };
+        });
+      },
     }),
     {
       name: 'photo-consent-store',

@@ -46,6 +46,8 @@ RUN sh -c 'for i in 1 2 3 4; do if /app/.venv/bin/python -c "from transformers i
 # 4) Código de la app y adaptador entrenado. main:app vive en src/ (igual que el dev local).
 COPY src ./src
 COPY models ./models
+COPY migrations ./migrations
+COPY scripts ./scripts
 ENV PATH="/app/.venv/bin:$PATH" \
   HF_HUB_OFFLINE=1
 

@@ -8,6 +8,46 @@ export interface AuthUser {
   name: string | null;
   /** ISO date string — Supabase's `created_at`. Used by profile-flow's `ProfileHeader`. */
   createdAt: string;
+  /** Persisted across sessions/devices via Supabase `user_metadata.photo_consent_given`. */
+  photoConsentGiven?: boolean;
+  /** True when Supabase signUp succeeded without an active session (email confirmation pending). */
+  needsEmailConfirmation?: boolean;
+}
+
+export function sanitizeRedirectPath(
+  raw: string | null | undefined,
+  fallback = '/wardrobe'
+): string {
+  if (!raw || !raw.startsWith('/') || raw.startsWith('//')) {
+    return fallback;
+  }
+  if (
+    raw === '/login' ||
+    raw.startsWith('/login?') ||
+    raw === '/signup' ||
+    raw.startsWith('/signup?')
+  ) {
+    return fallback;
+  }
+  return raw;
+}
+
+/**
+ * Navigates after login/signup using a full browser load in real browsers so fresh
+ * `@supabase/ssr` cookies reach `proxy.ts` without hitting a stale prefetched 307 in
+ * Next.js Router Cache, while using `router.replace` under Vitest.
+ */
+export function redirectAfterAuth(
+  rawTarget: string | null | undefined,
+  router: { replace: (href: string) => void; refresh?: () => void }
+): void {
+  const safeTarget = sanitizeRedirectPath(rawTarget, '/wardrobe');
+  router.refresh?.();
+  if (typeof window !== 'undefined' && process.env['NODE_ENV'] !== 'test') {
+    window.location.assign(safeTarget);
+    return;
+  }
+  router.replace(safeTarget);
 }
 
 function mapSupabaseError(error: { message: string; code?: string }): never {
@@ -58,6 +98,7 @@ export function toAuthUser(supabaseUser: {
     email: supabaseUser.email ?? '',
     name: (supabaseUser.user_metadata?.['name'] as string | undefined) ?? null,
     createdAt: supabaseUser.created_at ?? new Date(0).toISOString(),
+    photoConsentGiven: supabaseUser.user_metadata?.['photo_consent_given'] === true,
   };
 }
 
@@ -72,7 +113,11 @@ export async function signUpWithEmail(form: SignupForm): Promise<AuthUser> {
   if (error) mapSupabaseError(error);
   if (!data.user) throw new ApiError('No se pudo crear el usuario.', 500);
 
-  return toAuthUser(data.user);
+  const authUser = toAuthUser(data.user);
+  if ('session' in data && data.session === null) {
+    authUser.needsEmailConfirmation = true;
+  }
+  return authUser;
 }
 
 export async function signInWithEmail(form: LoginForm): Promise<AuthUser> {
@@ -86,6 +131,15 @@ export async function signInWithEmail(form: LoginForm): Promise<AuthUser> {
   if (!data.user) throw new ApiError('Email o contraseña incorrectos.', 401);
 
   return toAuthUser(data.user);
+}
+
+export async function persistPhotoConsentToSupabase(granted = true): Promise<void> {
+  try {
+    const supabase = createBrowserSupabaseClient();
+    await supabase.auth.updateUser({ data: { photo_consent_given: granted } });
+  } catch {
+    // Offline or mocked test environment — localStorage fallback remains authoritative locally.
+  }
 }
 
 export async function signOut(): Promise<void> {

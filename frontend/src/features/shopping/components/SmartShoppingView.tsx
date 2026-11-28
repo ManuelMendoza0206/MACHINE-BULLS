@@ -21,6 +21,8 @@ import { evaluateCandidateGarment } from '../api/evaluateCandidateGarment';
 import { adoptCandidateGarment } from '../api/adoptCandidateGarment';
 import type { SmartShoppingEvaluateResponse } from '@/schemas/api/shopping';
 
+const TRYON_COMPATIBLE_POSITIONS = new Set(['top', 'bottom', 'dress', 'outerwear']);
+
 export function SmartShoppingView(): JSX.Element {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -204,6 +206,29 @@ export function SmartShoppingView(): JSX.Element {
                   </>
                 )}
               </Button>
+
+              {(evaluation.potential_outfits?.[0] ||
+                TRYON_COMPATIBLE_POSITIONS.has(evaluation.candidate_garment.position ?? '')) && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    const firstOutfit = evaluation.potential_outfits?.[0];
+                    if (firstOutfit) {
+                      router.push(`/try-on?outfit=${encodeURIComponent(firstOutfit.outfit_id)}`);
+                    } else {
+                      const pos = evaluation.candidate_garment.position ?? 'top';
+                      router.push(
+                        `/try-on?garment=${encodeURIComponent(evaluation.candidate_garment.garment_id)}&position=${encodeURIComponent(pos)}&image=${encodeURIComponent(evaluation.candidate_garment.processed_image_url)}`
+                      );
+                    }
+                  }}
+                  className="w-full rounded-full gap-2 text-xs border-accent/40 text-accent hover:bg-accent/10"
+                >
+                  <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
+                  <span>Probar cómo me queda puesta</span>
+                </Button>
+              )}
             </Card>
 
             {/* Diagnóstico y Métricas */}
@@ -337,7 +362,7 @@ export function SmartShoppingView(): JSX.Element {
                     <Button
                       type="button"
                       size="sm"
-                      onClick={() => router.push(`/try-on?outfit_id=${outfit.outfit_id}`)}
+                      onClick={() => router.push(`/try-on?outfit=${outfit.outfit_id}`)}
                       className="w-full rounded-full gap-2 text-xs"
                     >
                       <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />

@@ -74,6 +74,45 @@ describe('CapsuleCatalogGrid', () => {
     expect(screen.getByText(/no pudimos conectar con el catálogo/i)).toBeInTheDocument();
   });
 
+  it('expone las seis categorías CLIP y filtra por categoría', async () => {
+    const categories = ['top', 'bottom', 'dress', 'outwear', 'shoes', 'bag'] as const;
+    server.use(
+      http.get('*/api/v1/garments/capsule', () =>
+        HttpResponse.json({
+          garments: categories.map((category, index) => ({
+            id: `00000000-0000-4000-8000-00000000000${index}`,
+            processed_image_url: `https://cdn.example.com/${category}.jpg`,
+            category,
+            dominant_aesthetic: 'casual',
+            position: null,
+          })),
+        })
+      )
+    );
+
+    renderWithProviders(<CapsuleCatalogGrid />);
+    await screen.findByText('top');
+
+    for (const label of [
+      'Superiores',
+      'Inferiores',
+      'Vestidos',
+      'Abrigos',
+      'Calzado',
+      'Bolsos',
+    ]) {
+      expect(screen.getByRole('button', { name: label })).toBeInTheDocument();
+    }
+
+    await userEvent.click(screen.getByRole('button', { name: 'Vestidos' }));
+    expect(screen.getByText('dress')).toBeInTheDocument();
+    expect(screen.queryByText('top')).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Calzado' }));
+    expect(screen.getByText('shoes')).toBeInTheDocument();
+    expect(screen.queryByText('dress')).not.toBeInTheDocument();
+  });
+
   it('shows a loading state before the catalog resolves', async () => {
     renderWithProviders(<CapsuleCatalogGrid />);
     expect(screen.getAllByRole('status').length).toBeGreaterThan(0);

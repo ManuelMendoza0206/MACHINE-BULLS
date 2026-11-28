@@ -1,17 +1,26 @@
 'use client';
 
-import { Suspense } from 'react';
+import { Suspense, useEffect } from 'react';
 import type { JSX } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { AuthForm } from '@/features/auth/components/AuthForm';
 import { AuthScreenLayout } from '@/features/auth/components/AuthScreenLayout';
+import { redirectAfterAuth, sanitizeRedirectPath } from '@/features/auth/api/auth';
+import { useAuth } from '@/features/auth/hooks/useAuth';
 
 function LoginContent(): JSX.Element {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const redirectTo = searchParams.get('redirectTo') ?? '/wardrobe';
+  const { status } = useAuth();
+  const redirectTo = sanitizeRedirectPath(searchParams.get('redirectTo'), '/wardrobe');
 
-  return <AuthForm mode="login" onSuccess={() => router.push(redirectTo)} />;
+  useEffect(() => {
+    if (status === 'authenticated') {
+      router.replace(redirectTo);
+    }
+  }, [status, redirectTo, router]);
+
+  return <AuthForm mode="login" onSuccess={() => redirectAfterAuth(redirectTo, router)} />;
 }
 
 export default function LoginPage(): JSX.Element {

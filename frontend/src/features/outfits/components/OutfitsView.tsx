@@ -23,13 +23,19 @@ import {
   Calendar,
   Pin,
   CheckCircle2,
+  Wand2,
+  Layers,
+  LocateFixed,
 } from 'lucide-react';
 import { useMe } from '@/features/auth/hooks/useMe';
 import { listCapsuleGarments } from '@/features/garments/api/listCapsuleGarments';
+import { listGarments } from '@/features/garments/api/listGarments';
 import { recommendOutfits } from '@/features/outfits/api/recommendOutfits';
 import { remixOutfit } from '@/features/outfits/api/remixOutfit';
 import { submitOutfitFeedback } from '@/features/outfits/api/submitOutfitFeedback';
 import { wearOutfit } from '@/features/outfits/api/wearOutfit';
+import { ManualOutfitBuilderModal } from '@/features/outfits/components/ManualOutfitBuilderModal';
+import { StylistAdviceModal } from '@/features/outfits/components/StylistAdviceModal';
 import { createOutfitPlan } from '@/features/planner/api/plannerApi';
 import { fetchCurrentWeather } from '@/features/shopping/api/fetchCurrentWeather';
 import { mapStatusToUserMessage } from '@/lib/api/mapStatusToUserMessage';
@@ -40,9 +46,36 @@ import type { GarmentSummary } from '@/schemas/api/garments';
 const POSITION_LABEL: Record<OutfitPosition, string> = {
   top: 'Parte superior',
   bottom: 'Parte inferior',
+  dress: 'Vestido',
   footwear: 'Calzado',
   outerwear: 'Abrigo',
+  bag: 'Bolso',
 };
+
+const WEATHER_CITIES = [
+  'La Paz',
+  'Cochabamba',
+  'Santa Cruz',
+  'Sucre',
+  'Tarija',
+  'Oruro',
+  'Potosí',
+] as const;
+
+const WEATHER_CITY_STORAGE_KEY = 'styleme:weather-city';
+
+function getStoredWeatherCity(): string {
+  if (typeof window === 'undefined') return 'La Paz';
+  try {
+    const saved = window.localStorage.getItem(WEATHER_CITY_STORAGE_KEY);
+    if (saved && (WEATHER_CITIES as readonly string[]).includes(saved)) {
+      return saved;
+    }
+  } catch {
+    // ignore storage errors
+  }
+  return 'La Paz';
+}
 
 /**
  * Mensaje de fallo distinguiendo causa raíz: si el backend rechazó con 400 (armario
@@ -103,6 +136,7 @@ interface OutfitCardProps {
   onWear?: (outfitId: string) => void;
   onOpenRemix?: (outfit: Outfit) => void;
   onSchedulePlan?: (outfit: Outfit) => void;
+  onAskStylist?: (outfit: Outfit) => void;
 }
 
 function OutfitCard({
@@ -116,6 +150,7 @@ function OutfitCard({
   onWear,
   onOpenRemix,
   onSchedulePlan,
+  onAskStylist,
 }: OutfitCardProps): JSX.Element {
   const chromaPct = Math.round(outfit.chromatic_score * 100);
   const embPct = Math.round(outfit.embedding_score * 100);
@@ -185,6 +220,18 @@ function OutfitCard({
             <span>{outfit.reason}</span>
           </div>
         )}
+
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={() => onAskStylist?.(outfit)}
+          aria-label={`Consultar al estilista IA para ${outfit.aesthetic.replace(/_/g, ' ')}`}
+          className="h-8 rounded-full px-3 text-xs text-accent hover:bg-accent/10 hover:text-accent gap-1.5 w-fit"
+        >
+          <Wand2 className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+          <span>Profundizar con Estilista IA</span>
+        </Button>
 
         <div className="space-y-3 pt-2">
           <div>
@@ -332,12 +379,54 @@ export function OutfitsView(): JSX.Element {
   );
   const [isScheduling, setIsScheduling] = useState<boolean>(false);
 
+  // Estado para Asesor de Moda Virtual (Estilista IA) y Armador Manual
+  const [stylistTarget, setStylistTarget] = useState<Outfit | null>(null);
+  const [isManualBuilderOpen, setIsManualBuilderOpen] = useState<boolean>(false);
+
+  // Estado configurable para ciudad / GPS del clima
+  const [selectedCity, setSelectedCity] = useState<string>(() => getStoredWeatherCity());
+  const [gpsCoords, setGpsCoords] = useState<{ lat: number; lon: number } | null>(null);
+  const [locatingGps, setLocatingGps] = useState<boolean>(false);
+
   const weatherQuery = useQuery({
-    queryKey: ['weather', 'current'],
-    queryFn: ({ signal }) => fetchCurrentWeather('La Paz', signal),
+    queryKey: [
+      'weather',
+      'current',
+      gpsCoords ? `${gpsCoords.lat.toFixed(2)},${gpsCoords.lon.toFixed(2)}` : selectedCity,
+    ],
+    queryFn: ({ signal }) =>
+      fetchCurrentWeather(
+        gpsCoords ? { lat: gpsCoords.lat, lon: gpsCoords.lon } : { city: selectedCity },
+        signal
+      ),
     staleTime: 1000 * 60 * 30, // 30 min
     refetchOnWindowFocus: false,
   });
+
+  const handleSelectCity = useCallback((city: string) => {
+    setGpsCoords(null);
+    setSelectedCity(city);
+    try {
+      window.localStorage.setItem(WEATHER_CITY_STORAGE_KEY, city);
+    } catch {
+      // ignore storage error
+    }
+  }, []);
+
+  const handleUseGps = useCallback(() => {
+    if (typeof navigator === 'undefined' || !navigator.geolocation) return;
+    setLocatingGps(true);
+    navigator.geolocation.getCurrentPosition(
+      pos => {
+        setGpsCoords({ lat: pos.coords.latitude, lon: pos.coords.longitude });
+        setLocatingGps(false);
+      },
+      () => {
+        setLocatingGps(false);
+      },
+      { timeout: 6_000 }
+    );
+  }, []);
 
   const handleWear = useCallback((id: string) => {
     setWornMap(prev => ({ ...prev, [id]: true }));
@@ -401,6 +490,11 @@ export function OutfitsView(): JSX.Element {
     queryFn: ({ signal }) => listCapsuleGarments(signal),
   });
 
+  const myGarments = useQuery({
+    queryKey: ['garments-list'],
+    queryFn: ({ signal }) => listGarments(signal),
+  });
+
   const recommend = useQuery({
     queryKey: [
       'outfits',
@@ -422,14 +516,19 @@ export function OutfitsView(): JSX.Element {
         signal
       );
     },
-    enabled: Boolean(me),
+    // Espera el clima (o su fallback tras timeout) para no recomendar dos veces.
+    enabled: Boolean(me) && !weatherQuery.isPending,
     staleTime: Infinity,
     refetchOnWindowFocus: false,
   });
 
-  const images = new Map<string, GarmentSummary>(
-    (capsule.data?.garments ?? []).map(g => [g.id, g])
-  );
+  const images = new Map<string, GarmentSummary>();
+  for (const g of capsule.data?.garments ?? []) {
+    images.set(g.id, g);
+  }
+  for (const g of myGarments.data?.garments ?? []) {
+    images.set(g.id, g);
+  }
 
   const goTryOn = (outfitId: string): void => {
     router.push(`/try-on?outfit=${encodeURIComponent(outfitId)}`);
@@ -543,15 +642,37 @@ export function OutfitsView(): JSX.Element {
 
   if (allOutfits.length === 0) {
     return (
-      <div className="rounded-lg border border-border p-6 text-center">
-        <p className="font-semibold">Todavía no hay combinaciones</p>
-        <p className="mt-2 text-sm text-muted-foreground">
-          Necesitas al menos una prenda superior y una inferior para armar un outfit.
-        </p>
-        <Button type="button" className="mt-4" onClick={() => router.push('/wardrobe')}>
-          Ir al armario
-        </Button>
-      </div>
+      <>
+        <div className="rounded-lg border border-border p-6 text-center">
+          <p className="font-semibold">Todavía no hay combinaciones</p>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Necesitas al menos una prenda superior y una inferior para armar un outfit.
+          </p>
+          <div className="mt-4 flex flex-wrap justify-center gap-2">
+            <Button type="button" onClick={() => router.push('/wardrobe')}>
+              Ir al armario
+            </Button>
+            <Button type="button" variant="outline" onClick={() => setIsManualBuilderOpen(true)}>
+              Armar manualmente
+            </Button>
+          </div>
+        </div>
+        {isManualBuilderOpen && (
+          <ManualOutfitBuilderModal
+            occasion={selectedOccasion === 'all' ? undefined : selectedOccasion}
+            weather={weatherQuery.data?.weather_type}
+            onClose={() => setIsManualBuilderOpen(false)}
+            onTryOn={id => {
+              setIsManualBuilderOpen(false);
+              goTryOn(id);
+            }}
+            onAskStylist={outfit => {
+              setIsManualBuilderOpen(false);
+              setStylistTarget(outfit);
+            }}
+          />
+        )}
+      </>
     );
   }
 
@@ -616,20 +737,44 @@ export function OutfitsView(): JSX.Element {
           ))}
         </div>
 
-        {weatherQuery.data && (
-          <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-accent/10 border border-accent/20 text-accent text-xs font-medium shrink-0 self-start sm:self-auto">
-            <CloudSun className="h-3.5 w-3.5" aria-hidden="true" />
-            <span>
-              {weatherQuery.data.city}: {Math.round(weatherQuery.data.temp_c)}°C (
-              {weatherQuery.data.weather_type === 'cold'
-                ? 'Frío'
-                : weatherQuery.data.weather_type === 'warm'
-                  ? 'Cálido'
-                  : 'Templado'}
-              )
-            </span>
-          </div>
-        )}
+        <div className="flex flex-wrap items-center gap-2 shrink-0 self-start sm:self-auto">
+          {weatherQuery.data && (
+            <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-accent/10 border border-accent/20 text-accent text-xs font-medium">
+              <CloudSun className="h-3.5 w-3.5" aria-hidden="true" />
+              <span>
+                {weatherQuery.data.city}: {Math.round(weatherQuery.data.temp_c)}°C (
+                {weatherQuery.data.weather_type === 'cold'
+                  ? 'Frío'
+                  : weatherQuery.data.weather_type === 'warm'
+                    ? 'Cálido'
+                    : 'Templado'}
+                ){weatherQuery.data.source === 'fallback' && ' · Clima estimado'}
+              </span>
+            </div>
+          )}
+          <select
+            aria-label="Ciudad para el clima"
+            value={selectedCity}
+            onChange={e => handleSelectCity(e.target.value)}
+            className="rounded-full border border-border bg-muted/40 px-2.5 py-1 text-xs text-foreground focus:outline-hidden focus:ring-1 focus:ring-accent"
+          >
+            {WEATHER_CITIES.map(city => (
+              <option key={city} value={city}>
+                {city}
+              </option>
+            ))}
+          </select>
+          <button
+            type="button"
+            onClick={handleUseGps}
+            disabled={locatingGps}
+            aria-label="Usar mi ubicación GPS"
+            title="Usar mi ubicación GPS"
+            className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-border bg-muted/40 text-muted-foreground hover:text-accent hover:border-accent/40 transition-colors disabled:opacity-50"
+          >
+            <LocateFixed className="h-3.5 w-3.5" aria-hidden="true" />
+          </button>
+        </div>
       </div>
 
       {/* Banner Smart Shopping */}
@@ -695,6 +840,16 @@ export function OutfitsView(): JSX.Element {
           )}
           <Button
             type="button"
+            variant="outline"
+            size="sm"
+            className="text-xs rounded-full h-8 inline-flex items-center gap-1.5"
+            onClick={() => setIsManualBuilderOpen(true)}
+          >
+            <Layers className="h-3.5 w-3.5" aria-hidden="true" />
+            <span>Armar manualmente</span>
+          </Button>
+          <Button
+            type="button"
             variant="secondary"
             size="sm"
             className="text-xs rounded-full h-8"
@@ -721,6 +876,7 @@ export function OutfitsView(): JSX.Element {
               onFeedback={handleFeedback}
               onOpenRemix={handleOpenRemix}
               onSchedulePlan={handleOpenSchedule}
+              onAskStylist={setStylistTarget}
             />
           </div>
           <div className="lg:col-span-5">
@@ -781,6 +937,7 @@ export function OutfitsView(): JSX.Element {
               onFeedback={handleFeedback}
               onOpenRemix={handleOpenRemix}
               onSchedulePlan={handleOpenSchedule}
+              onAskStylist={setStylistTarget}
             />
           ))}
         </div>
@@ -941,6 +1098,29 @@ export function OutfitsView(): JSX.Element {
             </div>
           </div>
         </div>
+      )}
+
+      <StylistAdviceModal
+        outfit={stylistTarget}
+        occasion={selectedOccasion === 'all' ? undefined : selectedOccasion}
+        weather={weatherQuery.data?.weather_type}
+        onClose={() => setStylistTarget(null)}
+      />
+
+      {isManualBuilderOpen && (
+        <ManualOutfitBuilderModal
+          occasion={selectedOccasion === 'all' ? undefined : selectedOccasion}
+          weather={weatherQuery.data?.weather_type}
+          onClose={() => setIsManualBuilderOpen(false)}
+          onTryOn={id => {
+            setIsManualBuilderOpen(false);
+            goTryOn(id);
+          }}
+          onAskStylist={outfit => {
+            setIsManualBuilderOpen(false);
+            setStylistTarget(outfit);
+          }}
+        />
       )}
     </div>
   );

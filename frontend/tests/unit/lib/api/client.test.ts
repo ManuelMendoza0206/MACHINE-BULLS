@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { z } from 'zod';
-import { apiRequest } from '@/lib/api/client';
+import { apiRequest, apiRequestBlob } from '@/lib/api/client';
 import { ApiError, NetworkError, ValidationError } from '@/lib/errors';
 
 const TestSchema = z.object({ ok: z.boolean(), value: z.string() });
@@ -93,9 +93,15 @@ describe('apiRequest', () => {
       'fetch',
       vi.fn().mockImplementation((_url: string, opts: RequestInit) => {
         return new Promise((_resolve, reject) => {
-          opts.signal?.addEventListener('abort', () => {
+          const signal = opts.signal;
+          const rejectAbort = (): void => {
             reject(new DOMException('The operation was aborted', 'AbortError'));
-          });
+          };
+          if (signal?.aborted) {
+            rejectAbort();
+            return;
+          }
+          signal?.addEventListener('abort', rejectAbort, { once: true });
         });
       })
     );
@@ -213,5 +219,218 @@ describe('apiRequest', () => {
     await expect(
       apiRequest({ path: '/api/v1/test', method: 'GET', timeoutMs: 1000 }, TestSchema)
     ).rejects.toBeInstanceOf(NetworkError);
+  });
+});
+
+// E2-T10 — respuestas que violan el contrato: cuerpos que no parsean, 4xx/5xx sin
+// body o con shape inesperado, y mensajes tipados para timeout vs. abort externo.
+describe('apiRequest — respuestas horrendas', () => {
+  it('rechaza un cuerpo que no parsea como JSON con NetworkError tipado', async () => {
+    mockFetchOnce({
+      ok: true,
+      status: 200,
+      json: async () => {
+        throw new SyntaxError('Unexpected token < in JSON at position 0');
+      },
+    });
+
+    const err = (await apiRequest(
+      { path: '/api/v1/test', method: 'GET', timeoutMs: 1000 },
+      TestSchema
+    ).catch((e: unknown) => e)) as Error;
+
+    // Un body roto NO se cuela como data validada ni crashea: sale tipado.
+    expect(err).toBeInstanceOf(NetworkError);
+    expect(err).toMatchObject({ code: 'NETWORK_ERROR' });
+  });
+
+  it('4xx sin body: ApiError con status y responseBody undefined', async () => {
+    mockFetchOnce({ ok: false, status: 502, text: async () => '' });
+
+    const err = (await apiRequest(
+      { path: '/api/v1/test', method: 'GET', timeoutMs: 1000 },
+      TestSchema
+    ).catch((e: unknown) => e)) as ApiError;
+
+    expect(err).toBeInstanceOf(ApiError);
+    expect(err.status).toBe(502);
+    expect(err.responseBody).toBeUndefined();
+    expect(err.message).toBe('Request failed with status 502');
+  });
+
+  it('4xx con body HTML (no-JSON) conserva el status sin romper el manejo de errores', async () => {
+    mockFetchOnce({
+      ok: false,
+      status: 403,
+      text: async () => '<html><body>Proxy error</body></html>',
+    });
+
+    const err = (await apiRequest(
+      { path: '/api/v1/test', method: 'GET', timeoutMs: 1000 },
+      TestSchema
+    ).catch((e: unknown) => e)) as ApiError;
+
+    expect(err).toBeInstanceOf(ApiError);
+    expect(err.status).toBe(403);
+    expect(err.responseBody).toBeUndefined();
+  });
+
+  it('5xx con un body de shape inesperado (array) se conserva para diagnóstico', async () => {
+    mockFetchOnce({ ok: false, status: 500, text: async () => '["sin","forma"]' });
+
+    const err = (await apiRequest(
+      { path: '/api/v1/test', method: 'GET', timeoutMs: 1000 },
+      TestSchema
+    ).catch((e: unknown) => e)) as ApiError;
+
+    expect(err).toBeInstanceOf(ApiError);
+    expect(err.responseBody).toEqual(['sin', 'forma']);
+  });
+
+  it('422 conserva el detalle del body en ApiError.responseBody (lo consume mapStatusToUserMessage)', async () => {
+    mockFetchOnce({
+      ok: false,
+      status: 422,
+      text: async () => JSON.stringify({ detail: 'Imagen rechazada por el motor' }),
+    });
+
+    const err = (await apiRequest(
+      { path: '/api/v1/test', method: 'POST', body: { foo: 1 }, timeoutMs: 1000 },
+      TestSchema
+    ).catch((e: unknown) => e)) as ApiError;
+
+    expect(err).toBeInstanceOf(ApiError);
+    expect(err.status).toBe(422);
+    expect(err.responseBody).toMatchObject({ detail: 'Imagen rechazada por el motor' });
+  });
+
+  it('ValidationError expone los issues de Zod con path y mensaje', async () => {
+    mockFetchOnce({ ok: true, status: 200, json: async () => ({ ok: true, value: 42 }) });
+
+    const err = (await apiRequest(
+      { path: '/api/v1/test', method: 'GET', timeoutMs: 1000 },
+      TestSchema
+    ).catch((e: unknown) => e)) as ValidationError;
+
+    expect(err).toBeInstanceOf(ValidationError);
+    expect(err.code).toBe('VALIDATION_ERROR');
+    expect(err.issues.length).toBeGreaterThan(0);
+    expect(err.issues[0]?.path).toEqual(['value']);
+  });
+
+  it('el mensaje de timeout indica los ms esperados', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockImplementation((_url: string, opts: RequestInit) => {
+        return new Promise((_resolve, reject) => {
+          opts.signal?.addEventListener('abort', () => {
+            reject(new DOMException('The operation was aborted', 'AbortError'));
+          });
+        });
+      })
+    );
+
+    const err = (await apiRequest(
+      { path: '/api/v1/test', method: 'GET', timeoutMs: 1234 },
+      TestSchema
+    ).catch((e: unknown) => e)) as NetworkError;
+
+    expect(err).toBeInstanceOf(NetworkError);
+    expect(err.message).toBe('Request timeout after 1234ms');
+  });
+
+  it('el mensaje de abort externo es distinguible del timeout', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockImplementation((_url: string, opts: RequestInit) => {
+        return new Promise((_resolve, reject) => {
+          opts.signal?.addEventListener('abort', () => {
+            reject(new DOMException('The operation was aborted', 'AbortError'));
+          });
+        });
+      })
+    );
+
+    const external = new AbortController();
+    const promise = apiRequest(
+      { path: '/api/v1/test', method: 'GET', timeoutMs: 99_999, signal: external.signal },
+      TestSchema
+    );
+    external.abort();
+
+    const err = (await promise.catch((e: unknown) => e)) as NetworkError;
+    expect(err).toBeInstanceOf(NetworkError);
+    expect(err.message).toBe('Request aborted');
+  });
+
+  it('conserva el mensaje original del fetch en NetworkError (diagnóstico offline)', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('fetch failed')));
+
+    const err = (await apiRequest(
+      { path: '/api/v1/test', method: 'GET', timeoutMs: 1000 },
+      TestSchema
+    ).catch((e: unknown) => e)) as NetworkError;
+
+    expect(err).toBeInstanceOf(NetworkError);
+    expect(err.message).toBe('fetch failed');
+    expect(err.cause).toBeInstanceOf(TypeError);
+  });
+
+  it('si la señal externa ya está abortada, fetch ni siquiera llega a resolverse', async () => {
+    const fetchMock = vi.fn().mockImplementation((_url: string, opts: RequestInit) => {
+      return new Promise((_resolve, reject) => {
+        if (opts.signal?.aborted) {
+          reject(new DOMException('The operation was aborted', 'AbortError'));
+          return;
+        }
+        opts.signal?.addEventListener('abort', () => {
+          reject(new DOMException('The operation was aborted', 'AbortError'));
+        });
+      });
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const external = new AbortController();
+    external.abort();
+
+    await expect(
+      apiRequest(
+        { path: '/api/v1/test', method: 'GET', timeoutMs: 99_999, signal: external.signal },
+        TestSchema
+      )
+    ).rejects.toBeInstanceOf(NetworkError);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+});
+
+describe('apiRequestBlob', () => {
+  it('resolves with the response blob on 200', async () => {
+    const blob = new Blob(['jpeg-bytes'], { type: 'image/jpeg' });
+    const fetchMock = mockFetchOnce({
+      ok: true,
+      status: 200,
+      blob: async () => blob,
+    });
+
+    const result = await apiRequestBlob({
+      path: '/api/v1/vton/job/download',
+      method: 'GET',
+      timeoutMs: 1000,
+    });
+
+    expect(result).toBe(blob);
+    expect(fetchMock.mock.calls[0]?.[0]).toBe('https://api.example.com/api/v1/vton/job/download');
+  });
+
+  it('throws ApiError with status on non-2xx', async () => {
+    mockFetchOnce({
+      ok: false,
+      status: 404,
+      text: async () => JSON.stringify({ detail: 'not found' }),
+    });
+
+    await expect(
+      apiRequestBlob({ path: '/api/v1/vton/job/download', method: 'GET', timeoutMs: 1000 })
+    ).rejects.toMatchObject({ code: 'API_ERROR', status: 404 });
   });
 });

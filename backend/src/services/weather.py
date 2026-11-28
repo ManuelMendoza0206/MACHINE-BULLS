@@ -18,12 +18,24 @@ logger = logging.getLogger(__name__)
 
 # Caché simple en memoria: clave -> (timestamp, data)
 _WEATHER_CACHE: dict[str, tuple[float, dict[str, Any]]] = {}
-CACHE_TTL_SECONDS = 1800.0  # 30 minutos
+CACHE_TTL_SECONDS = 7200.0  # 2 horas (ahorro de cuota de API externa)
 
 # Coordenadas por defecto (La Paz, Bolivia) si no se proveen
 DEFAULT_LAT = -16.5000
 DEFAULT_LON = -68.1500
 DEFAULT_CITY = "La Paz"
+
+KNOWN_CITY_COORDS: dict[str, tuple[float, float]] = {
+    "la paz": (-16.5000, -68.1500),
+    "el alto": (-16.5047, -68.1633),
+    "cochabamba": (-17.3935, -66.1570),
+    "santa cruz": (-17.7833, -63.1821),
+    "sucre": (-19.0333, -65.2627),
+    "tarija": (-21.5355, -64.7296),
+    "oruro": (-17.9833, -67.1500),
+    "potosi": (-19.5836, -65.7531),
+    "potosí": (-19.5836, -65.7531),
+}
 
 
 def _classify_thermal_type(temp_c: float, is_raining: bool) -> str:
@@ -42,8 +54,16 @@ def get_current_weather(
     api_key: str | None = None,
 ) -> dict[str, Any]:
     """Obtiene el clima actual y su clasificación para moda."""
+    if lat is not None and not -90 <= lat <= 90:
+        raise ValueError("latitud debe estar entre -90 y 90")
+    if lon is not None and not -180 <= lon <= 180:
+        raise ValueError("longitud debe estar entre -180 y 180")
     key = api_key or os.environ.get("WEATHER_API_KEY") or os.environ.get("WEATHERAPI_KEY")
-    cache_key = f"{city}_{lat}_{lon}"
+    has_coords = lat is not None and lon is not None
+    norm_city = city.strip().lower() if city else ""
+    norm_lat = round(lat, 2) if has_coords and lat is not None else None
+    norm_lon = round(lon, 2) if has_coords and lon is not None else None
+    cache_key = f"{norm_city}_{norm_lat}_{norm_lon}"
     now = time.time()
 
     if cache_key in _WEATHER_CACHE:
@@ -51,13 +71,15 @@ def get_current_weather(
         if now - cached_time < CACHE_TTL_SECONDS:
             return cached_data
 
+    resolved_label = city.strip() if city and city.strip() else ("Tu ubicación" if has_coords else DEFAULT_CITY)
+
     # 1. Intentar con WeatherAPI si hay API Key
     if key:
-        query = city if city else f"{lat or DEFAULT_LAT},{lon or DEFAULT_LON}"
-        url = f"http://api.weatherapi.com/v1/current.json?key={key}&q={query}&aqi=no"
+        query = f"{lat},{lon}" if has_coords else resolved_label
+        url = "https://api.weatherapi.com/v1/current.json"
         try:
             with httpx.Client(timeout=5.0) as client:
-                res = client.get(url)
+                res = client.get(url, params={"key": key, "q": query, "aqi": "no"})
                 if res.status_code == 200:
                     data = res.json()
                     temp_c = float(data["current"]["temp_c"])
@@ -67,7 +89,7 @@ def get_current_weather(
                         r in condition_text.lower() for r in ("rain", "drizzle", "shower", "thunderstorm", "snow")
                     )
                     weather_type = _classify_thermal_type(temp_c, is_raining)
-                    resolved_city = data["location"].get("name", city or DEFAULT_CITY)
+                    resolved_city = data["location"].get("name", resolved_label)
 
                     result = {
                         "city": resolved_city,
@@ -83,8 +105,11 @@ def get_current_weather(
             logger.warning("Fallo en WeatherAPI (%s), intentando Open-Meteo fallback...", exc)
 
     # 2. Fallback a Open-Meteo (100% libre, sin API key)
-    actual_lat = lat if lat is not None else DEFAULT_LAT
-    actual_lon = lon if lon is not None else DEFAULT_LON
+    if has_coords and lat is not None and lon is not None:
+        actual_lat, actual_lon = lat, lon
+    else:
+        actual_lat, actual_lon = KNOWN_CITY_COORDS.get(norm_city, (DEFAULT_LAT, DEFAULT_LON))
+
     open_meteo_url = (
         f"https://api.open-meteo.com/v1/forecast?latitude={actual_lat}&longitude={actual_lon}"
         "&current=temperature_2m,precipitation,weather_code"
@@ -101,7 +126,7 @@ def get_current_weather(
                 weather_type = _classify_thermal_type(temp_c, is_raining)
 
                 result = {
-                    "city": city or DEFAULT_CITY,
+                    "city": resolved_label,
                     "temp_c": round(temp_c, 1),
                     "condition": "Rainy" if is_raining else ("Clear" if temp_c > 18.0 else "Cool"),
                     "weather_type": weather_type,
@@ -115,7 +140,7 @@ def get_current_weather(
 
     # 3. Fallback estático de resiliencia
     fallback_res = {
-        "city": city or DEFAULT_CITY,
+        "city": resolved_label,
         "temp_c": 15.0,
         "condition": "Mild / Season",
         "weather_type": "mild",

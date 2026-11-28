@@ -10,30 +10,43 @@ Contrato del frontend (`schemas/api/vton.ts`):
 
 from __future__ import annotations
 
-import io
 import json
 import logging
 from typing import Annotated
 
-from fastapi import APIRouter, BackgroundTasks, Depends, Form, HTTPException, UploadFile
+from fastapi import (
+    APIRouter,
+    BackgroundTasks,
+    Depends,
+    File,
+    Form,
+    HTTPException,
+    Response,
+    UploadFile,
+)
 from sqlalchemy.orm import Session
 
+from config import settings
 from db.session import get_session
 from domain.enums import VtonJobStatus, VtonStage
 from domain.models import Garment, Outfit, OutfitGarment, User, VtonJob, new_uuid
 from domain.schemas import (
+    ShareLookResponse,
     VtonJobCreateResponse,
     VtonJobListItem,
     VtonJobListResponse,
     VtonJobStatusResponse,
 )
 from services import storage
-from services.auth import DEMO_USER_EMAIL
+from services.auth import get_current_user
+from services.image_upload import read_validated_image
 from services.vton import pipeline
+from services.vton.share_tokens import generate_share_token, verify_share_token
 
 router = APIRouter(prefix="/api/v1/vton", tags=["vton"])
 
 SessionDep = Annotated[Session, Depends(get_session)]
+UserDep = Annotated[User, Depends(get_current_user)]
 
 logger = logging.getLogger(__name__)
 
@@ -41,43 +54,71 @@ logger = logging.getLogger(__name__)
 @router.post("/try-on", response_model=VtonJobCreateResponse)
 async def create_try_on(
     background_tasks: BackgroundTasks,
-    user_image: UploadFile,
     session: SessionDep,
+    user: UserDep,
+    user_image: Annotated[UploadFile | None, File()] = None,
+    use_canonical: Annotated[bool, Form()] = False,
     outfit_id: Annotated[str | None, Form()] = None,
     garment_layers: Annotated[str | None, Form()] = None,
+    steps: Annotated[int | None, Form()] = None,
+    guidance: Annotated[float | None, Form()] = None,
+    seed: Annotated[int | None, Form()] = None,
+    layer_mode: Annotated[str | None, Form()] = None,
 ) -> VtonJobCreateResponse:
     """Crea un job de try-on, lo encola en Redis (ARQ) y devuelve su id.
 
+    Acepta `user_image` (foto puntual de un solo uso), `use_canonical=true` o,
+    si se omite `user_image`, reutiliza la foto canónica guardada del usuario.
     Acepta `outfit_id` (outfit ya recomendado) o `garment_layers` (lista JSON
     de {garment_id, position} del flujo multicapa). Si ninguno viene, 400.
-    Redis caido: el job corre igual en BackgroundTasks (fallback de demo,
-    `services/queue.py` explica el orden).
+    Permite opcionalmente hiperparámetros de inferencia (`steps`, `guidance`, `seed`, `layer_mode`).
     """
-    contenido = user_image.file.read()
-    if not contenido:
-        raise HTTPException(status_code=400, detail="user_image vacia")
+    if steps is not None and (steps < 10 or steps > 100):
+        raise HTTPException(status_code=422, detail="steps debe estar entre 10 y 100")
+    if guidance is not None and (guidance < 1.0 or guidance > 10.0):
+        raise HTTPException(status_code=422, detail="guidance debe estar entre 1.0 y 10.0")
+    if layer_mode is not None and layer_mode not in ("sequential", "from_original"):
+        raise HTTPException(status_code=422, detail="layer_mode debe ser 'sequential' o 'from_original'")
 
-    try:
-        from PIL import Image, UnidentifiedImageError
+    if user_image is not None and not use_canonical:
+        contenido, _image = read_validated_image(user_image, "user_image")
+        from services.pose_check import validate_apose
 
-        Image.open(io.BytesIO(contenido)).load()
-    except UnidentifiedImageError as exc:
-        raise HTTPException(status_code=400, detail="user_image no es imagen") from exc
-
-    # Protocolo de entrada (4.1.5): la foto debe estar en A-Pose ANTES de
-    # gastar GPU. Rechazo temprano con causa en detalle (frontend la muestra).
-    from services.pose_check import validate_apose
-
-    pose = validate_apose(contenido)
-    if not pose.ok:
-        raise HTTPException(status_code=422, detail=f"A-Pose invalida: {pose.reason}")
-
-    user = session.query(User).filter(User.email == DEMO_USER_EMAIL).first()
-    if user is None:
-        raise HTTPException(status_code=400, detail="no hay usuario demo; sube una prenda primero")
+        pose = validate_apose(contenido)
+        if not pose.ok:
+            raise HTTPException(status_code=422, detail=f"A-Pose invalida: {pose.reason}")
+        rel_humano, _ = storage.save_image(contenido, f"humans/{user.id}")
+    elif use_canonical or (user.canonical_consent and user.canonical_photo_path):
+        if not user.canonical_consent or not user.canonical_photo_path:
+            raise HTTPException(
+                status_code=400,
+                detail="El usuario no tiene una foto canónica configurada con consentimiento.",
+            )
+        try:
+            storage.read_bytes(user.canonical_photo_path)
+        except FileNotFoundError as exc:
+            user.canonical_photo_path = None
+            user.canonical_consent = False
+            user.canonical_consent_at = None
+            session.commit()
+            raise HTTPException(
+                status_code=400,
+                detail="Tu foto canónica ya no está disponible; vuelve a subirla en tu perfil.",
+            ) from exc
+        rel_humano = user.canonical_photo_path
+    else:
+        raise HTTPException(
+            status_code=400,
+            detail="Debe proporcionar user_image o configurar una foto canónica en tu perfil.",
+        )
 
     # Resolver el outfit: outfit_id directo, o garment_layers -> outfit sintetico.
     if outfit_id:
+        outfit = session.get(Outfit, outfit_id)
+        if outfit is None:
+            raise HTTPException(status_code=404, detail="outfit no existe")
+        if outfit.user_id != user.id:
+            raise HTTPException(status_code=403, detail="no autorizado para probar este outfit")
         n_capas = pipeline.outfit_layer_count(session, outfit_id)
         if n_capas == 0:
             raise HTTPException(status_code=404, detail="outfit no existe o sin prendas")
@@ -86,8 +127,6 @@ async def create_try_on(
         n_capas = pipeline.outfit_layer_count(session, outfit_id)
     else:
         raise HTTPException(status_code=400, detail="falta outfit_id o garment_layers")
-
-    rel_humano, _ = storage.save_image(contenido, "humans")
 
     # Job en cola: nace pending (contrato) con stage QUEUED (spec 4.1.8).
     job = VtonJob(
@@ -102,11 +141,26 @@ async def create_try_on(
 
     from services.queue import enqueue_vton_job
 
-    enqueued = await enqueue_vton_job(job.id, rel_humano)
+    enqueued = await enqueue_vton_job(
+        job.id,
+        rel_humano,
+        steps=steps,
+        guidance=guidance,
+        seed=seed,
+        layer_mode=layer_mode,
+    )
     if not enqueued:
         # Fallback de demo (Redis caido): el mismo pipeline corre en el server
         # de FastAPI como siempre. Contrato publico identico.
-        background_tasks.add_task(pipeline.run_job, job.id, rel_humano)
+        background_tasks.add_task(
+            pipeline.run_job,
+            job.id,
+            rel_humano,
+            num_inference_steps=steps,
+            guidance_scale=guidance,
+            seed=seed,
+            layer_mode=layer_mode,
+        )
     else:
         logger.info("job %s encolado en Redis", job.id)
 
@@ -118,10 +172,12 @@ async def create_try_on(
 
 
 @router.get("/status/{job_id}", response_model=VtonJobStatusResponse)
-def job_status(job_id: str, session: SessionDep) -> VtonJobStatusResponse:
+def job_status(job_id: str, session: SessionDep, user: UserDep) -> VtonJobStatusResponse:
     """Estado del job. completed incluye result_url absoluto (lo exige Zod)."""
     job = session.get(VtonJob, job_id)
     if job is None:
+        raise HTTPException(status_code=404, detail="job no existe")
+    if job.user_id != user.id:
         raise HTTPException(status_code=404, detail="job no existe")
 
     result_url = None
@@ -131,21 +187,18 @@ def job_status(job_id: str, session: SessionDep) -> VtonJobStatusResponse:
     return VtonJobStatusResponse(
         job_id=job.id,
         status=VtonJobStatus(job.status),
+        stage=job.stage,
         result_url=result_url,
         error_message=job.error_message,
     )
 
 
 @router.get("/jobs", response_model=VtonJobListResponse)
-def list_vton_jobs(session: SessionDep, limit: int = 50) -> VtonJobListResponse:
-    """Historial de jobs VTON del usuario demo (G3).
+def list_vton_jobs(session: SessionDep, user: UserDep, limit: int = 50) -> VtonJobListResponse:
+    """Historial de jobs VTON del usuario autenticado (G3).
 
     Ordenados por fecha de creación desc (más recientes primero).
     """
-    user = session.query(User).filter(User.email == DEMO_USER_EMAIL).first()
-    if user is None:
-        return VtonJobListResponse(jobs=[], total=0)
-
     query = (
         session.query(VtonJob)
         .filter(VtonJob.user_id == user.id)
@@ -174,6 +227,70 @@ def list_vton_jobs(session: SessionDep, limit: int = 50) -> VtonJobListResponse:
     return VtonJobListResponse(jobs=items, total=total)
 
 
+@router.post("/{job_id}/share", response_model=ShareLookResponse)
+def share_look(job_id: str, session: SessionDep, user: UserDep) -> ShareLookResponse:
+    """Genera un enlace público firmado y temporal para compartir el look."""
+    job = session.get(VtonJob, job_id)
+    if job is None:
+        raise HTTPException(status_code=404, detail="Job VTON no encontrado")
+    if job.user_id != user.id:
+        raise HTTPException(status_code=403, detail="No autorizado para compartir este look")
+    if job.status != VtonJobStatus.COMPLETED.value or not job.result_path:
+        raise HTTPException(status_code=400, detail="El trabajo VTON no ha finalizado exitosamente")
+
+    token = generate_share_token(job.id, user.id, ttl_hours=24)
+    # Pagina publica del frontend: incluye Open Graph y boton de descarga.
+    share_url = f"{settings.frontend_public_url.rstrip('/')}/looks/{token}"
+    return ShareLookResponse(
+        job_id=job.id,
+        share_token=token,
+        share_url=share_url,
+        expires_in_hours=24,
+    )
+
+
+@router.get("/shared/{token}")
+def get_shared_look(token: str, session: SessionDep) -> Response:
+    """Endpoint público para acceder a la imagen de un look compartido mediante token firmado."""
+    payload = verify_share_token(token)
+    job = session.get(VtonJob, payload["job_id"])
+    if job is None or job.user_id != payload.get("user_id") or not job.result_path:
+        raise HTTPException(status_code=404, detail="Look no disponible")
+
+    image_bytes = storage.read_bytes(job.result_path)
+    return Response(
+        content=image_bytes,
+        media_type="image/jpeg",
+        headers={
+            "Cache-Control": "private, max-age=3600",
+            "X-Content-Type-Options": "nosniff",
+        },
+    )
+
+
+@router.get("/{job_id}/download")
+def download_look(job_id: str, session: SessionDep, user: UserDep) -> Response:
+    """Descarga directa del resultado del look con cabeceras attachment protegidas."""
+    job = session.get(VtonJob, job_id)
+    if job is None:
+        raise HTTPException(status_code=404, detail="Job VTON no encontrado")
+    if job.user_id != user.id:
+        raise HTTPException(status_code=403, detail="No autorizado para descargar este look")
+    if job.status != VtonJobStatus.COMPLETED.value or not job.result_path:
+        raise HTTPException(status_code=400, detail="El trabajo VTON no ha finalizado exitosamente")
+
+    image_bytes = storage.read_bytes(job.result_path)
+    filename = f"styleme-look-{job.id[:8]}.jpg"
+    return Response(
+        content=image_bytes,
+        media_type="image/jpeg",
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}"',
+            "X-Content-Type-Options": "nosniff",
+        },
+    )
+
+
 def _outfit_desde_layers(session: Session, user_id: str, garment_layers_json: str) -> str:
     """Crea un Outfit temporal a partir de garment_layers JSON del frontend."""
     try:
@@ -192,6 +309,14 @@ def _outfit_desde_layers(session: Session, user_id: str, garment_layers_json: st
         prenda = session.get(Garment, gid)
         if prenda is None:
             raise HTTPException(status_code=404, detail=f"prenda {gid} no existe")
+        if prenda.owner_id != user_id:
+            from domain.models import GarmentOwnership
+
+            ownership = session.query(GarmentOwnership).filter_by(
+                user_id=user_id, garment_id=gid
+            ).first()
+            if ownership is None:
+                raise HTTPException(status_code=403, detail="no autorizado para usar esta prenda")
         session.add(
             OutfitGarment(
                 outfit_id=outfit.id,

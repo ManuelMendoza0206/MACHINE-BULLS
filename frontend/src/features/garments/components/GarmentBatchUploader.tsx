@@ -1,6 +1,7 @@
 'use client';
 
 import { useRef, useState, type JSX } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent } from '@/components/ui/card';
 import { GarmentDropzone } from '@/features/garments/components/GarmentDropzone';
 import { GarmentAnalysisResult } from '@/features/garments/components/GarmentAnalysisResult';
@@ -45,6 +46,7 @@ function QueuedPlaceholder({ position }: { position: number }): JSX.Element {
  * settled/reviewed/confirmed) renders its own `GarmentAnalysisResult`, which owns that state.
  */
 export function GarmentBatchUploader(): JSX.Element {
+  const queryClient = useQueryClient();
   const queue = useUploadQueue();
   const [allFiles, setAllFiles] = useState<File[]>([]);
   const getKey = useFileKeys();
@@ -55,8 +57,8 @@ export function GarmentBatchUploader(): JSX.Element {
   };
 
   const handleConfirmed = (_garment: GarmentUploadResponse): void => {
-    // GarmentAnalysisResult renders its own confirmed read-only card; nothing else to do here
-    // until /wardrobe has a real "already-owned garments" list to append to (blocked on G1).
+    void queryClient.invalidateQueries({ queryKey: ['garments-list'] });
+    void queryClient.invalidateQueries({ queryKey: ['wardrobe', 'analytics'] });
   };
 
   return (

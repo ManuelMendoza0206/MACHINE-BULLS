@@ -14,8 +14,15 @@ export const DominantColorSchema = z.object({
 });
 export type DominantColor = z.infer<typeof DominantColorSchema>;
 
-// Posición para armado multicapa — alinea con OutfitPosition y permite layering ordenado
-export const GarmentPositionSchema = z.enum(['top', 'bottom', 'footwear', 'outerwear']);
+// Posición para armado multicapa — alinea con OutfitPosition y soporta las 6 clases CLIP
+export const GarmentPositionSchema = z.enum([
+  'top',
+  'bottom',
+  'dress',
+  'outerwear',
+  'footwear',
+  'bag',
+]);
 export type GarmentPosition = z.infer<typeof GarmentPositionSchema>;
 
 // GAP: category is z.string() deliberately — plan-base.md gives examples but no closed enum.
@@ -23,10 +30,13 @@ export type GarmentPosition = z.infer<typeof GarmentPositionSchema>;
 export const GarmentUploadResponseSchema = z.object({
   garment_id: z.string().uuid(),
   category: z.string(),
-  position: GarmentPositionSchema.optional(),
+  subcategory: z.string().nullable().optional(),
+  // dress y bag no tienen posicion de capa: el backend devuelve null.
+  position: GarmentPositionSchema.nullable().optional(),
   top_aesthetics: z.array(AestheticScoreSchema).min(1).optional(),
   dominant_colors: z.array(DominantColorSchema).min(1),
   processed_image_url: z.string().url(),
+  pattern: z.string().nullable().optional(),
 });
 export type GarmentUploadResponse = z.infer<typeof GarmentUploadResponseSchema>;
 
@@ -42,9 +52,12 @@ export const GarmentSummarySchema = z.object({
   id: z.string().uuid(),
   processed_image_url: z.string().url(),
   category: z.string(),
+  subcategory: z.string().nullable().optional(),
   dominant_aesthetic: z.string(),
-  position: GarmentPositionSchema.optional(),
+  // dress y bag no tienen posicion de capa: el backend devuelve null.
+  position: GarmentPositionSchema.nullable().optional(),
   status: GarmentStatusSchema.optional(),
+  pattern: z.string().nullable().optional(),
 });
 export type GarmentSummary = z.infer<typeof GarmentSummarySchema>;
 

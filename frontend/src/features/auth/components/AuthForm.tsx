@@ -41,6 +41,13 @@ export function AuthForm({ mode, onSuccess }: AuthFormProps): JSX.Element {
       const user = isSignup
         ? await signUpWithEmail(data as SignupForm)
         : await signInWithEmail(data as LoginForm);
+      if (user.needsEmailConfirmation) {
+        const msg =
+          'Cuenta creada. Revisa tu bandeja de entrada para confirmar tu email antes de ingresar.';
+        setServerError(msg);
+        toast.info(msg);
+        return;
+      }
       toast.success(isSignup ? '¡Cuenta creada con éxito!' : '¡Bienvenido de vuelta!');
       onSuccess(user);
     } catch (err) {

@@ -7,16 +7,19 @@ import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/features/auth/hooks/useAuth';
 import { useMe } from '@/features/auth/hooks/useMe';
-import { listCapsuleGarments } from '@/features/garments/api/listCapsuleGarments';
+import { listGarments } from '@/features/garments/api/listGarments';
 import { getHealth } from '@/features/profile/api/getHealth';
+import { ProfileVtonPhotoCard } from '@/features/profile/components/ProfileVtonPhotoCard';
 import { mapStatusToUserMessage } from '@/lib/api/mapStatusToUserMessage';
 import { ApiError } from '@/lib/errors';
 
 const POSITION_LABEL: Record<string, string> = {
   top: 'Parte superior',
   bottom: 'Parte inferior',
+  dress: 'Vestido',
   footwear: 'Calzado',
   outerwear: 'Abrigo',
+  bag: 'Bolso',
 };
 
 /**
@@ -29,9 +32,9 @@ export function ProfileView(): JSX.Element {
   const { signOut, status: authStatus } = useAuth();
   const { data: me, isLoading, error } = useMe();
 
-  const capsule = useQuery({
-    queryKey: ['capsule'],
-    queryFn: ({ signal }) => listCapsuleGarments(signal),
+  const wardrobe = useQuery({
+    queryKey: ['garments-list'],
+    queryFn: ({ signal }) => listGarments(signal),
   });
 
   const health = useQuery({
@@ -82,7 +85,7 @@ export function ProfileView(): JSX.Element {
     );
   }
 
-  const garments = capsule.data?.garments ?? [];
+  const garments = wardrobe.data?.garments ?? [];
   const porPosition = garments.reduce<Record<string, number>>((acc, g) => {
     const key = g.position ?? 'sin posición';
     acc[key] = (acc[key] ?? 0) + 1;
@@ -175,6 +178,11 @@ export function ProfileView(): JSX.Element {
           Prendas listas para combinar en el probador
         </div>
       </Card>
+
+      {/* Bento Foto privada por defecto para VTON */}
+      <div className="lg:col-span-12">
+        <ProfileVtonPhotoCard />
+      </div>
 
       {/* Diagnóstico técnico accesible y discreto (conserva testids para verificación) */}
       <div className="lg:col-span-12">

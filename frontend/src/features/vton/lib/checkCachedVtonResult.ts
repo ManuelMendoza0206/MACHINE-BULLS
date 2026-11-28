@@ -8,16 +8,20 @@ const sessionCache = new Map<string, CachedVtonResult>();
 /**
  * Genera una clave determinista para el par (outfitId, file) en la sesión actual.
  */
-function getCacheKey(outfitId: string, file: File): string {
-  return `${outfitId}:${file.name}:${file.size}`;
+function getCacheKey(outfitId: string, photoKey: File | string): string {
+  const serialized = typeof photoKey === 'string' ? photoKey : `${photoKey.name}:${photoKey.size}`;
+  return `${outfitId}:${serialized}`;
 }
 
 /**
  * Revisa si ya existe un resultado VTON completado para el par (outfit, foto) en la sesión actual.
  * Evita disparar un POST /vton/try-on redundante y costoso en GPU (spec 04 §2.2).
  */
-export function checkCachedVtonResult(outfitId: string, file: File): CachedVtonResult | null {
-  const key = getCacheKey(outfitId, file);
+export function checkCachedVtonResult(
+  outfitId: string,
+  photoKey: File | string
+): CachedVtonResult | null {
+  const key = getCacheKey(outfitId, photoKey);
   return sessionCache.get(key) ?? null;
 }
 
@@ -26,11 +30,11 @@ export function checkCachedVtonResult(outfitId: string, file: File): CachedVtonR
  */
 export function setCachedVtonResult(
   outfitId: string,
-  file: File,
+  photoKey: File | string,
   resultUrl: string,
   jobId: string
 ): void {
-  const key = getCacheKey(outfitId, file);
+  const key = getCacheKey(outfitId, photoKey);
   sessionCache.set(key, { jobId, resultUrl });
 }
 

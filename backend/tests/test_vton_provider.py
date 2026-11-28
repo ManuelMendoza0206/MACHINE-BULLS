@@ -10,6 +10,7 @@ from __future__ import annotations
 import base64
 import json
 from typing import Any, Self
+from unittest.mock import MagicMock, patch
 
 import pytest
 from PIL import Image
@@ -34,10 +35,12 @@ def _jpg(color: tuple[int, int, int] = (10, 20, 30)) -> bytes:
 
 
 class _FakeResponse:
-    def __init__(self, payload: dict, status_code: int = 200) -> None:
+    def __init__(self, payload: dict, status_code: int = 200, content: bytes | None = None) -> None:
         self._payload = payload
         self.status_code = status_code
-        self.content = json.dumps(payload).encode()
+        # `content` permite simular la descarga binaria del output (bytes de
+        # imagen reales); por defecto es el JSON del payload.
+        self.content = content if content is not None else json.dumps(payload).encode()
 
     def json(self) -> dict:
         return self._payload
@@ -50,9 +53,14 @@ class _FakeResponse:
 class _FakeClient:
     """Captura la ultima peticion POST y devuelve la prediccion succeeded."""
 
-    def __init__(self, result_url: str = "https://replicate.delivery/x.jpg") -> None:
+    def __init__(
+        self,
+        result_url: str = "https://replicate.delivery/x.jpg",
+        image_bytes: bytes | None = None,
+    ) -> None:
         self.last_post: dict[str, Any] | None = None
         self._result_url = result_url
+        self._image_bytes = image_bytes
 
     def __enter__(self) -> Self:
         return self
@@ -72,13 +80,16 @@ class _FakeClient:
 
     def get(self, url: str, headers: dict | None = None) -> _FakeResponse:
         if url.startswith("https://replicate.delivery"):
-            return _FakeResponse({}, status_code=200)
+            # Descarga del output: bytes de imagen reales (no JSON basura),
+            # para que el test pueda afirmar el contenido devuelto.
+            return _FakeResponse({}, content=self._image_bytes or b"")
         return _FakeResponse({"status": "succeeded", "output": self._result_url})
 
 
 def test_replicate_payload_correcto(monkeypatch: pytest.MonkeyPatch) -> None:
     """Version fijada, inputs con data-URI y Prefer: wait (para respuesta sincrona)."""
-    fake = _FakeClient()
+    resultado = _jpg((77, 88, 99))
+    fake = _FakeClient(image_bytes=resultado)
     monkeypatch.setattr("services.vton.provider.httpx.Client", lambda **kw: fake)
 
     p = ReplicateVtonProvider(api_token="tok-abc")
@@ -88,7 +99,10 @@ def test_replicate_payload_correcto(monkeypatch: pytest.MonkeyPatch) -> None:
         garment_description="a red t-shirt",
         category="upper",
     )
-    assert out  # devolvio bytes
+    # El retorno es EXACTAMENTE lo descargado del output (antes el fake
+    # devolvia bytes arbitrarios y `assert out` pasaba con cualquiera).
+    assert out == resultado
+    assert out.startswith(b"\xff\xd8")  # es JPEG de verdad
 
     assert fake.last_post is not None
     body = fake.last_post["json"]
@@ -118,6 +132,34 @@ def test_replicate_rechaza_categoria_no_soportada() -> None:
         )
 
 
+def test_replicate_poll_hasta_succeeded(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Si `Prefer: wait` no alcanza (status processing), hace polling hasta succeeded."""
+    resultado = _jpg((5, 5, 5))
+
+    class _PollingClient(_FakeClient):
+        def post(self, url: str, json: dict, headers: dict) -> _FakeResponse:
+            self.last_post = {"url": url, "json": json, "headers": headers}
+            return _FakeResponse(
+                {
+                    "status": "processing",
+                    "urls": {"get": "https://api.replicate.com/v1/predictions/abc"},
+                }
+            )
+
+        # get(): la URL de polling devuelve succeeded (clase base) y la
+        # descarga de `replicate.delivery` devuelve `image_bytes`.
+
+    fake = _PollingClient(image_bytes=resultado)
+    monkeypatch.setattr("services.vton.provider.httpx.Client", lambda **kw: fake)
+
+    p = ReplicateVtonProvider(api_token="tok")
+    # Sin dormir los 2s reales del polling.
+    with patch("time.sleep"):
+        out = p.try_on(_jpg(), _jpg(), "a shirt", "upper")
+    assert out == resultado
+    assert fake.last_post is not None
+
+
 def test_mock_composicion_devuelve_jpeg() -> None:
     """El mock pega la prenda sobre la persona y devuelve JPEG valido."""
     out = MockVtonProvider().try_on(
@@ -136,6 +178,7 @@ def test_first_output_url_formas() -> None:
     assert _first_output_url("https://a/x.jpg") == "https://a/x.jpg"
     assert _first_output_url(["https://a/x.jpg"]) == "https://a/x.jpg"
     assert _first_output_url({"image": "https://a/x.jpg"}) == "https://a/x.jpg"
+    assert _first_output_url({"status": "empty"}) is None  # dict sin URL util
     assert _first_output_url([]) is None
     assert _first_output_url(None) is None
 
@@ -197,7 +240,6 @@ def test_http_provider_devuelve_imagen_cruda(monkeypatch: pytest.MonkeyPatch) ->
 
 def test_http_provider_json_con_output(monkeypatch: pytest.MonkeyPatch) -> None:
     """Acepta la alternativa JSON: {"output": "<url>"}."""
-    import io
     import json as _json
 
     resultado = _jpg((7, 7, 7))
@@ -221,7 +263,22 @@ def test_http_provider_json_con_output(monkeypatch: pytest.MonkeyPatch) -> None:
     assert delivered  # bajo la URL del output
     assert fake.last is not None
     assert fake.last["headers"]["Authorization"] == "Bearer sec"
-    assert io.BytesIO is not None  # sin import ruff
+
+
+def test_http_provider_json_con_output_data_uri(monkeypatch: pytest.MonkeyPatch) -> None:
+    """La VM puede embeber el resultado como data-URI en el JSON (sin descarga)."""
+    payload = b"decoded-bytes"
+    b64_payload = base64.b64encode(payload).decode("ascii")
+    resp_json = _FakeHttpResponse(
+        json.dumps({"output": f"data:image/png;base64,{b64_payload}"}).encode(),
+        "application/json",
+    )
+    fake = _FakeHttpSession(resp_json)
+    monkeypatch.setattr("services.vton.provider.httpx.Client", lambda **kw: fake)
+
+    p = HttpVtonProvider("http://vm:8000/vton")
+    out = p.try_on(_jpg(), _jpg(), "x", "upper")
+    assert out == payload
 
 
 def test_http_provider_rechaza_footwear() -> None:
@@ -231,11 +288,12 @@ def test_http_provider_rechaza_footwear() -> None:
 
 
 def test_build_provider_seleccion(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Orden de prioridad: mock explicito > http explicito > auto(http>replicate>mock)."""
+    """Orden de prioridad: mock explicito > http explicito > auto(http>replicate>catvton)."""
     import dataclasses
 
     from config import settings as base
 
+    monkeypatch.setattr("services.vton.provider.is_catvton_server_reachable", lambda url: False)
     actual = base
 
     def _set(**kwargs: Any) -> None:
@@ -260,9 +318,37 @@ def test_build_provider_seleccion(monkeypatch: pytest.MonkeyPatch) -> None:
     _set(vton_http_url=None)
     assert build_provider().name == "replicate"
 
-    # auto sin nada -> mock (fallback local que siempre funciona)
+    # auto sin nada -> http (CatVTON GPU por defecto, sin fallback a mock en runtime)
     _set(replicate_api_token=None)
-    assert build_provider().name == "mock"
+    assert build_provider().name == "http"
+
+
+@pytest.mark.parametrize(
+    ("overrides", "error_match"),
+    [
+        # http explicito sin endpoint: error claro, no un provider roto.
+        ({"vton_provider": "http", "vton_http_url": ""}, "falta VTON_HTTP_URL"),
+        # replicate explicito sin token: error claro.
+        (
+            {"vton_provider": "replicate", "replicate_api_token": ""},
+            "falta REPLICATE_API_TOKEN",
+        ),
+    ],
+    ids=["http-sin-url", "replicate-sin-token"],
+)
+def test_build_provider_config_incompleta_da_error(
+    overrides: dict[str, Any], error_match: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Config declarada incompleta falla en build, no al primer try-on."""
+    import dataclasses
+
+    from config import settings as base
+
+    actual = dataclasses.replace(base, **overrides)
+    monkeypatch.setattr("services.vton.provider.settings", actual)
+
+    with pytest.raises(RuntimeError, match=error_match):
+        build_provider()
 
 
 def test_http_provider_reenvia_mask_type_al_payload(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -324,6 +410,31 @@ def test_resolve_catvton_url_defaults(monkeypatch: pytest.MonkeyPatch) -> None:
     assert resolve_catvton_url("http://my-gpu:7861/custom") == "http://my-gpu:7861/custom"
 
 
+def test_is_catvton_server_reachable_paths() -> None:
+    """Reachability: URL invalida, server arriba y server caido."""
+    from services.vton import provider as vton_provider
+
+    assert vton_provider.is_catvton_server_reachable("not-a-url") is False
+
+    ok_client = MagicMock()
+    ok_client.get.return_value = MagicMock(status_code=200)
+    ok_cm = MagicMock()
+    ok_cm.__enter__.return_value = ok_client
+    ok_cm.__exit__.return_value = False
+    with patch("services.vton.provider.httpx.Client", return_value=ok_cm):
+        assert vton_provider.is_catvton_server_reachable("http://127.0.0.1:7861/tryon") is True
+
+    import httpx as _httpx
+
+    err_client = MagicMock()
+    err_client.get.side_effect = _httpx.ConnectError("refused")
+    err_cm = MagicMock()
+    err_cm.__enter__.return_value = err_client
+    err_cm.__exit__.return_value = False
+    with patch("services.vton.provider.httpx.Client", return_value=err_cm):
+        assert vton_provider.is_catvton_server_reachable("http://127.0.0.1:7861/tryon") is False
+
+
 def test_build_provider_catvton_sin_url_resuelve_default(monkeypatch: pytest.MonkeyPatch) -> None:
     """Si VTON_PROVIDER=catvton y no hay VTON_HTTP_URL, no rompe y resuelve por defecto."""
     import dataclasses
@@ -367,7 +478,10 @@ def test_http_provider_connect_error_mensaje_claro(monkeypatch: pytest.MonkeyPat
     monkeypatch.setattr(httpx.Client, "post", _mock_post)
 
     p = HttpVtonProvider("http://127.0.0.1:7861/tryon")
-    with pytest.raises(RuntimeError, match="server.py"):
+    with pytest.raises(RuntimeError) as excinfo:
         p.try_on(_jpg(), _jpg(), "shirt", "upper")
+    # Ambas partes del mensaje accionable: que falta el server y donde mirar.
+    assert "No se pudo conectar" in str(excinfo.value)
+    assert "server.py" in str(excinfo.value)
 
 

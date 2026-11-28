@@ -45,6 +45,9 @@ class User(Base):
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_uuid)
     email: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    canonical_photo_path: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    canonical_consent: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    canonical_consent_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
     garments: Mapped[list[Garment]] = relationship(back_populates="owner")
 
@@ -57,7 +60,9 @@ class Garment(Base):
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_uuid)
     owner_id: Mapped[str | None] = mapped_column(ForeignKey("users.id"), nullable=True)
     category: Mapped[str] = mapped_column(String(50), nullable=False)
+    subcategory: Mapped[str | None] = mapped_column(String(50), nullable=True)
     position: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    pattern: Mapped[str | None] = mapped_column(String(50), nullable=True)
     image_path: Mapped[str] = mapped_column(String(500), nullable=False)
     processed_image_path: Mapped[str] = mapped_column(String(500), nullable=False)
     dominant_colors: Mapped[list] = mapped_column(JSON, nullable=False, default=list)

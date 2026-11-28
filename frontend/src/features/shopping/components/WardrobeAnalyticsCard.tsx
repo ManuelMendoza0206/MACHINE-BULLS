@@ -117,6 +117,37 @@ export function WardrobeAnalyticsCard(): JSX.Element {
             </div>
           </div>
         )}
+
+        {/* Prendas olvidadas / sin uso reciente */}
+        {analytics.unworn_garments && analytics.unworn_garments.length > 0 && (
+          <div className="space-y-2 pt-1">
+            <span className="text-[11px] font-semibold text-muted-foreground">
+              Prendas olvidadas (sin registro de uso):
+            </span>
+            <div className="flex gap-2">
+              {analytics.unworn_garments.slice(0, 4).map(g => (
+                <div
+                  key={g.id}
+                  className="relative aspect-square w-12 h-12 rounded-xl overflow-hidden bg-muted/60 border border-dashed border-border/80 opacity-75 hover:opacity-100 transition-opacity"
+                  title={`${g.category} - 0 usos registrados`}
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={g.image_url}
+                    alt={g.category}
+                    className="w-full h-full object-cover grayscale"
+                  />
+                  <span className="absolute bottom-0 right-0 bg-muted-foreground/80 text-background text-[9px] font-mono px-1 rounded-tl-md">
+                    0x
+                  </span>
+                </div>
+              ))}
+            </div>
+            <p className="text-[10px] text-muted-foreground">
+              Considera probarlas en nuevas combinaciones o donarlas si no las usas.
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Acceso a Smart Shopping */}
