@@ -44,8 +44,10 @@ class User(Base):
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_uuid)
     email: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
-    vton_photo_path: Mapped[str | None] = mapped_column(String(512), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    canonical_photo_path: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    canonical_consent: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    canonical_consent_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
     garments: Mapped[list[Garment]] = relationship(back_populates="owner")
 

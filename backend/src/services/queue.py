@@ -26,14 +26,29 @@ logger = logging.getLogger(__name__)
 _ENQUEUE_TIMEOUT_S = 3.0
 
 
-async def enqueue_vton_job(job_id: str, human_image_path: str) -> bool:
+async def enqueue_vton_job(
+    job_id: str,
+    human_image_path: str,
+    steps: int | None = None,
+    guidance: float | None = None,
+    seed: int | None = None,
+    layer_mode: str | None = None,
+) -> bool:
     """Encola `run_vton_job`. False si Redis no responde (caller hace fallback)."""
     try:
         async with asyncio.timeout(_ENQUEUE_TIMEOUT_S):
             pool = await create_pool(RedisSettings.from_dsn(settings.redis_url))
         try:
             async with asyncio.timeout(_ENQUEUE_TIMEOUT_S):
-                await pool.enqueue_job("run_vton_job", job_id, human_image_path)
+                await pool.enqueue_job(
+                    "run_vton_job",
+                    job_id,
+                    human_image_path,
+                    steps,
+                    guidance,
+                    seed,
+                    layer_mode,
+                )
         finally:
             # cerrar el pool libera la conexion; el job ya esta en la lista
             await pool.close()

@@ -1,7 +1,6 @@
 import { z } from 'zod';
 
-// Identidad del MVP: el backend no valida JWT, así que /me expone el user_id
-// bajo el que persiste prendas y outfits (coincide con domain/schemas.py::MeResponse).
+// Identidad derivada por backend desde JWT o demo explícitamente habilitado en desarrollo.
 export const MeResponseSchema = z.object({
   user_id: z.string().uuid(),
   email: z.string().email(),
@@ -9,3 +8,12 @@ export const MeResponseSchema = z.object({
   default_vton_photo_url: z.string().nullable().optional().default(null),
 });
 export type MeResponse = z.infer<typeof MeResponseSchema>;
+
+// Foto canonica persistente con consentimiento informado (retencion explicita).
+export const CanonicalPhotoResponseSchema = z.object({
+  has_canonical: z.boolean(),
+  photo_url: z.string().url().nullable().optional(),
+  consent_at: z.string().nullable().optional(),
+  message: z.string().nullable().optional(),
+});
+export type CanonicalPhotoResponse = z.infer<typeof CanonicalPhotoResponseSchema>;

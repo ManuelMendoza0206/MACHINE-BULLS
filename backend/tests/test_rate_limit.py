@@ -93,3 +93,21 @@ def test_domain_exception_handler() -> None:
     res_inf = client.get("/test/raise-inference")
     assert res_inf.status_code == 500
     assert res_inf.json()["error"] == "ModelInferenceError"
+
+
+def test_forwarded_ip_is_ignored_unless_peer_is_trusted() -> None:
+    from starlette.requests import Request
+
+    app = FastAPI()
+    untrusted = RateLimitMiddleware(app)
+    trusted = RateLimitMiddleware(app, trusted_proxy_ips=("10.0.0.0/8",))
+    scope = {
+        "type": "http", "method": "POST", "path": "/x", "headers": [(b"x-forwarded-for", b"198.51.100.7")],
+        "client": ("203.0.113.4", 1000), "scheme": "http", "server": ("test", 80), "query_string": b"",
+    }
+    request = Request(scope)
+    assert untrusted._get_client_identifier(request) == "ip:203.0.113.4"
+
+    scope["client"] = ("10.1.2.3", 1000)
+    trusted_request = Request(scope)
+    assert trusted._get_client_identifier(trusted_request) == "ip:198.51.100.7"

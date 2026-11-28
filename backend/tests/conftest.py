@@ -46,22 +46,18 @@ atexit.register(shutil.rmtree, _TEST_ROOT, ignore_errors=True)
 _TEST_DB = _TEST_ROOT / "styleme_test.db"
 _TEST_MEDIA = _TEST_ROOT / "media"
 
-# Se FUERZA el entorno (no `setdefault`): un valor exportado a mano o el `.env`
-# del proyecto (hoy apunta a Supabase/Azure/Replicate reales) no debe filtrarse
-# a la suite; correr contra la BD de produccion seria el peor tipo de "verde".
-# Los tests que necesitan otra configuracion parchean `settings` (frozen, via
-# `dataclasses.replace`) o el seam del modulo, no el proceso.
+# Se FUERZA el entorno (no `setdefault`) para aislar completamente la suite
+# del .env local o Supabase/Azure reales.
 os.environ["DATABASE_URL"] = f"sqlite:///{_TEST_DB}"
 os.environ["MEDIA_DIR"] = str(_TEST_MEDIA)
-# Sin nube: storage local dentro del tmp del proceso.
 os.environ["AZURE_STORAGE_CONNECTION_STRING"] = ""
 os.environ["AZURE_STORAGE_PUBLIC_URL_BASE"] = ""
-# Sin llamadas reales a Azure OpenAI en la suite automatizada.
 os.environ["AZURE_OPENAI_ENDPOINT"] = ""
 os.environ["AZURE_OPENAI_API_KEY"] = ""
 os.environ["AZURE_OPENAI_DEPLOYMENT_NAME"] = ""
-# Provider VTON fijo en mock: ningun test depende de Replicate/CatVTON reales.
 os.environ["VTON_PROVIDER"] = "mock"
+os.environ.setdefault("SUPABASE_JWT_SECRET", "unverified-secret")
+os.environ.setdefault("ALLOW_DEMO_AUTH", "true")
 # Cola ARQ: puerto muerto para que los tests SIEMPRE ejerzan el fallback a
 # BackgroundTasks (determinista; el enqueue real lo cubre el smoke de compose
 # y test_vton_fallback_sin_redis_completa_igual).
@@ -71,6 +67,9 @@ os.environ["REDIS_URL"] = "redis://localhost:6399/0"
 # cubre (test_vton_pose_invalida_da_422). `pose_check` lee este env EN RUNTIME,
 # por eso `monkeypatch.setenv` ahi es efectivo de verdad.
 os.environ["POSE_VALIDATION"] = "off"
+os.environ.setdefault("RATE_LIMIT_GARMENTS", "1000/minute")
+os.environ.setdefault("RATE_LIMIT_SHOPPING", "1000/minute")
+os.environ.setdefault("RATE_LIMIT_VTON", "1000/minute")
 
 
 def _analisis_stub(imagen: Any) -> dict[str, Any]:

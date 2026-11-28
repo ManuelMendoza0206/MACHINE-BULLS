@@ -79,7 +79,7 @@ export function PlannerView(): React.JSX.Element {
   });
 
   const garmentsQuery = useQuery({
-    queryKey: ['garments-list'],
+    queryKey: ['garments'],
     queryFn: ({ signal }) => listGarments(signal),
     staleTime: 60_000,
     refetchOnWindowFocus: false,

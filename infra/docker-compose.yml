@@ -30,7 +30,6 @@ services:
       timeout: 3s
       retries: 10
   db:
-    profiles: ["local-db"]
     image: pgvector/pgvector:pg16
     container_name: styleme-db
     restart: unless-stopped
@@ -58,11 +57,18 @@ services:
       - path: ../backend/.env # DATABASE_URL (Supabase), AZURE_STORAGE_*, REPLICATE_API_TOKEN
         required: false
     environment:
-      # Usa DATABASE_URL de backend/.env (Supabase Postgres por defecto).
+      # Postgres local por defecto. Sobrescribir DATABASE_URL en infra/.env
+      # (junto a DB_MODE=supabase) para optar por Supabase.
+      DATABASE_URL: ${DATABASE_URL:-postgresql+psycopg://styleme:styleme_mvp@db:5432/styleme}
+      DB_MODE: ${DB_MODE:-local}
       # Cola ARQ (el endpoint encola; worker service consume).
       REDIS_URL: redis://redis:6379/0
       # URLs absolutas de /media para el navegador (localhost:8000 publicado).
       PUBLIC_BASE_URL: http://localhost:8000
+      # Los enlaces de compartir apuntan a la pagina publica del frontend.
+      FRONTEND_PUBLIC_URL: ${FRONTEND_PUBLIC_URL:-http://localhost:3000}
+      # Secreto dedicado para tokens de compartir; vacio = Supabase JWT secret.
+      VTON_SHARE_SECRET: ${VTON_SHARE_SECRET:-}
       # Fallback local por defecto; ver comentarios arriba para VM/Replicate.
       VTON_PROVIDER: ${VTON_PROVIDER:-mock}
       VTON_HTTP_URL: ${VTON_HTTP_URL:-}
@@ -81,6 +87,25 @@ services:
     depends_on:
       redis:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+
+  migrate:
+    image: styleme-backend
+    build: ../backend
+    pull_policy: never
+    container_name: styleme-migrate
+    restart: "no"
+    env_file:
+      - path: ../backend/.env
+        required: false
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgresql+psycopg://styleme:styleme_mvp@db:5432/styleme}
+      DB_MODE: ${DB_MODE:-local}
+    command: ["python", "/app/scripts/apply_migrations.py"]
+    depends_on:
+      db:
+        condition: service_healthy
 
   # Worker ARQ: consume la cola de Redis y corre el pipeline VTON (mock,
   # catvton http o Replicate segun env). Misma imagen que el backend (tiene
@@ -98,6 +123,8 @@ services:
       - path: ../backend/.env
         required: false
     environment:
+      DATABASE_URL: ${DATABASE_URL:-postgresql+psycopg://styleme:styleme_mvp@db:5432/styleme}
+      DB_MODE: ${DB_MODE:-local}
       REDIS_URL: redis://redis:6379/0
       PUBLIC_BASE_URL: http://localhost:8000
       VTON_PROVIDER: ${VTON_PROVIDER:-mock}
@@ -113,6 +140,8 @@ services:
     depends_on:
       redis:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
     # La imagen comparte el HEALTHCHECK del backend (curl /health de uvicorn,
     # que acá no existe): override con el health check nativo de arq.
     healthcheck:

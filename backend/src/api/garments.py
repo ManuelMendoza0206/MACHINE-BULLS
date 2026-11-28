@@ -44,6 +44,7 @@ from services.auth import DEMO_USER_EMAIL, get_current_user, get_demo_user
 from services.garment_analysis.analyzer import analyze_garment
 from services.garment_analysis.background_remover import remove_background
 from services.garment_analysis.color_extraction import dominant_colors
+from services.image_upload import read_validated_image
 
 __all__ = ["DEMO_USER_EMAIL", "get_current_user", "get_demo_user", "router"]
 
@@ -60,17 +61,7 @@ def upload_garment(
     user: UserDep,
 ) -> GarmentUploadResponse:
     """Analiza una prenda subida: CLIP (categoria + estetica) + colores."""
-    contenido = file.file.read()
-    if not contenido:
-        raise HTTPException(status_code=400, detail="archivo vacio")
-
-    try:
-        from PIL import Image, UnidentifiedImageError
-
-        imagen = Image.open(io.BytesIO(contenido))
-        imagen.load()
-    except UnidentifiedImageError as exc:
-        raise HTTPException(status_code=400, detail="archivo no es una imagen") from exc
+    contenido, imagen = read_validated_image(file, "archivo")
 
     # Remocion de fondo textil (u2net_cloth_seg)
     imagen_procesada = remove_background(imagen)
@@ -166,7 +157,7 @@ def update_garment_status(
     garment = session.get(Garment, garment_id)
     if garment is None:
         raise HTTPException(status_code=404, detail="prenda no existe")
-    if garment.owner_id is not None and garment.owner_id != user.id:
+    if garment.owner_id != user.id:
         raise HTTPException(status_code=403, detail="no tienes permiso para modificar esta prenda")
 
     allowed = {"AVAILABLE", "LAUNDRY", "REPAIR", "INACTIVE"}

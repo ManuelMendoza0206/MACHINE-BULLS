@@ -11,7 +11,9 @@ Arranque local:
 
 from __future__ import annotations
 
+import asyncio
 import logging
+import os
 import sys
 from pathlib import Path
 
@@ -35,6 +37,7 @@ from middleware.rate_limit import RateLimitMiddleware
 from services import storage
 
 logging.basicConfig(level=logging.INFO)
+_media_cleanup_task: asyncio.Task | None = None
 
 app = FastAPI(
     title="StyleMe MVP API",
@@ -49,10 +52,12 @@ app.add_middleware(MetricsMiddleware)
 app.add_middleware(
     RateLimitMiddleware,
     limits={
-        "/garments/upload": "20/minute",
-        "/shopping/evaluate": "20/minute",
-        "/vton/try-on": "10/minute",
+        "/garments/upload": os.environ.get("RATE_LIMIT_GARMENTS", "20/minute"),
+        "/shopping/evaluate": os.environ.get("RATE_LIMIT_SHOPPING", "20/minute"),
+        "/vton/try-on": os.environ.get("RATE_LIMIT_VTON", "10/minute"),
     },
+    redis_url=settings.redis_url,
+    trusted_proxy_ips=settings.trusted_proxy_ips,
 )
 
 # 3. CORS Middleware: orígenes permitidos (soporta cualquier puerto localhost/127.0.0.1)
@@ -91,10 +96,33 @@ app.mount("/media", StaticFiles(directory=settings.media_dir), name="media")
 
 @app.on_event("startup")
 def _startup() -> None:
-    """Crea tablas al arrancar (SQLite). En Postgres lo hace Alembic."""
+    """Inicializa SQLite, valida migraciones Postgres y programa la purga de fotos."""
+    global _media_cleanup_task
     init_db()
-    # Purga automatica de fotos humanas con mas de 24 horas (privacidad y compliance)
-    storage.purge_expired_human_photos(max_age_hours=24.0)
+    storage.purge_expired_human_photos(max_age_hours=settings.human_photo_retention_hours)
+    _media_cleanup_task = asyncio.get_running_loop().create_task(_periodic_media_cleanup())
+
+
+async def _periodic_media_cleanup() -> None:
+    """Repite la retención mientras el proceso siga vivo (no solo al reiniciar)."""
+    while True:
+        await asyncio.sleep(settings.human_photo_purge_interval_seconds)
+        await asyncio.to_thread(
+            storage.purge_expired_human_photos,
+            max_age_hours=settings.human_photo_retention_hours,
+        )
+
+
+@app.on_event("shutdown")
+async def _shutdown() -> None:
+    global _media_cleanup_task
+    if _media_cleanup_task is not None:
+        _media_cleanup_task.cancel()
+        try:
+            await _media_cleanup_task
+        except asyncio.CancelledError:
+            pass
+        _media_cleanup_task = None
 
 
 @app.get("/health")

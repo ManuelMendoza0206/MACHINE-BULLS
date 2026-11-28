@@ -22,6 +22,9 @@ beforeEach(() => {
     ),
     http.get('*/api/v1/garments', () => HttpResponse.json(capsuleFixture)),
     http.get('*/api/v1/garments/capsule', () => HttpResponse.json(capsuleFixture)),
+    http.get('*/api/v1/me/canonical-photo', () =>
+      HttpResponse.json({ has_canonical: false, photo_url: null })
+    ),
     http.get('*/health', () => HttpResponse.json({ status: 'ok', vton_provider: 'mock' }))
   );
 });
@@ -49,6 +52,7 @@ describe('ProfileView', () => {
     // Proveedor VTON desde /health — clave para la demo (mock hoy, VM mañana).
     expect(await screen.findByTestId('vton-provider')).toHaveTextContent('mock');
     expect(screen.getByText(/openai\/clip-vit-base-patch32/)).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: /foto canónica/i })).toBeInTheDocument();
   });
 
   it('ofrece cerrar sesión', async () => {

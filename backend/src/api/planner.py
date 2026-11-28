@@ -102,11 +102,20 @@ def create_plan(
         outfit = session.get(Outfit, payload.outfit_id)
         if outfit is None:
             raise HTTPException(status_code=404, detail="el outfit asociado no existe")
+        if outfit.user_id != user.id:
+            raise HTTPException(status_code=403, detail="no autorizado para asociar este outfit")
 
     # Verificar que las prendas existan
     garments = session.query(Garment).filter(Garment.id.in_(payload.garment_ids)).all()
     if len(garments) != len(set(payload.garment_ids)):
         raise HTTPException(status_code=400, detail="una o más prendas especificadas no existen")
+    owned_ids = {
+        row.garment_id
+        for row in session.query(GarmentOwnership).filter(GarmentOwnership.user_id == user.id)
+    }
+    owned_ids.update(g.id for g in garments if g.owner_id == user.id)
+    if not set(payload.garment_ids).issubset(owned_ids):
+        raise HTTPException(status_code=403, detail="una o más prendas no pertenecen al usuario")
 
     plan = OutfitPlan(
         id=new_uuid(),
@@ -173,6 +182,13 @@ def confirm_plan_usage(
     laundry_updated: list[str] = []
     if send_to_laundry and plan.garment_ids:
         prendas = session.query(Garment).filter(Garment.id.in_(plan.garment_ids)).all()
+        owned_ids = {
+            row.garment_id
+            for row in session.query(GarmentOwnership).filter(GarmentOwnership.user_id == user.id)
+        }
+        owned_ids.update(g.id for g in prendas if g.owner_id == user.id)
+        if any(g.id not in owned_ids for g in prendas):
+            raise HTTPException(status_code=403, detail="el plan contiene prendas que no pertenecen al usuario")
         for p in prendas:
             p.status = GarmentStatus.LAUNDRY.value
             laundry_updated.append(p.id)

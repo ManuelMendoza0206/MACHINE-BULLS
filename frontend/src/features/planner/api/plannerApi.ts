@@ -26,7 +26,7 @@ export function getOutfitPlans(
   const path = `/api/v1/planner${qs ? `?${qs}` : ''}`;
 
   return apiRequest(
-    { path, method: 'GET', timeoutMs: 8_000, signal },
+    { path, method: 'GET', timeoutMs: 10_000, signal },
     z.array(OutfitPlanResponseSchema)
   );
 }
@@ -40,7 +40,7 @@ export function createOutfitPlan(
       path: '/api/v1/planner',
       method: 'POST',
       body: payload as unknown as Record<string, unknown>,
-      timeoutMs: 8_000,
+      timeoutMs: 10_000,
       signal,
     },
     OutfitPlanResponseSchema
@@ -56,7 +56,7 @@ export function confirmOutfitPlan(
     {
       path: `/api/v1/planner/${encodeURIComponent(planId)}/confirm?send_to_laundry=${sendToLaundry}`,
       method: 'PATCH',
-      timeoutMs: 8_000,
+      timeoutMs: 10_000,
       signal,
     },
     OutfitPlanConfirmResponseSchema
@@ -68,7 +68,7 @@ export async function deleteOutfitPlan(planId: string, signal?: AbortSignal): Pr
     {
       path: `/api/v1/planner/${encodeURIComponent(planId)}`,
       method: 'DELETE',
-      timeoutMs: 8_000,
+      timeoutMs: 10_000,
       signal,
     },
     z.object({ deleted: z.boolean() }).passthrough()

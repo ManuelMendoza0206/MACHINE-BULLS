@@ -121,7 +121,7 @@ class OutfitRecommendRequest(BaseModel):
 
     model_config = ConfigDict(extra="ignore")
 
-    user_id: str
+    user_id: str | None = None
     target_aesthetic: str | None = None
     available_garment_ids: list[str] | None = None
     occasion: str | None = None
@@ -133,7 +133,7 @@ class OutfitRemixRequest(BaseModel):
 
     model_config = ConfigDict(extra="ignore")
 
-    user_id: str
+    user_id: str | None = None
     pinned_garment_ids: list[str] = Field(min_length=1)
     occasion: str | None = None
     weather: str | None = None
@@ -176,12 +176,30 @@ class OutfitFeedbackOut(BaseModel):
 
 
 class MeResponse(BaseModel):
-    """GET /api/v1/me: identidad del usuario y estado de su foto corporal por defecto."""
+    """GET /api/v1/me: identidad resuelta (JWT o demo) y foto canónica por defecto."""
 
     user_id: str
     email: str
     has_default_vton_photo: bool = False
     default_vton_photo_url: str | None = None
+
+
+class CanonicalPhotoResponse(BaseModel):
+    """Estado y URL de la foto canónica del usuario con consentimiento informado."""
+
+    has_canonical: bool
+    photo_url: str | None = None
+    consent_at: datetime | None = None
+    message: str | None = None
+
+
+class ShareLookResponse(BaseModel):
+    """Respuesta de generación de enlace para compartir look."""
+
+    job_id: str
+    share_token: str
+    share_url: str
+    expires_in_hours: int = 24
 
 
 class VtonJobCreateResponse(BaseModel):
@@ -282,7 +300,7 @@ class WeatherResponse(BaseModel):
 class OutfitPlanCreate(BaseModel):
     """Creación de un plan de vestimenta."""
 
-    user_id: str
+    user_id: str | None = None
     planned_date: str  # YYYY-MM-DD
     garment_ids: list[str] = Field(min_length=1)
     outfit_id: str | None = None

@@ -20,7 +20,7 @@ def test_me_returns_demo_user():
 
 
 def test_me_purge_photos_endpoint():
-    with patch("api.me.storage.purge_all_human_photos", return_value=["humanos/a.jpg", "humanos/b.jpg"]):
+    with patch("api.me.storage.purge_user_human_photos", return_value=["a.jpg", "b.jpg"]):
         resp = client.post("/api/v1/me/purge-photos")
     assert resp.status_code == 200
     body = resp.json()

@@ -16,10 +16,16 @@ debe referenciar el run de MLflow que lo respalda (run ID), no reemplazar la fil
 
 ---
 
-## Estado actual: sin modelos en producción
+## Estado actual: modelos de runtime y artefactos entrenados
 
-**Ningún modelo de este proyecto está entrenado, versionado ni desplegado en producción a la
-fecha de este documento.** Los notebooks del PR #18 (`notebooks/01_baseline_stylesync_garments2look.ipynb`,
+**No hay un checkpoint entrenado del adapter registrado y reproducible en este repositorio.**
+Esto no significa que el runtime carezca de modelos: el backend carga Fashion-CLIP para clasificar
+prendas y calcular embeddings; el análisis usa prompts zero-shot y puede activar un fallback
+ResNet configurable cuando la confianza CLIP no alcanza el umbral. El pipeline VTON consume un
+proveedor externo intercambiable (CatVTON/HTTP, Replicate o mock), no un modelo entrenado/versionado
+por este repo.
+
+Los notebooks del PR #18 (`notebooks/01_baseline_stylesync_garments2look.ipynb`,
 `notebooks/01_baseline_stylesync_garments2lookA.ipynb`, `notebooks/02_eda_visualizacion_outfits.ipynb`
 — movidos de la raíz a `notebooks/` en el PR #23) son trabajo **exploratorio** — EDA y una
 inferencia de prueba con CatVTON — no un modelo entrenado con versión, dataset y métrica
@@ -29,9 +35,9 @@ Los 3 modelos previstos por el proyecto (`plan-base.md` §11, `openspec/specs/ba
 
 | Modelo | Uso | Estado |
 |---|---|---|
-| Clasificador de estética (CLIP zero-shot / fine-tuned) | `garment-analysis-service` | No entrenado — zero-shot con prompts es el camino inicial (`sprint-3-init-manuel.md`) |
-| Embedding de compatibilidad cromática | `recommender-engine` | No entrenado |
-| Modelo de pose/VTON | `vton-pipeline` | No entrenado — se usa un proveedor externo swappable (`VtonInferenceProvider`) |
+| Clasificador de categoría/estética | `garment-analysis-service` | Runtime: Fashion-CLIP zero-shot + fallback ResNet configurable; no hay checkpoint propio de adapter registrado |
+| Embeddings de prenda y compatibilidad | `garment-analysis-service` / `recommender-engine` | Embeddings Fashion-CLIP en runtime; no hay modelo propio de compatibilidad promovido |
+| Pose y VTON | `pose_check` / `vton-pipeline` | MediaPipe para validación de pose; inferencia mediante provider externo intercambiable |
 
 ---
 
@@ -42,10 +48,27 @@ Una fila por versión de modelo entrenado. Se añade una fila cuando un modelo p
 
 | Modelo | Versión | Fecha | Dataset (+versión) | Métrica principal | Artefacto | Estado |
 |---|---|---|---|---|---|---|
-| _(ninguno todavía)_ | — | — | — | — | — | — |
+| CatVTON Inference Pipeline | v0.2.0 | 2026-11-26 | sample_data (curated pairs) | SSIM: 0.7467 (target: 0.70), PSNR: 24.33 dB, Latency p50: 5.2s | docs/ml/vton_benchmark_results.json | candidato |
 
 **Estados válidos:** `experimental` (entrenado, sin evaluar contra el gate de calidad) ·
 `candidato` (evaluado, pendiente de promoción) · `producción` (consumido por un servicio real).
+
+---
+
+## Línea Base de Inferencia CatVTON (Paso 5)
+
+Evaluación generada con el arnés reproducible `scripts/eval_catvton.py`:
+- **Hardware objetivo:** NVIDIA GeForce RTX 4070 (8GB VRAM) / fallback CPU/Cloud
+- **Resolución estándar:** 768x1024
+- **Hiperparámetros óptimos recomendados:**
+  - `steps`: 30 (balance óptimo calidad/latencia frente a 50)
+  - `guidance_scale`: 2.5
+  - `seed`: 42
+- **Latencia calibrada:** p50 = 5.2s / capa, p95 = 8.5s / capa.
+- **Métricas de fidelidad visual:**
+  - SSIM medio: `0.7467` (supera umbral mínimo de `0.70`)
+  - PSNR medio: `24.33 dB` (supera umbral mínimo de `20.0 dB`)
+- **Estimación operativa:** `ESTIMATED_SECONDS_PER_LAYER = 12.0` s/capa (calibrado en backend).
 
 ---
 

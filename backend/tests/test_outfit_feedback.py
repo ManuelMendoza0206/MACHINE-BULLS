@@ -2,8 +2,12 @@
 
 from __future__ import annotations
 
+import time
+
+import jwt
 from fastapi.testclient import TestClient
 
+from config import settings
 from db.session import SessionLocal
 from domain.models import (
     Outfit,
@@ -34,10 +38,24 @@ def test_submit_and_get_outfit_feedback():
         session.add(outfit)
         session.commit()
 
+        token = jwt.encode(
+            {
+                "sub": user.id,
+                "email": user.email,
+                "role": "authenticated",
+                "aud": "authenticated",
+                "exp": time.time() + 3600,
+            },
+            settings.supabase_jwt_secret or "unverified-secret",
+            algorithm="HS256",
+        )
+        headers = {"Authorization": f"Bearer {token}"}
+
         # Enviar feedback Like (+1)
         resp = client.post(
             f"/api/v1/outfits/{outfit.id}/feedback",
             json={"rating": 1, "feedback_type": "like"},
+            headers=headers,
         )
         assert resp.status_code == 200, resp.text
         data = resp.json()
@@ -46,7 +64,7 @@ def test_submit_and_get_outfit_feedback():
         assert data["outfit_id"] == outfit.id
 
         # Consultar feedback del outfit
-        resp_get = client.get(f"/api/v1/outfits/{outfit.id}/feedback")
+        resp_get = client.get(f"/api/v1/outfits/{outfit.id}/feedback", headers=headers)
         assert resp_get.status_code == 200
         assert resp_get.json()["rating"] == 1
 
@@ -54,6 +72,7 @@ def test_submit_and_get_outfit_feedback():
         resp_update = client.post(
             f"/api/v1/outfits/{outfit.id}/feedback",
             json={"rating": -1, "feedback_type": "dislike"},
+            headers=headers,
         )
         assert resp_update.status_code == 200
         assert resp_update.json()["rating"] == -1

@@ -17,6 +17,10 @@ import { recommendOutfits } from '@/features/outfits/api/recommendOutfits';
 import { useMe } from '@/features/auth/hooks/useMe';
 import { createVtonJob, createVtonMultilayerJob } from '@/features/vton/api/createVtonJob';
 import { getVtonJobStatus } from '@/features/vton/api/getVtonJobStatus';
+import { useVtonJobStatus } from '@/features/vton/hooks/useVtonJobStatus';
+import { CompareView } from '@/features/vton/components/CompareView';
+import { downloadVtonJob, shareVtonJob } from '@/features/vton/api/shareVtonJob';
+import { getCanonicalPhoto } from '@/features/profile/api/canonicalPhoto';
 import {
   checkCachedVtonResult,
   setCachedVtonResult,
@@ -77,12 +81,53 @@ function sanitizeImageParam(raw: string | null): string | null {
 }
 
 type CreateJobVars =
-  | { mode: 'outfit'; image: File | null; outfitId: string }
-  | { mode: 'layers'; image: File | null; layers: VtonGarmentLayer[] };
+  | { mode: 'outfit'; image: File | null; outfitId: string; useCanonical: boolean }
+  | { mode: 'layers'; image: File | null; layers: VtonGarmentLayer[]; useCanonical: boolean };
 
 /** Techo de polling configurable por entorno (ms). El job NUNCA se cancela al alcanzarlo. */
 function getPollTimeoutMs(): number {
   return Number(process.env['NEXT_PUBLIC_VTON_POLL_TIMEOUT_MS'] ?? 90_000);
+}
+
+function ComparisonResult({
+  jobId,
+  originalUrl,
+  originalLabel,
+  comparisonLabel,
+}: {
+  jobId: string;
+  originalUrl: string;
+  originalLabel: string;
+  comparisonLabel: string;
+}): JSX.Element {
+  const result = useVtonJobStatus({ jobId, timeoutMs: getPollTimeoutMs() });
+
+  if (result.status === 'completed' && result.data?.result_url) {
+    return (
+      <CompareView
+        originalUrl={originalUrl}
+        comparisonUrl={result.data.result_url}
+        originalLabel={originalLabel}
+        comparisonLabel={comparisonLabel}
+      />
+    );
+  }
+
+  if (result.status === 'failed') {
+    return (
+      <p role="alert">
+        {result.data?.error_message || 'No se pudo generar el resultado alternativo.'}
+      </p>
+    );
+  }
+
+  if (result.status === 'timeout') {
+    return (
+      <p role="status">La comparación sigue procesándose. Podrás consultarla en el historial.</p>
+    );
+  }
+
+  return <p role="status">Generando resultado alternativo…</p>;
 }
 /** Backoff: 1s, 1.5s, 2.25s… techo 5s. */
 const POLL_BASE_MS = 1_000;
@@ -125,7 +170,8 @@ export function TryOnView(): JSX.Element {
       if (!me) throw new Error('sin identidad del backend');
       return recommendOutfits({ user_id: me.user_id }, signal);
     },
-    enabled: Boolean(me) && !isSingleGarmentMode,
+    // Si la URL ya trae outfit o prenda única, no necesitamos llamar al recomendador otra vez.
+    enabled: Boolean(me) && !isSingleGarmentMode && !queryOutfitId,
     staleTime: 60_000,
   });
 
@@ -136,10 +182,12 @@ export function TryOnView(): JSX.Element {
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [wantsCustomPhoto, setWantsCustomPhoto] = useState<boolean>(false);
+  const [canonicalSelected, setCanonicalSelected] = useState<boolean>(false);
   const [phase, setPhase] = useState<Phase>('idle');
 
   const defaultPhotoUrl = me?.default_vton_photo_url ?? null;
   const usingDefaultPhoto = Boolean(defaultPhotoUrl && !file && !wantsCustomPhoto);
+  const usingCanonicalPhoto = usingDefaultPhoto || canonicalSelected;
   const activePreviewUrl = previewUrl ?? (usingDefaultPhoto ? defaultPhotoUrl : null);
   const activePhotoCacheKey: File | string | null =
     file ?? (usingDefaultPhoto && defaultPhotoUrl ? `default:${defaultPhotoUrl}` : null);
@@ -147,11 +195,18 @@ export function TryOnView(): JSX.Element {
   const [jobStage, setJobStage] = useState<string | null>(null);
   const [resultUrl, setResultUrl] = useState<string | null>(null);
   const [failure, setFailure] = useState<string | null>(null);
+  const [comparisonOpen, setComparisonOpen] = useState(false);
+  const [comparisonOutfitId, setComparisonOutfitId] = useState('');
+  const [comparisonJobId, setComparisonJobId] = useState<string | null>(null);
   const [createError, setCreateError] = useState<string | null>(null);
   const [isCheckingManual, setIsCheckingManual] = useState(false);
   const [manualCheckMsg, setManualCheckMsg] = useState<string | null>(null);
   const [attempt, setAttempt] = useState(0);
   const [elapsedSec, setElapsedSec] = useState(0);
+  const [shareMessage, setShareMessage] = useState<string | null>(null);
+  const [isSharing, setIsSharing] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [downloadMessage, setDownloadMessage] = useState<string | null>(null);
   const [isVisible, setIsVisible] = useState(() =>
     typeof document !== 'undefined' ? document.visibilityState === 'visible' : true
   );
@@ -175,12 +230,40 @@ export function TryOnView(): JSX.Element {
     queryFn: ({ signal }) => listGarments(signal),
   });
 
+  const canonicalPhoto = useQuery({
+    queryKey: ['canonical-photo'],
+    queryFn: ({ signal }) => getCanonicalPhoto(signal),
+  });
+  const hasCanonicalPhoto = Boolean(
+    !defaultPhotoUrl && canonicalPhoto.data?.has_canonical && canonicalPhoto.data.photo_url
+  );
+
+  const comparisonOptionsQuery = useQuery({
+    queryKey: ['outfits', 'comparison-options', me?.user_id],
+    queryFn: ({ signal }) => {
+      if (!me) throw new Error('sin identidad del backend');
+      return recommendOutfits({ user_id: me.user_id }, signal);
+    },
+    enabled: comparisonOpen && Boolean(me) && Boolean(queryOutfitId),
+    staleTime: 60_000,
+  });
+
   const createJob = useMutation({
     mutationFn: (vars: CreateJobVars) =>
       vars.mode === 'layers'
-        ? createVtonMultilayerJob(vars.image, vars.layers)
-        : createVtonJob(vars.image, vars.outfitId),
+        ? createVtonMultilayerJob(vars.image, vars.layers, { useCanonical: vars.useCanonical })
+        : createVtonJob(vars.image, vars.outfitId, { useCanonical: vars.useCanonical }),
   });
+  type CreateComparisonVars = { image: File | null; id: string; useCanonical: boolean };
+  const createComparisonJob = useMutation({
+    mutationFn: (vars: CreateComparisonVars) =>
+      createVtonJob(vars.image, vars.id, { useCanonical: vars.useCanonical }),
+  });
+
+  const comparisonOptions = queryOutfitId
+    ? (comparisonOptionsQuery.data?.outfits ?? [])
+    : availableOutfits;
+  const comparisonOutfit = comparisonOptions.find(item => item.outfit_id === comparisonOutfitId);
 
   // Detector de visibilidad de pestaña (visibilityState)
   useEffect(() => {
@@ -286,20 +369,27 @@ export function TryOnView(): JSX.Element {
     setElapsedSec(0);
     pausedAtRef.current = null;
     setManualCheckMsg(null);
+    setDownloadMessage(null);
     setPhase('idle');
+    setComparisonOpen(false);
+    setComparisonOutfitId('');
+    setComparisonJobId(null);
+    createComparisonJob.reset();
   };
 
   const resetPhoto = (): void => {
-    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    if (previewUrl && previewUrl.startsWith('blob:')) URL.revokeObjectURL(previewUrl);
     setFile(null);
+    setCanonicalSelected(false);
     setPreviewUrl(null);
     setWantsCustomPhoto(true);
     resetJobState();
   };
 
   const resetToDefaultPhoto = (): void => {
-    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    if (previewUrl && previewUrl.startsWith('blob:')) URL.revokeObjectURL(previewUrl);
     setFile(null);
+    setCanonicalSelected(false);
     setPreviewUrl(null);
     setWantsCustomPhoto(false);
     resetJobState();
@@ -320,44 +410,67 @@ export function TryOnView(): JSX.Element {
     const first = files[0];
     if (!first) return;
     if (previewUrl) URL.revokeObjectURL(previewUrl);
+    setCanonicalSelected(false);
     setFile(first);
     setPreviewUrl(URL.createObjectURL(first));
     setWantsCustomPhoto(true);
     setCreateError(null);
   };
 
+  const selectCanonicalPhoto = (): void => {
+    const photoUrl = canonicalPhoto.data?.photo_url;
+    if (!photoUrl) return;
+    if (previewUrl && previewUrl.startsWith('blob:')) URL.revokeObjectURL(previewUrl);
+    setFile(null);
+    setCanonicalSelected(true);
+    setWantsCustomPhoto(false);
+    setPreviewUrl(photoUrl);
+    setCreateError(null);
+  };
+
   const submit = (): void => {
     // Doble-submit: no re-entra mientras la creación del job esté en vuelo
     // ni mientras haya un job corriendo.
-    if (!activePhotoCacheKey || !cacheKeyId || createJob.isPending || phase === 'processing')
+    if (
+      (!activePhotoCacheKey && !canonicalSelected) ||
+      !cacheKeyId ||
+      createJob.isPending ||
+      phase === 'processing'
+    ) {
       return;
+    }
 
     // Reuso de cache: si ya existe un resultado en la sesión para el par (outfit|prenda, foto),
     // se muestra directo sin disparar un nuevo POST /vton/try-on ni gastar GPU.
-    const cached = checkCachedVtonResult(cacheKeyId, activePhotoCacheKey);
-    if (cached) {
-      setJobId(cached.jobId);
-      setResultUrl(cached.resultUrl);
-      setFailure(null);
-      setCreateError(null);
-      setPhase('completed');
-      return;
+    // La foto canónica explícita de `/me/canonical-photo` no se cachea si cambió en perfil.
+    if (activePhotoCacheKey) {
+      const cached = checkCachedVtonResult(cacheKeyId, activePhotoCacheKey);
+      if (cached) {
+        setJobId(cached.jobId);
+        setResultUrl(cached.resultUrl);
+        setFailure(null);
+        setCreateError(null);
+        setPhase('completed');
+        return;
+      }
     }
 
     setCreateError(null);
     setElapsedSec(0);
-    const imageToSend = usingDefaultPhoto ? null : file;
+    const imageToSend = usingCanonicalPhoto ? null : file;
     const payload: CreateJobVars =
       isSingleGarmentMode && queryGarmentId
         ? {
             mode: 'layers',
             image: imageToSend,
             layers: [{ garment_id: queryGarmentId, position: singleGarmentPosition }],
+            useCanonical: usingCanonicalPhoto,
           }
         : {
             mode: 'outfit',
             image: imageToSend,
             outfitId: effectiveOutfitId as string,
+            useCanonical: usingCanonicalPhoto,
           };
 
     createJob.mutate(payload, {
@@ -379,6 +492,47 @@ export function TryOnView(): JSX.Element {
     setElapsedSec(0);
     setManualCheckMsg(null);
     setPhase('processing');
+  };
+
+  const handleShare = async (): Promise<void> => {
+    if (!jobId) return;
+    setIsSharing(true);
+    setShareMessage(null);
+    try {
+      const res = await shareVtonJob(jobId);
+      if (typeof navigator !== 'undefined' && navigator.clipboard) {
+        await navigator.clipboard.writeText(res.share_url);
+        setShareMessage('¡Enlace copiado al portapapeles! Expira en 24 horas.');
+      } else {
+        setShareMessage(`Enlace para compartir: ${res.share_url}`);
+      }
+    } catch {
+      setShareMessage('No pudimos generar el enlace para compartir.');
+    } finally {
+      setIsSharing(false);
+    }
+  };
+
+  const handleDownload = async (): Promise<void> => {
+    if (!jobId) return;
+    setIsDownloading(true);
+    setDownloadMessage(null);
+    try {
+      const blob = await downloadVtonJob(jobId);
+      const objectUrl = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = objectUrl;
+      link.download = `styleme-look-${jobId.slice(0, 8)}.jpg`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      // Dar tiempo al navegador a iniciar la descarga antes de liberar el blob.
+      setTimeout(() => URL.revokeObjectURL(objectUrl), 1_000);
+    } catch {
+      setDownloadMessage('No pudimos descargar la imagen. Intenta de nuevo.');
+    } finally {
+      setIsDownloading(false);
+    }
   };
 
   const handleManualCheck = async (): Promise<void> => {
@@ -695,6 +849,33 @@ export function TryOnView(): JSX.Element {
                       </Button>
                     </div>
                   )}
+                  {hasCanonicalPhoto && (
+                    <div className="flex items-center gap-3 rounded-xl border border-accent/30 bg-accent/5 p-2.5">
+                      {/* eslint-disable-next-line @next/next/no-img-element -- foto canónica del backend */}
+                      <img
+                        src={canonicalPhoto.data?.photo_url ?? ''}
+                        alt="Foto canónica guardada"
+                        className="h-16 w-12 rounded-lg object-cover"
+                      />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs font-semibold text-foreground">
+                          Usar mi foto canónica
+                        </p>
+                        <p className="text-[11px] text-muted-foreground">
+                          Guardada con consentimiento. No hace falta subirla de nuevo.
+                        </p>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        size="sm"
+                        className="h-8 text-xs shrink-0"
+                        onClick={selectCanonicalPhoto}
+                      >
+                        Usar
+                      </Button>
+                    </div>
+                  )}
                   <GarmentDropzone
                     onFilesSelected={handleFiles}
                     multiple={false}
@@ -703,7 +884,7 @@ export function TryOnView(): JSX.Element {
                     badgeText="JPG, PNG, WEBP · 1 foto tuya"
                     inputAriaLabel="Seleccionar fotos tuyas para la prueba virtual"
                   />
-                  {!defaultPhotoUrl && (
+                  {!defaultPhotoUrl && !hasCanonicalPhoto && (
                     <p className="text-[11px] text-muted-foreground text-center">
                       ¿Pruebas outfits seguido?{' '}
                       <Link
@@ -751,7 +932,11 @@ export function TryOnView(): JSX.Element {
                 type="button"
                 className="w-full"
                 onClick={submit}
-                disabled={!activePhotoCacheKey || createJob.isPending || phase === 'processing'}
+                disabled={
+                  (!activePhotoCacheKey && !canonicalSelected) ||
+                  createJob.isPending ||
+                  phase === 'processing'
+                }
               >
                 {createJob.isPending
                   ? 'Generando…'
@@ -987,11 +1172,23 @@ export function TryOnView(): JSX.Element {
                   />
                 </div>
               </div>
-              <div className="flex flex-wrap gap-2 pt-2">
-                <Button type="button" size="sm" asChild>
-                  <a href={resultUrl} download>
-                    Guardar imagen
-                  </a>
+              <div className="flex flex-wrap items-center gap-2 pt-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={() => void handleDownload()}
+                  disabled={isDownloading}
+                >
+                  {isDownloading ? 'Descargando…' : 'Guardar imagen'}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleShare}
+                  disabled={isSharing}
+                >
+                  {isSharing ? 'Generando...' : 'Compartir look'}
                 </Button>
                 <Button type="button" variant="secondary" size="sm" onClick={resetPhoto}>
                   Probar con otra foto
@@ -1004,7 +1201,119 @@ export function TryOnView(): JSX.Element {
                 >
                   Probar otro outfit
                 </Button>
+                {shareMessage && (
+                  <p role="status" className="w-full text-xs text-muted-foreground pt-1">
+                    {shareMessage}
+                  </p>
+                )}
+                {downloadMessage && (
+                  <p role="alert" className="w-full text-xs text-destructive pt-1">
+                    {downloadMessage}
+                  </p>
+                )}
               </div>
+              <section
+                className="space-y-3 border-t border-border/50 pt-4"
+                aria-label="Comparar outfits"
+              >
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setComparisonOpen(open => !open)}
+                >
+                  {comparisonOpen ? 'Cerrar comparación' : 'Comparar con otro outfit'}
+                </Button>
+
+                {comparisonOpen && (
+                  <div className="space-y-3 rounded-xl border border-border/70 bg-muted/20 p-4">
+                    <div>
+                      <h3 className="font-semibold">Prueba otra combinación con la misma foto</h3>
+                      <p className="text-xs text-muted-foreground">
+                        La foto permanece en esta sesión y se vuelve a enviar para generar el otro
+                        resultado.
+                      </p>
+                    </div>
+
+                    {comparisonOptionsQuery.isError && queryOutfitId ? (
+                      <p role="alert" className="text-sm text-destructive">
+                        No pudimos cargar otras combinaciones. Intenta de nuevo más tarde.
+                      </p>
+                    ) : (
+                      <select
+                        aria-label="Outfit alternativo"
+                        value={comparisonOutfitId}
+                        onChange={event => setComparisonOutfitId(event.currentTarget.value)}
+                        disabled={comparisonOptionsQuery.isPending && Boolean(queryOutfitId)}
+                        className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm"
+                      >
+                        <option value="">
+                          {comparisonOptionsQuery.isPending && queryOutfitId
+                            ? 'Buscando combinaciones…'
+                            : 'Elige otro outfit'}
+                        </option>
+                        {comparisonOptions
+                          .filter(candidate => candidate.outfit_id !== effectiveOutfitId)
+                          .map(candidate => (
+                            <option key={candidate.outfit_id} value={candidate.outfit_id}>
+                              {candidate.aesthetic.replace(/_/g, ' ')}
+                            </option>
+                          ))}
+                      </select>
+                    )}
+
+                    {comparisonOptions.length > 0 &&
+                      comparisonOptions.every(
+                        candidate => candidate.outfit_id === effectiveOutfitId
+                      ) && (
+                        <p role="status" className="text-sm text-muted-foreground">
+                          No encontramos otro outfit para comparar todavía.
+                        </p>
+                      )}
+
+                    <Button
+                      type="button"
+                      size="sm"
+                      onClick={() => {
+                        if ((!file && !usingCanonicalPhoto) || !comparisonOutfitId) return;
+                        createComparisonJob.mutate(
+                          {
+                            image: usingCanonicalPhoto ? null : file,
+                            id: comparisonOutfitId,
+                            useCanonical: usingCanonicalPhoto,
+                          },
+                          { onSuccess: job => setComparisonJobId(job.job_id) }
+                        );
+                      }}
+                      disabled={
+                        (!file && !usingCanonicalPhoto) ||
+                        !comparisonOutfitId ||
+                        createComparisonJob.isPending
+                      }
+                    >
+                      {createComparisonJob.isPending
+                        ? 'Creando comparación…'
+                        : 'Generar comparación'}
+                    </Button>
+
+                    {createComparisonJob.isError && (
+                      <p role="alert" className="text-sm text-destructive">
+                        {describeCreateError(createComparisonJob.error)}
+                      </p>
+                    )}
+
+                    {comparisonJobId && resultUrl && comparisonOutfit && (
+                      <ComparisonResult
+                        key={comparisonJobId}
+                        jobId={comparisonJobId}
+                        originalUrl={resultUrl}
+                        originalLabel={`Outfit ${(outfit.data?.aesthetic ?? 'principal').replace(/_/g, ' ')}`}
+                        comparisonLabel={`Outfit ${comparisonOutfit.aesthetic.replace(/_/g, ' ')}`}
+                      />
+                    )}
+                  </div>
+                )}
+              </section>
             </div>
           )}
 

@@ -10,13 +10,14 @@ from __future__ import annotations
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile
+from fastapi import APIRouter, Depends, Query, UploadFile
 from sqlalchemy.orm import Session
 
 from db.session import get_session
 from domain.models import User
 from domain.schemas import SmartShoppingEvaluateResponse, WeatherResponse
 from services.auth import get_current_user
+from services.image_upload import read_validated_image
 from services.shopping.evaluator import adopt_candidate_garment, evaluate_prospective_garment
 from services.weather import get_weather
 
@@ -33,9 +34,7 @@ def evaluate_candidate(
     user: UserDep,
 ) -> SmartShoppingEvaluateResponse:
     """Evalua una prenda de tienda para determinar redundancia y compatibilidad con el closet."""
-    content = file.file.read()
-    if not content:
-        raise HTTPException(status_code=400, detail="archivo vacio")
+    content, _image = read_validated_image(file, "archivo")
 
     return evaluate_prospective_garment(session, user.id, content)
 
@@ -54,8 +53,8 @@ def adopt_candidate(
 @router.get("/weather", response_model=WeatherResponse)
 def fetch_current_weather(
     city: str | None = Query(None, description="Ciudad para consultar el clima"),
-    lat: float | None = Query(None, description="Latitud GPS opcional"),
-    lon: float | None = Query(None, description="Longitud GPS opcional"),
+    lat: float | None = Query(None, ge=-90, le=90, description="Latitud GPS opcional"),
+    lon: float | None = Query(None, ge=-180, le=180, description="Longitud GPS opcional"),
 ) -> WeatherResponse:
     """Obtiene el clima actual para contextualizar las recomendaciones."""
     effective_city = city if (city is not None or (lat is not None and lon is not None)) else "La Paz"

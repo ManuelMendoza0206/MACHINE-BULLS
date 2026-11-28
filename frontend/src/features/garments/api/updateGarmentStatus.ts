@@ -11,7 +11,7 @@ export function updateGarmentStatus(
       path: `/api/v1/garments/${encodeURIComponent(garmentId)}/status`,
       method: 'PATCH',
       body: { status },
-      timeoutMs: 5_000,
+      timeoutMs: 10_000,
       signal,
     },
     GarmentSummarySchema

@@ -118,7 +118,7 @@ def test_run_job_failover_catvton_to_replicate(monkeypatch) -> None:
 
 
 def test_vton_job_status_forbidden_for_other_user() -> None:
-    """Verifica que consultar un VtonJob ajeno devuelva 403."""
+    """Verifica que consultar un VtonJob ajeno devuelva 404 para evitar enumeración."""
     db_session = SessionLocal()
     try:
         owner = User(id="owner-vton-403", email="owner-vton-403@styles.com")
@@ -139,6 +139,6 @@ def test_vton_job_status_forbidden_for_other_user() -> None:
 
         client = TestClient(app)
         resp = client.get(f"/api/v1/vton/status/{foreign_job.id}")
-        assert resp.status_code == 403
+        assert resp.status_code == 404
     finally:
         db_session.close()

@@ -65,11 +65,13 @@ def _outfit_a_schema(session: Session, outfit: Outfit) -> OutfitOut:
 
 
 @router.get("/{outfit_id}", response_model=OutfitOut)
-def get_outfit(outfit_id: str, session: SessionDep) -> OutfitOut:
+def get_outfit(outfit_id: str, session: SessionDep, user: UserDep) -> OutfitOut:
     """Outfit por id (lo consume el Probador para mostrar las capas elegidas)."""
     outfit = session.get(Outfit, outfit_id)
     if outfit is None:
         raise HTTPException(status_code=404, detail="outfit no existe")
+    if outfit.user_id != user.id:
+        raise HTTPException(status_code=403, detail="no autorizado para consultar este outfit")
     return _outfit_a_schema(session, outfit)
 
 
@@ -84,6 +86,8 @@ def submit_feedback(
     outfit = session.get(Outfit, outfit_id)
     if outfit is None:
         raise HTTPException(status_code=404, detail="outfit no existe")
+    if outfit.user_id != user.id:
+        raise HTTPException(status_code=403, detail="no autorizado para valorar este outfit")
 
     if outfit.user_id != user.id and user.email != DEMO_USER_EMAIL:
         raise HTTPException(status_code=403, detail="no autorizado para modificar este outfit")
@@ -127,8 +131,14 @@ def submit_feedback(
 def get_outfit_feedback(
     outfit_id: str,
     session: SessionDep,
+    user: UserDep,
 ) -> OutfitFeedbackOut | None:
     """Obtiene el feedback registrado de un outfit."""
+    outfit = session.get(Outfit, outfit_id)
+    if outfit is None:
+        raise HTTPException(status_code=404, detail="outfit no existe")
+    if outfit.user_id != user.id:
+        raise HTTPException(status_code=403, detail="no autorizado para consultar esta valoración")
     feedback = (
         session.query(OutfitFeedback)
         .filter(OutfitFeedback.outfit_id == outfit_id)
@@ -153,15 +163,13 @@ def recommend(
     user: UserDep,
 ) -> OutfitRecommendResponse:
     """Arma outfits con las prendas del usuario y los persiste rankeados."""
-    target_user_id = req.user_id if req.user_id else user.id
-    target_user = session.get(User, target_user_id)
-    if target_user is None:
-        raise HTTPException(status_code=404, detail="user_id no existe en el backend")
+    if req.user_id is not None and req.user_id != user.id:
+        raise HTTPException(status_code=403, detail="user_id no coincide con la sesión autenticada")
 
     # Prendas del usuario: las que tiene ownership (upload o capsule adoptada).
     garment_ids = [
         row.garment_id
-        for row in session.query(GarmentOwnership).filter(GarmentOwnership.user_id == target_user_id)
+        for row in session.query(GarmentOwnership).filter(GarmentOwnership.user_id == user.id)
     ]
     if req.available_garment_ids:
         permitidos = set(req.available_garment_ids)
@@ -175,7 +183,7 @@ def recommend(
     # Cargar historial de feedback del usuario para personalizar recomendaciones
     user_feedbacks = (
         session.query(OutfitFeedback)
-        .filter(OutfitFeedback.user_id == target_user_id)
+        .filter(OutfitFeedback.user_id == user.id)
         .all()
     )
     disliked_combinations: list[set[str]] = []
@@ -206,7 +214,7 @@ def recommend(
     for crudo in crudos:
         outfit = Outfit(
             id=new_uuid(),
-            user_id=target_user_id,
+            user_id=user.id,
             aesthetic=crudo["aesthetic"],
             chromatic_score=crudo["chromatic_score"],
             embedding_score=crudo["embedding_score"],
@@ -250,14 +258,12 @@ def remix(
     user: UserDep,
 ) -> OutfitRecommendResponse:
     """Genera alternativas de outfit manteniendo ancladas las piezas indicadas en pinned_garment_ids."""
-    target_user_id = req.user_id if req.user_id else user.id
-    target_user = session.get(User, target_user_id)
-    if target_user is None:
-        raise HTTPException(status_code=404, detail="user_id no existe en el backend")
+    if req.user_id is not None and req.user_id != user.id:
+        raise HTTPException(status_code=403, detail="user_id no coincide con la sesión autenticada")
 
     garment_ids = [
         row.garment_id
-        for row in session.query(GarmentOwnership).filter(GarmentOwnership.user_id == target_user_id)
+        for row in session.query(GarmentOwnership).filter(GarmentOwnership.user_id == user.id)
     ]
     if not garment_ids:
         raise HTTPException(status_code=400, detail="el usuario no tiene prendas")
@@ -267,7 +273,7 @@ def remix(
 
     user_feedbacks = (
         session.query(OutfitFeedback)
-        .filter(OutfitFeedback.user_id == target_user_id)
+        .filter(OutfitFeedback.user_id == user.id)
         .all()
     )
     disliked_combinations: list[set[str]] = []
@@ -299,7 +305,7 @@ def remix(
     for crudo in crudos:
         outfit = Outfit(
             id=new_uuid(),
-            user_id=req.user_id,
+            user_id=user.id,
             aesthetic=crudo["aesthetic"],
             chromatic_score=crudo["chromatic_score"],
             embedding_score=crudo["embedding_score"],
@@ -414,6 +420,8 @@ def record_outfit_wear(
     outfit = session.get(Outfit, outfit_id)
     if outfit is None:
         raise HTTPException(status_code=404, detail="outfit no existe")
+    if outfit.user_id != user.id:
+        raise HTTPException(status_code=403, detail="no autorizado para registrar este outfit")
 
     fecha_uso = datetime.now(UTC).date()
     if payload and payload.worn_date:

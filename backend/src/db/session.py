@@ -41,53 +41,19 @@ SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False, futu
 
 
 def init_db() -> None:
-    """Crea las tablas si no existen. En Postgres esto lo reemplaza Alembic.
+    """Inicializa SQLite de demo; Postgres se modifica solo con SQL versionado."""
+    if engine.dialect.name == "sqlite":
+        Base.metadata.create_all(bind=engine)
+        return
 
-    Migracion liviana para DBs dev viejas: `create_all` no ALTERa tablas ya
-    creadas, asi que si faltan columnas nuevas se agregan automaticamente.
-    """
-    Base.metadata.create_all(bind=engine)
-    from sqlalchemy import inspect
-
-    insp = inspect(engine)
-    tablas = set(insp.get_table_names())
-
-    if "users" in tablas:
-        columnas_users = {c["name"] for c in insp.get_columns("users")}
-        if "vton_photo_path" not in columnas_users:
-            with engine.begin() as conn:
-                conn.execute(text("ALTER TABLE users ADD COLUMN vton_photo_path VARCHAR(512)"))
-
-    if "vton_jobs" in tablas:
-        columnas_vton = {c["name"] for c in insp.get_columns("vton_jobs")}
-        if "stage" not in columnas_vton:
-            with engine.begin() as conn:
-                conn.execute(text("ALTER TABLE vton_jobs ADD COLUMN stage VARCHAR(30)"))
-
-    if "garments" in tablas:
-        columnas_garments = {c["name"] for c in insp.get_columns("garments")}
-        if "is_candidate" not in columnas_garments:
-            with engine.begin() as conn:
-                conn.execute(text("ALTER TABLE garments ADD COLUMN is_candidate BOOLEAN DEFAULT 0 NOT NULL" if engine.dialect.name == "sqlite" else "ALTER TABLE garments ADD COLUMN is_candidate BOOLEAN DEFAULT FALSE NOT NULL"))
-        if "status" not in columnas_garments:
-            with engine.begin() as conn:
-                conn.execute(text("ALTER TABLE garments ADD COLUMN status VARCHAR(20) DEFAULT 'AVAILABLE' NOT NULL"))
-        if "subcategory" not in columnas_garments:
-            with engine.begin() as conn:
-                conn.execute(text("ALTER TABLE garments ADD COLUMN subcategory VARCHAR(50)"))
-        if "pattern" not in columnas_garments:
-            with engine.begin() as conn:
-                conn.execute(text("ALTER TABLE garments ADD COLUMN pattern VARCHAR(50)"))
-
-    if "outfits" in tablas:
-        columnas_outfits = {c["name"] for c in insp.get_columns("outfits")}
-        with engine.begin() as conn:
-            if "occasion" not in columnas_outfits:
-                conn.execute(text("ALTER TABLE outfits ADD COLUMN occasion VARCHAR(50)"))
-            if "weather" not in columnas_outfits:
-                conn.execute(text("ALTER TABLE outfits ADD COLUMN weather VARCHAR(50)"))
-            if "reason" not in columnas_outfits:
-                conn.execute(text("ALTER TABLE outfits ADD COLUMN reason TEXT"))
+    with engine.connect() as conn:
+        has_history = conn.execute(
+            text("SELECT to_regclass('public.schema_migrations') IS NOT NULL")
+        ).scalar_one()
+    if not has_history:
+        raise RuntimeError(
+            "Postgres no tiene schema_migrations. Ejecuta scripts/apply_migrations.py antes de iniciar la API."
+        )
 
 
 def get_session() -> Iterator[Session]:

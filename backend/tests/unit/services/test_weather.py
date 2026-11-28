@@ -43,6 +43,9 @@ def test_get_current_weather_weatherapi_and_cache():
     assert res1["is_raining"] is True
     assert res2 == res1
     assert mock_cls.call_count == 1
+    client = mock_cls.return_value.__enter__.return_value
+    assert client.get.call_args.args[0].startswith("https://")
+    assert client.get.call_args.kwargs["params"]["key"] == "fake-key"
 
 
 def test_get_current_weather_open_meteo_fallback():
@@ -77,3 +80,12 @@ def test_get_current_weather_static_fallback():
     assert res["source"] == "fallback"
     assert res["weather_type"] == "mild"
     assert res["city"] == "Cochabamba"
+
+
+def test_get_current_weather_rechaza_coordenadas_fuera_de_rango():
+    import pytest
+
+    with pytest.raises(ValueError):
+        weather.get_current_weather(lat=91)
+    with pytest.raises(ValueError):
+        weather.get_current_weather(lon=-181)

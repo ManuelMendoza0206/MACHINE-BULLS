@@ -21,9 +21,53 @@ function getBaseUrl(): string {
   return url.replace(/\/$/, '');
 }
 
-export async function apiRequest<T>(config: RequestConfig, schema: z.ZodType<T>): Promise<T> {
-  const baseUrl = getBaseUrl();
-  const url = `${baseUrl}${config.path}`;
+async function buildAuthHeaders(): Promise<Record<string, string>> {
+  const authHeaders: Record<string, string> = {};
+  if (typeof window === 'undefined' || !isSupabaseConfigured()) {
+    return authHeaders;
+  }
+
+  try {
+    const supabase = createBrowserSupabaseClient();
+    const { data, error: sessionError } = await supabase.auth.getSession();
+    if (sessionError) {
+      throw new NetworkError('No se pudo consultar la sesión de autenticación', sessionError);
+    }
+    const session = data?.session;
+    if (!session) {
+      throw new ApiError('Se requiere iniciar sesión', 401);
+    }
+
+    let token = session.access_token;
+    const nowSec = Math.floor(Date.now() / 1000);
+    if (session.expires_at && session.expires_at <= nowSec + 30) {
+      try {
+        const { data: refreshed } = await supabase.auth.refreshSession();
+        if (refreshed?.session?.access_token) {
+          token = refreshed.session.access_token;
+        }
+      } catch {
+        // Si el refresh falla, continuar con el token existente
+      }
+    }
+    if (token) {
+      authHeaders['Authorization'] = `Bearer ${token}`;
+    }
+  } catch (error) {
+    if (error instanceof ApiError || error instanceof NetworkError) throw error;
+    throw new NetworkError('No se pudo validar la sesión de autenticación', error);
+  }
+
+  return authHeaders;
+}
+
+/**
+ * Ejecuta la request con auth, timeout y mapeo uniforme de errores.
+ * `apiRequest` valida JSON; `apiRequestBlob` devuelve binarios (descargas).
+ */
+async function executeRequest(config: RequestConfig): Promise<Response> {
+  const url = `${getBaseUrl()}${config.path}`;
+  const authHeaders = await buildAuthHeaders();
 
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), config.timeoutMs);
@@ -38,32 +82,13 @@ export async function apiRequest<T>(config: RequestConfig, schema: z.ZodType<T>)
     }
   }
 
-  const authHeaders: Record<string, string> = {};
-  if (typeof window !== 'undefined' && isSupabaseConfigured()) {
-    try {
-      const supabase = createBrowserSupabaseClient();
-      const { data } = await supabase.auth.getSession();
-      const session = data?.session;
-      if (session) {
-        let token = session.access_token;
-        const nowSec = Math.floor(Date.now() / 1000);
-        if (session.expires_at && session.expires_at <= nowSec + 30) {
-          try {
-            const { data: refreshed } = await supabase.auth.refreshSession();
-            if (refreshed?.session?.access_token) {
-              token = refreshed.session.access_token;
-            }
-          } catch {
-            // Si el refresh falla, continuar con el token existente
-          }
-        }
-        if (token) {
-          authHeaders['Authorization'] = `Bearer ${token}`;
-        }
-      }
-    } catch {
-      // Ignora errores si Supabase no responde o esta offline (fallback a demo)
-    }
+  if (controller.signal.aborted) {
+    clearTimeout(timeoutId);
+    if (config.signal) config.signal.removeEventListener('abort', onExternalAbort);
+    throw new NetworkError(
+      'Request aborted',
+      new DOMException('The operation was aborted', 'AbortError')
+    );
   }
 
   const headers: Record<string, string> = { ...authHeaders };
@@ -102,12 +127,7 @@ export async function apiRequest<T>(config: RequestConfig, schema: z.ZodType<T>)
       );
     }
 
-    const json = (await response.json()) as unknown;
-    const result = schema.safeParse(json);
-    if (!result.success) {
-      throw new ValidationError('Response validation failed', result.error.issues);
-    }
-    return result.data;
+    return response;
   } catch (error) {
     if (error instanceof ApiError || error instanceof ValidationError) {
       throw error;
@@ -142,4 +162,33 @@ export async function apiRequest<T>(config: RequestConfig, schema: z.ZodType<T>)
       config.signal.removeEventListener('abort', onExternalAbort);
     }
   }
+}
+
+export async function apiRequest<T>(config: RequestConfig, schema: z.ZodType<T>): Promise<T> {
+  const response = await executeRequest(config);
+
+  let json: unknown;
+  try {
+    json = response.status === 204 ? undefined : ((await response.json()) as unknown);
+  } catch (error) {
+    throw new NetworkError(
+      error instanceof Error ? error.message : 'Invalid JSON response',
+      error
+    );
+  }
+
+  const result = schema.safeParse(json);
+  if (!result.success) {
+    throw new ValidationError('Response validation failed', result.error.issues);
+  }
+  return result.data;
+}
+
+/**
+ * Descarga un binario autenticado (p. ej. el JPEG de un look VTON).
+ * Comparte auth, timeout y errores con `apiRequest`.
+ */
+export async function apiRequestBlob(config: RequestConfig): Promise<Blob> {
+  const response = await executeRequest(config);
+  return response.blob();
 }

@@ -9,6 +9,17 @@
 
 ## 1. Resumen Ejecutivo y Presupuesto de Error
 
+> **Calibración empírica completada (Paso 5 - Noviembre 2026):**
+> La latencia de generación VTON cuenta con medición reproducible generada mediante `scripts/eval_catvton.py`
+> (registrada en `docs/ml/vton_benchmark_results.json`). Para la configuración recomendada de 30 steps
+> (768x1024), la latencia observada se sitúa en **p50 = 5.2 s / capa** y **p95 = 8.5 s / capa**.
+> El backend utiliza una estimación operativa de `ESTIMATED_SECONDS_PER_LAYER = 12.0 s` por capa
+> para el cálculo predictivo del tiempo restante del job.
+
+Las métricas actuales se agregan en memoria por proceso y conservan una ventana limitada de
+muestras; no representan una serie histórica global cuando se ejecutan varios workers. El endpoint
+`/metrics` expone el snapshot disponible en el proceso que responde.
+
 StyleMe establece Service Level Objectives (SLOs) cuantitativos y medibles con el objetivo de garantizar una experiencia de usuario fluida, predecible y resiliente tanto en las recomendaciones de vestuario en tiempo real como en la generación asíncrona de pruebas virtuales (VTON).
 
 ### Tabla Maestra de SLOs

@@ -36,6 +36,7 @@ export function ProfileVtonPhotoCard(): JSX.Element {
     onSuccess: updatedMe => {
       setErrorMsg(null);
       queryClient.setQueryData(['me'], updatedMe);
+      void queryClient.invalidateQueries({ queryKey: ['canonical-photo'] });
       toast.success('Foto guardada como predeterminada para tus pruebas.');
     },
     onError: err => {
@@ -50,6 +51,7 @@ export function ProfileVtonPhotoCard(): JSX.Element {
     onSuccess: updatedMe => {
       setErrorMsg(null);
       queryClient.setQueryData(['me'], updatedMe);
+      void queryClient.invalidateQueries({ queryKey: ['canonical-photo'] });
       toast.success('Foto predeterminada eliminada de tu perfil.');
     },
     onError: err => {
@@ -76,7 +78,7 @@ export function ProfileVtonPhotoCard(): JSX.Element {
           <div className="flex flex-wrap items-center gap-2">
             <Camera className="h-4 w-4 text-accent" aria-hidden="true" />
             <h2 className="text-lg font-bold tracking-tight text-foreground">
-              Mi foto para el probador virtual
+              Mi foto canónica para el probador virtual
             </h2>
             <Badge
               variant="outline"

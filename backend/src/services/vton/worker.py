@@ -22,13 +22,28 @@ from config import settings
 logger = logging.getLogger(__name__)
 
 
-async def run_vton_job(ctx: dict, job_id: str, human_image_path: str) -> str:
+async def run_vton_job(
+    ctx: dict,
+    job_id: str,
+    human_image_path: str,
+    steps: int | None = None,
+    guidance: float | None = None,
+    seed: int | None = None,
+    layer_mode: str | None = None,
+) -> str:
     """Job de ARQ: despacha el pipeline sync a un thread y reporta el fin."""
 
     def _pipeline_sync() -> str:
         from services.vton import pipeline
 
-        pipeline.run_job(job_id, human_image_path)
+        pipeline.run_job(
+            job_id,
+            human_image_path,
+            num_inference_steps=steps,
+            guidance_scale=guidance,
+            seed=seed,
+            layer_mode=layer_mode,
+        )
         return job_id
 
     logger.info("worker: corriendo job VTON %s (human=%s)", job_id, human_image_path)

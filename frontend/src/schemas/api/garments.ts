@@ -31,7 +31,8 @@ export const GarmentUploadResponseSchema = z.object({
   garment_id: z.string().uuid(),
   category: z.string(),
   subcategory: z.string().nullable().optional(),
-  position: GarmentPositionSchema.optional(),
+  // dress y bag no tienen posicion de capa: el backend devuelve null.
+  position: GarmentPositionSchema.nullable().optional(),
   top_aesthetics: z.array(AestheticScoreSchema).min(1).optional(),
   dominant_colors: z.array(DominantColorSchema).min(1),
   processed_image_url: z.string().url(),
@@ -53,7 +54,8 @@ export const GarmentSummarySchema = z.object({
   category: z.string(),
   subcategory: z.string().nullable().optional(),
   dominant_aesthetic: z.string(),
-  position: GarmentPositionSchema.optional(),
+  // dress y bag no tienen posicion de capa: el backend devuelve null.
+  position: GarmentPositionSchema.nullable().optional(),
   status: GarmentStatusSchema.optional(),
   pattern: z.string().nullable().optional(),
 });

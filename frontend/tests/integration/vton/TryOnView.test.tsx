@@ -45,6 +45,14 @@ function happyHandlers(): void {
     http.get('*/api/v1/outfits/:id', () => HttpResponse.json(recommendFixture.outfits[0])),
     http.post('*/api/v1/outfits/recommend', () => HttpResponse.json(recommendFixture)),
     http.get('*/api/v1/garments/capsule', () => HttpResponse.json(capsuleFixture)),
+    http.get('*/api/v1/me/canonical-photo', () =>
+      HttpResponse.json({ has_canonical: false, photo_url: null })
+    ),
+    http.get('*/api/v1/vton/:id/download', () =>
+      HttpResponse.arrayBuffer(new ArrayBuffer(8), {
+        headers: { 'Content-Type': 'image/jpeg' },
+      })
+    ),
     http.post('*/api/v1/vton/try-on', () =>
       HttpResponse.json({ job_id: JOB_UUID, status: 'processing', estimated_time_seconds: 1 })
     ),
@@ -107,9 +115,85 @@ describe('TryOnView', () => {
     );
     expect(resultado).toBeInTheDocument();
 
-    const guardar = screen.getByRole('link', { name: /guardar imagen/i });
-    expect(guardar).toHaveAttribute('href', 'https://cdn.example.com/result.jpg');
+    const guardar = screen.getByRole('button', { name: /guardar imagen/i });
+    expect(guardar).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /compartir look/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /probar con otra foto/i })).toBeInTheDocument();
+  });
+
+  it('reutiliza la foto canónica sin volver a subir un archivo', async () => {
+    let captured: FormData | undefined;
+    server.use(
+      http.get('*/api/v1/me/canonical-photo', () =>
+        HttpResponse.json({
+          has_canonical: true,
+          photo_url: 'https://api.example.com/media/humans/u/canonical.jpg',
+        })
+      ),
+      http.post('*/api/v1/vton/try-on', async ({ request }) => {
+        captured = await request.formData();
+        return HttpResponse.json({
+          job_id: JOB_UUID,
+          status: 'processing',
+          estimated_time_seconds: 1,
+        });
+      })
+    );
+
+    renderWithProviders(<TryOnView />);
+
+    await userEvent.click(await screen.findByRole('button', { name: /^usar$/i }));
+    await userEvent.click(await screen.findByRole('button', { name: /generar prueba virtual/i }));
+
+    await screen.findByAltText(/resultado de la prueba virtual/i, {}, { timeout: 4_000 });
+
+    expect(captured).toBeDefined();
+    expect(captured?.get('use_canonical')).toBe('true');
+    expect(captured?.get('user_image')).toBeNull();
+  });
+
+  it('compara otro outfit con la misma foto de forma temporal', async () => {
+    let createdJobs = 0;
+    const alternativeId = '7c8f8b1a-1234-4567-8901-abcdef123456';
+    server.use(
+      http.post('*/api/v1/outfits/recommend', () =>
+        HttpResponse.json({
+          outfits: [
+            recommendFixture.outfits[0],
+            { ...recommendFixture.outfits[0], outfit_id: alternativeId, aesthetic: 'minimalist' },
+          ],
+        })
+      ),
+      http.post('*/api/v1/vton/try-on', () => {
+        createdJobs += 1;
+        return HttpResponse.json({
+          job_id: `${JOB_UUID.slice(0, -1)}e`,
+          status: 'processing',
+          estimated_time_seconds: 1,
+        });
+      })
+    );
+
+    renderWithProviders(<TryOnView />);
+    await uploadPhoto();
+    await userEvent.click(await screen.findByRole('button', { name: /generar prueba virtual/i }));
+    await screen.findByRole('button', { name: /guardar imagen/i }, { timeout: 4_000 });
+
+    await userEvent.click(screen.getByRole('button', { name: /comparar con otro outfit/i }));
+    await userEvent.selectOptions(
+      await screen.findByRole('combobox', { name: /outfit alternativo/i }),
+      alternativeId
+    );
+    await userEvent.click(screen.getByRole('button', { name: /generar comparación/i }));
+
+    expect(
+      await screen.findByRole(
+        'region',
+        { name: /comparacion visual de resultados/i },
+        { timeout: 5_000 }
+      )
+    ).toBeInTheDocument();
+    expect(createdJobs).toBe(2);
   });
 
   it('un doble click dispara una sola creación de job', async () => {

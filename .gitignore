@@ -45,6 +45,7 @@ next-env.d.ts.timestamp-*
 .env.*.local
 .env.*.private
 .env.production.local
+!backend/.env.example
 # excepcion: infra/.env lleva el modo demo del stack, sin secretos
 !infra/.env
 
@@ -125,6 +126,7 @@ backend/media/
 backend/*.db
 backend/.coverage
 backend/.pytest_cache/
+backend/.test-runtime/
 models/*.pt
 
 # Runtime junk del try-on y DB dev (se regeneran)

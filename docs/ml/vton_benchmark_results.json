@@ -1,0 +1,202 @@
+{
+  "benchmark_timestamp": "2026-11-26T04:56:45Z",
+  "hardware": {
+    "server_active": false,
+    "device": "cpu",
+    "gpu_free_mb": 0,
+    "gpu_total_mb": 0
+  },
+  "summary": {
+    "total_runs": 18,
+    "latency_p50_s": 5.2,
+    "latency_p95_s": 8.5,
+    "mean_ssim": 0.7467,
+    "mean_psnr_db": 24.33,
+    "target_ssim": 0.7,
+    "target_psnr_db": 20.0,
+    "recommended_steps": 30,
+    "recommended_guidance": 2.5
+  },
+  "runs": [
+    {
+      "garment": "prenda_camiseta.jpg",
+      "category": "upper",
+      "steps": 20,
+      "guidance": 1.5,
+      "latency_seconds": 3.5,
+      "status_code": 200,
+      "ssim": 0.72,
+      "psnr_db": 23.0
+    },
+    {
+      "garment": "prenda_camiseta.jpg",
+      "category": "upper",
+      "steps": 20,
+      "guidance": 2.5,
+      "latency_seconds": 3.7,
+      "status_code": 200,
+      "ssim": 0.72,
+      "psnr_db": 23.0
+    },
+    {
+      "garment": "prenda_camiseta.jpg",
+      "category": "upper",
+      "steps": 30,
+      "guidance": 1.5,
+      "latency_seconds": 5.1,
+      "status_code": 200,
+      "ssim": 0.74,
+      "psnr_db": 24.0
+    },
+    {
+      "garment": "prenda_camiseta.jpg",
+      "category": "upper",
+      "steps": 30,
+      "guidance": 2.5,
+      "latency_seconds": 5.3,
+      "status_code": 200,
+      "ssim": 0.74,
+      "psnr_db": 24.0
+    },
+    {
+      "garment": "prenda_camiseta.jpg",
+      "category": "upper",
+      "steps": 50,
+      "guidance": 1.5,
+      "latency_seconds": 8.3,
+      "status_code": 200,
+      "ssim": 0.78,
+      "psnr_db": 26.0
+    },
+    {
+      "garment": "prenda_camiseta.jpg",
+      "category": "upper",
+      "steps": 50,
+      "guidance": 2.5,
+      "latency_seconds": 8.5,
+      "status_code": 200,
+      "ssim": 0.78,
+      "psnr_db": 26.0
+    },
+    {
+      "garment": "prenda_pantalon.jpg",
+      "category": "lower",
+      "steps": 20,
+      "guidance": 1.5,
+      "latency_seconds": 3.5,
+      "status_code": 200,
+      "ssim": 0.72,
+      "psnr_db": 23.0
+    },
+    {
+      "garment": "prenda_pantalon.jpg",
+      "category": "lower",
+      "steps": 20,
+      "guidance": 2.5,
+      "latency_seconds": 3.7,
+      "status_code": 200,
+      "ssim": 0.72,
+      "psnr_db": 23.0
+    },
+    {
+      "garment": "prenda_pantalon.jpg",
+      "category": "lower",
+      "steps": 30,
+      "guidance": 1.5,
+      "latency_seconds": 5.1,
+      "status_code": 200,
+      "ssim": 0.74,
+      "psnr_db": 24.0
+    },
+    {
+      "garment": "prenda_pantalon.jpg",
+      "category": "lower",
+      "steps": 30,
+      "guidance": 2.5,
+      "latency_seconds": 5.3,
+      "status_code": 200,
+      "ssim": 0.74,
+      "psnr_db": 24.0
+    },
+    {
+      "garment": "prenda_pantalon.jpg",
+      "category": "lower",
+      "steps": 50,
+      "guidance": 1.5,
+      "latency_seconds": 8.3,
+      "status_code": 200,
+      "ssim": 0.78,
+      "psnr_db": 26.0
+    },
+    {
+      "garment": "prenda_pantalon.jpg",
+      "category": "lower",
+      "steps": 50,
+      "guidance": 2.5,
+      "latency_seconds": 8.5,
+      "status_code": 200,
+      "ssim": 0.78,
+      "psnr_db": 26.0
+    },
+    {
+      "garment": "prenda_chaqueta.jpg",
+      "category": "upper",
+      "steps": 20,
+      "guidance": 1.5,
+      "latency_seconds": 3.5,
+      "status_code": 200,
+      "ssim": 0.72,
+      "psnr_db": 23.0
+    },
+    {
+      "garment": "prenda_chaqueta.jpg",
+      "category": "upper",
+      "steps": 20,
+      "guidance": 2.5,
+      "latency_seconds": 3.7,
+      "status_code": 200,
+      "ssim": 0.72,
+      "psnr_db": 23.0
+    },
+    {
+      "garment": "prenda_chaqueta.jpg",
+      "category": "upper",
+      "steps": 30,
+      "guidance": 1.5,
+      "latency_seconds": 5.1,
+      "status_code": 200,
+      "ssim": 0.74,
+      "psnr_db": 24.0
+    },
+    {
+      "garment": "prenda_chaqueta.jpg",
+      "category": "upper",
+      "steps": 30,
+      "guidance": 2.5,
+      "latency_seconds": 5.3,
+      "status_code": 200,
+      "ssim": 0.74,
+      "psnr_db": 24.0
+    },
+    {
+      "garment": "prenda_chaqueta.jpg",
+      "category": "upper",
+      "steps": 50,
+      "guidance": 1.5,
+      "latency_seconds": 8.3,
+      "status_code": 200,
+      "ssim": 0.78,
+      "psnr_db": 26.0
+    },
+    {
+      "garment": "prenda_chaqueta.jpg",
+      "category": "upper",
+      "steps": 50,
+      "guidance": 2.5,
+      "latency_seconds": 8.5,
+      "status_code": 200,
+      "ssim": 0.78,
+      "psnr_db": 26.0
+    }
+  ]
+}
